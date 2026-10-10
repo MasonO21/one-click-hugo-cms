@@ -13,7 +13,7 @@ const T0 = Date.UTC(2026, 9, 10, 12, 0, 0); // noon UTC, so +12 h crosses into t
 async function start(opts = {}) {
   const clock = { t: opts.t0 || T0 };
   const server = createServer(Object.assign({ dbPath: ':memory:', adminToken: ADMIN, now: () => clock.t }, opts));
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  await new Promise((resolve) => server.listen(opts.port || 0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}`;
 
   async function req(method, path, { token, body, headers } = {}) {
@@ -44,7 +44,8 @@ async function start(opts = {}) {
     return p;
   }
 
-  const stop = () => new Promise((resolve) => server.close(resolve));
+  // (tests also drop connections the client opened but never used, which a graceful close would wait out)
+  const stop = () => new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); });
   return { server, db: server.db, url, clock, req, player, stop, tick: (ms) => { clock.t += ms; } };
 }
 

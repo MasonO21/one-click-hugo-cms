@@ -1,0 +1,27 @@
+# Render Blueprint for the Rainkeep server: one Docker web service with a persistent disk for the SQLite file.
+# In the Render dashboard: New > Blueprint, pick this repository and set the Blueprint path to
+# rainkeep/server/render.yaml (or copy this file to the repository root). Paths below are from the repository root.
+# SQLite lives on one disk, so this is one instance: see README.md "What's next" before scaling out.
+services:
+  - type: web
+    name: rainkeep-server
+    runtime: docker
+    dockerfilePath: ./rainkeep/server/Dockerfile
+    dockerContext: ./rainkeep/server
+    buildFilter:
+      paths:
+        - rainkeep/server/**
+    plan: starter # a persistent disk needs a paid instance type
+    numInstances: 1
+    healthCheckPath: /v1/health
+    disk:
+      name: rainkeep-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DB_PATH
+        value: /data/rainkeep.db
+      - key: ADMIN_TOKEN
+        generateValue: true # a random secret; read it in the dashboard's Environment tab
+      - key: CORS_ORIGIN
+        value: "*" # or e.g. capacitor://localhost,https://localhost,https://play.rainkeep.example

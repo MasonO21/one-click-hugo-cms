@@ -1,8 +1,9 @@
 /*
  * Rainkeep: the HTTP backend of KH.net (NETWORK.md), for the native app or a self-hosted web build with DATA.server
- * set. window.RKHttpNet(baseUrl, opts) returns an object with every KH.net call. Each call returns a Promise that
- * never rejects: a failure resolves null/false/[] and is counted in status(); a write resolves something truthy
- * (true, the new id, or the server's stored record) when it worked.
+ * set. window.RKHttpNet(baseUrl, opts) returns an object with every KH.net call (and the game's extra ones net.js
+ * lists: report, reports, removeMessage, oldHelps, dropBattles), giving records the artifact backend's shapes.
+ * Each call returns a Promise that never rejects: a failure resolves null/false/[] and is counted in status(); a
+ * write resolves something truthy (true, the new id, or the server's stored record) when it worked.
  * The device signs in on first use: its id lives in localStorage 'rk-device' and its token in 'rk-token'.
  * opts: { adminToken, name, pollMs }. watch* calls listen on the server's event stream (EventSource) and fall
  * back to polling every 15 seconds; each returns an unsubscribe function. No dependencies.
@@ -117,19 +118,23 @@
         return fallback;
       }
     }
-    async function admin(method, path, body, fallback) {
+    // A call with the admin token (the playtest dashboard); `gone` treats a 404 as done.
+    async function admin(method, path, body, fallback, gone) {
       st.calls++;
       if (!opts.adminToken) return fallback;
       try {
         const r = await send(method, path, body, opts.adminToken);
         if (r.ok) return r.data;
-        note(method + ' ' + path + ' ' + r.status);
+        if (gone && r.status === 404) return true;
+        note(method + ' ' + path.split('/').slice(0, 4).join('/') + ' ' + r.status);
       } catch (e) {
         note(e);
       }
       return fallback;
     }
     const remember = (p) => { if (p && p.id) names.set(p.id, p.name || p.keep || 'Warden'); return p; };
+    // the artifact backend's Caravans carry their member count as `members`: the game reads either backend alike
+    const caravan = (a) => (a ? Object.assign({}, a, { members: a.count }) : null);
     const rememberAll = (list) => { list = arr(list); list.forEach(remember); return list; };
 
     // ---- live updates: one shared EventSource for every watcher, or one shared poll timer without it
@@ -137,13 +142,7 @@
     let es = null;
     let polling = typeof EventSource !== 'function';
     let pollTimer = null;
-    function streamUp() {
-      if (!watchers.size || !token) return;
-      if (polling) {
-        if (!pollTimer) pollTimer = setInterval(() => watchers.forEach((w) => w.pull()), pollMs);
-        return;
-      }
-      if (es) return;
+    function openStream() {
       let opened = false;
       try {
         // EventSource can't send headers: the stream route alone takes the token as a query parameter
@@ -151,7 +150,7 @@
       } catch (e) {
         es = null;
         polling = true;
-        return streamUp();
+        return;
       }
       // after a reconnect, pull whatever was missed while the stream was down
       es.onopen = () => { if (opened) watchers.forEach((w) => w.pull()); opened = true; };
@@ -164,6 +163,14 @@
         try { d = JSON.parse(e.data); } catch (err) { return; }
         watchers.forEach((w) => w.on(type, d));
       }));
+    }
+    function streamUp() {
+      if (!watchers.size) return;
+      if (!polling && !es && token) openStream();
+      // poll while there is no stream: no EventSource, a stream that gave up, or not signed in yet (offline at
+      // start); each round tries the stream again once a sign-in has worked
+      if (!es && !pollTimer) pollTimer = setInterval(() => { watchers.forEach((w) => w.pull()); streamUp(); }, pollMs);
+      if (es && pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     }
     function watch(w) {
       watchers.add(w);
@@ -186,16 +193,16 @@
       const add = (list) => {
         let fresh = false;
         for (const m of arr(list)) {
-          if (!m || seen.has(m.id)) continue;
-          seen.add(m.id);
+          if (!m || seen.has(m.mid)) continue;
+          seen.add(m.mid);
           msgs.push(m);
           fresh = true;
           if (m.at > last) last = m.at;
           if (m.name) names.set(m.by, m.name);
         }
         if (fresh && msgs.length > 1) {
-          msgs.sort((a, b) => a.at - b.at || Number(a.id) - Number(b.id));
-          if (msgs.length > 100) { msgs = msgs.slice(-100); seen = new Set(msgs.map((m) => m.id)); }
+          msgs.sort((a, b) => a.at - b.at || Number(a.mid) - Number(b.mid));
+          if (msgs.length > 100) { msgs = msgs.slice(-100); seen = new Set(msgs.map((m) => m.mid)); }
         }
         return fresh;
       };
@@ -206,7 +213,12 @@
           const list = await call('GET', path + (last ? '?since=' + (last - 1) : ''), undefined, null);
           if (list && (add(list) || first)) { first = false; emit(); }
         },
-        on: (type, d) => { if (type === 'chat' && d && d.channel === channel && add([d.msg])) emit(); },
+        on: (type, d) => {
+          if (type !== 'chat' || !d || d.channel !== channel) return;
+          // a moderator removed a message
+          if (d.removed) { const n = msgs.length; msgs = msgs.filter((m) => m.mid !== d.removed); if (msgs.length !== n) emit(); return; }
+          if (add([d.msg])) emit();
+        },
       });
       return () => { live = false; off(); };
     }
@@ -252,11 +264,11 @@
       topPlayers: safe(async (by, n) => rememberAll(await call('GET', '/v1/players?' + query({ order: by === 'lp' ? 'lp' : 'power', limit: n || 50 }), undefined, [])), []),
       opponents: safe(async (power, n) => rememberAll(await call('GET', '/v1/players/opponents?' + query({ power, limit: n || 10 }), undefined, [])), []),
       members: safe(async (aid) => rememberAll(await call('GET', '/v1/players?' + query({ aid }), undefined, [])), []),
-      alliances: safe(async (n) => arr(await call('GET', '/v1/alliances?' + query({ limit: n || 20 }), undefined, [])), []),
+      alliances: safe(async (n) => arr(await call('GET', '/v1/alliances?' + query({ limit: n || 20 }), undefined, [])).map(caravan), []),
       alliance: safe(async (aid) => {
         const a = await call('GET', '/v1/alliances/' + seg(aid), undefined, null, true);
         if (a) rememberAll(a.members);
-        return a;
+        return caravan(a);
       }, null),
       createAlliance: safe(async (o) => { const r = await call('POST', '/v1/alliances', o || {}, null); return (r && r.aid) || null; }, null),
       updateAlliance: safe(async (aid, patch) => !!(await call('PATCH', '/v1/alliances/' + seg(aid), patch || {}, null)), false),
@@ -265,7 +277,15 @@
       kick: safe(async (aid, pid) => !!(await call('POST', '/v1/alliances/' + seg(aid) + '/kick', { id: pid }, null)), false),
       watchChat: (channel, cb) => { try { return watchChat(channel, cb); } catch (e) { note(e); return () => {}; } },
       sendChat: safe(async (channel, text) => !!(await call('POST', '/v1/chat/' + seg(channel), { text: String(text || '') }, null)), false),
-      reportChat: safe(async (channel, mid) => !!(await call('POST', '/v1/chat/' + seg(channel) + '/' + seg(mid) + '/report', {}, null)), false),
+      // r: { ch, mid, by, text, at } (the server keeps its own copy of the message)
+      report: safe(async (r) => !!(await call('POST', '/v1/chat/' + seg(r.ch) + '/' + seg(r.mid) + '/report', {}, null)), false),
+      reports: safe(async () => arr(await admin('GET', '/v1/admin/reports', undefined, [])), []),
+      // a moderator removes a reported message and closes its report; already gone counts as done
+      removeMessage: safe(async (ch, mid, rid) => {
+        const a = ch && mid ? await admin('DELETE', '/v1/admin/chat/' + seg(ch) + '/' + seg(mid), undefined, null, true) : true;
+        const b = rid ? await admin('DELETE', '/v1/admin/reports/' + seg(rid), undefined, null, true) : true;
+        return !!(a && b);
+      }, false),
       askHelp: safe(async (o) => {
         o = o || {};
         const r = await call('POST', '/v1/helps', { plot: o.plot, label: o.label, end: o.end, need: o.need }, null);
@@ -274,6 +294,9 @@
       giveHelp: safe(async (rid) => !!(await call('POST', '/v1/helps/' + seg(rid) + '/help', {}, null)), false),
       watchHelps: (aid, cb) => { try { return watchHelps(aid, cb); } catch (e) { note(e); return () => {}; } },
       dropHelp: safe(async (rid) => !!(await call('DELETE', '/v1/helps/' + seg(rid), undefined, null)), false),
+      // the server drops help requests after a day and Arena records after three: nothing for the client to clear
+      oldHelps: () => Promise.resolve(null),
+      dropBattles: () => Promise.resolve(null),
       boss: safe((aid, day) => call('GET', '/v1/alliances/' + seg(aid) + '/boss?' + query({ day }), undefined, null, true), null),
       hitBoss: safe((aid, day, hp, total) => call('POST', '/v1/alliances/' + seg(aid) + '/boss', { day, hp, total }, null), null),
       // resolves the server's result { bid, win, d, lp, left }: lp is this player's new Arena points

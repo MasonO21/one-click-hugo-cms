@@ -1554,3 +1554,4 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .pt-p { gap: 8px; align-items: center; }
 textarea { resize: vertical; }
 .mp-more { margin-left: 6px; padding: 0 6px; border-radius: 6px; color: var(--dim); font-weight: 900; line-height: 1.2; background: #0003; }
+.mp-alone { border-color: #3fd0c066; background: linear-gradient(150deg, #123a3a, #120c1d 80%); }

@@ -57,11 +57,15 @@ join times: to the strongest).
 `channel` is `world` or `al-{aid}`. A message is `{ by: id, at: time, text ≤ 200 }`. Each channel keeps its newest
 100 messages: a sender deletes the oldest beyond that. One message per 2 seconds per player.
 
-### Reports: `rp/{rid}`
+### Reports and moderation
 
-`{ ch, mid, by, text ≤ 200, at, rep: reporter id, rat: time reported }`. A player reports another's chat message;
-the owner (artifact) or a moderator (server) reads the reports on the Playtest sheet and removes the message.
-Blocking is local: a blocked player's messages and keep are hidden on the blocker's device only.
+A reported chat message travels in the reporter's own playtest report (`rep`: the last 20 `{ ch, mid, by, text,
+at, rat }`), which only the owner reads (the artifact's rules can't make a collection writable by testers but
+readable only by the owner, since a path's write level can't be below its read level). The owner removes a message
+from the Playtest sheet: the message is deleted and its id recorded in `cfg/mod` (`{ removed: { mid: time } }`,
+admin-written), so the reports naming it drop off. The server keeps reports and removals itself
+(`POST /v1/chat/:channel/:mid/report`). Blocking is local: a blocked player's messages and keep are hidden on the
+blocker's device only.
 
 ### Help requests: `hp/{rid}`
 
@@ -104,6 +108,7 @@ One document per tester, readable only by the owner (artifact rule `read: admin`
 | `dev` | `{ tier, gpu, mem, cores, w, h, dpr, ua }` and start-up timings `{ ui, keep3d, dunes3d }` in ms |
 | `fps` | median frames per second in the keep, sampled |
 | `err` | the last 20 distinct script errors `{ m ≤ 160, n, at }` |
+| `rep` | the last 20 chat messages this tester reported `{ ch, mid, by, text ≤ 200, at, rat }` |
 | `fb` | the last 30 feedback notes `{ at, r: 1–5, t ≤ 500, stage, ver }` |
 
 ### Live config: `cfg/live` (artifact, admin-written) · `GET /v1/config` (HTTP)
@@ -142,9 +147,8 @@ in `KH.net.status()`. `watch*` calls return an unsubscribe function.
 | `hitBoss(aid, day, hp, total)` | writes this player's running total |
 | `postBattle(rec)` | writes an Arena record |
 | `battlesAgainst(since)` | records naming this player as defender |
-| `report({ch, mid, by, text, at})` | reports a chat message |
-| `reports()` | reported messages (admin) |
-| `removeMessage(ch, mid, rid)` | deletes a reported message and its report (admin) |
+| `removeMessage(ch, mid)` | deletes a reported message and records it as removed (admin) |
+| `moderation()` | `{ mid: time }` of the messages removed (admin) |
 | `putTelemetry(doc)` | this tester's report |
 | `allTelemetry()` | every tester's report (admin) |
 | `config()` | the live config |

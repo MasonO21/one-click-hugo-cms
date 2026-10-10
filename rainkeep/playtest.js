@@ -15,7 +15,7 @@
   const { UI, ACT } = KH;
   const net = KH.net;
   let S = null;
-  KH.hooks.defaults.push((s) => { s.pt = { first: 0, last: 0, days: [], sessions: 0, secs: 0, ftue: {}, feat: {}, err: [], fb: [], motd: null }; });
+  KH.hooks.defaults.push((s) => { s.pt = { first: 0, last: 0, days: [], sessions: 0, secs: 0, ftue: {}, feat: {}, err: [], fb: [], rep: [], motd: null }; });
   const today = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 864e5); };
   const now = () => Date.now();
 
@@ -80,7 +80,7 @@
       stage: S.stage, wyrm: S.lv.wyrm, power: Math.round(KH.power()), ver: DATA.version,
       feat: Object.fromEntries(feat), spend: { n: (S.purchases || []).length || 0, usd: Math.round((S.spentUsd || 0) * 100) / 100 },
       dev: { tier: g.tier || null, gpu: (g.device && g.device.gpu) || '', mem: (g.device && g.device.mem) || 0, cores: (g.device && g.device.cores) || 0, w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1, ua: navigator.userAgent.slice(0, 120), ui: T.ui || null, keep3d: T.keep3d || null, dunes3d: T.dunes3d || null },
-      fps: KH.gfx && KH.gfx.fps ? KH.gfx.fps() : null, err: P.err, fb: P.fb,
+      fps: KH.gfx && KH.gfx.fps ? KH.gfx.fps() : null, err: P.err, fb: P.fb, rep: P.rep || [],
     };
   }
   KH.playtestReport = () => (S ? report() : null);
@@ -147,7 +147,7 @@
   ACT.ptremove = async (rid) => {
     const r = (T.reports || []).find((x) => x.rid === rid);
     if (!r || !net.isAdmin()) return;
-    if (await net.removeMessage(r.ch, r.mid, r.rid)) { T.reports = T.reports.filter((x) => x.rid !== rid); KH.toast('Message removed.', 'good'); KH.renderAll(); }
+    if (await net.removeMessage(r.ch, r.mid)) { T.reports = T.reports.filter((x) => x.rid !== rid); KH.toast('Message removed.', 'good'); KH.renderAll(); }
   };
   ACT.ptcopy = () => {
     const txt = summaryText();
@@ -158,7 +158,16 @@
     T.at = now();
     const list = await net.allTelemetry();
     T.list = list.filter((r) => r && typeof r === 'object' && r.first);
-    T.reports = await net.reports();
+    // chat reports travel in the reporters' own reports; the ones whose message the owner removed drop off
+    const removed = await net.moderation(), seen = new Set();
+    T.reports = [];
+    for (const r of T.list) for (const x of Array.isArray(r.rep) ? r.rep : []) {
+      const mid = KH.netClean.idOf(x.mid), ch = KH.netClean.str(x.ch, 60);
+      if (!mid || removed[mid] || seen.has(mid)) continue;
+      seen.add(mid);
+      T.reports.push({ rid: mid, mid, ch, by: KH.netClean.idOf(x.by), text: KH.netClean.str(x.text, 200), rep: r.id, rat: N(x.rat) });
+    }
+    T.reports.sort((a, b) => b.rat - a.rat);
     T.names = await net.names(T.list.map((r) => r.id).concat(T.reports.map((r) => r.by)));
     KH.renderAll();
   }
@@ -224,5 +233,12 @@
     };
   };
   KH.side.push({ id: 'playtest', icon: 'i-scroll', label: 'Playtest', act: 'playtest', show: () => net.isAdmin() });
-  KH.playtest = { FTUE, stats, summaryText, report: () => (S ? report() : null) };
+  // a chat message reported from the Square or a Caravan (mp.js): kept with this player's report, last twenty
+  const addReport = (r) => {
+    if (!S) return false;
+    S.pt.rep = (S.pt.rep || []).filter((x) => x.mid !== r.mid).concat({ ...r, rat: now() }).slice(-20);
+    send(true);
+    return true;
+  };
+  KH.playtest = { FTUE, stats, summaryText, addReport, report: () => (S ? report() : null) };
 })();

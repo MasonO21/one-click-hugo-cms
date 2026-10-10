@@ -446,7 +446,8 @@
     const sh = UI.sheet, list = sh && M.chat[sh.ch === 'world' ? 'world' : 'al'], m = list && list.find((x) => x.mid === sh.mid);
     UI.sheet = null;
     if (!m) return;
-    const ok = await net.report({ ch: sh.ch === 'world' ? 'world' : `al-${S.online.aid}`, mid: m.mid, by: m.by, text: m.text, at: m.at });
+    // the report goes to the game's keepers with this player's playtest report (playtest.js), which only they read
+    const ok = KH.playtest ? KH.playtest.addReport({ ch: sh.ch === 'world' ? 'world' : `al-${S.online.aid}`, mid: m.mid, by: m.by, text: m.text, at: m.at }) : false;
     KH.toast(ok ? 'Reported. The game\'s keepers will look at it.' : 'The report could not be sent just now.', ok ? 'good' : 'warn');
   };
   KH.sheets.mpmsg = () => {
@@ -531,8 +532,11 @@
     const t = UI.mpTab || 'caravan';
     const body = t === 'arena' ? arenaView() : t === 'board' ? boardView() : t === 'square' ? squareView() : caravanView();
     const al = !!S.online.aid && (helpable().length > 0 || unread('al'));
-    return `${head}<div class="panel-head"><h2>Wardens online</h2><p>${M.top.length ? `${M.top.length} warden${M.top.length === 1 ? '' : 's'} play this link · ${M.top.filter(onlineNow).length} here now` : 'Real players on this link'}</p></div>
-      ${seg(t, [['caravan', 'Caravan', al], ['arena', 'Arena', S.online.log.some((l) => l.win && !l.revenged)], ['board', 'Wardens'], ['square', 'Square', unread('world')]], 'mptab')}${body}`;
+    // alone on the link: how friends get here (the share menu is the platform's, the game can't open it)
+    const alone = M.topAt && M.top.filter((p) => p.id !== me()).length === 0
+      ? `<div class="card stack mp-alone"><b>Only you so far</b><p class="small">${net.isAdmin() ? 'Share this game from the <b>Share</b> menu at the top of the page and give friends <b>Contributor</b> access: they appear here as soon as they open it, and you can found a Caravan together.' : 'Friends join when the game\'s owner shares it with them (Contributor access). They appear here as soon as they open it.'}</p></div>` : '';
+    return `${head}<div class="panel-head"><h2>Wardens online</h2><p>${M.top.length ? `${M.top.length} warden${M.top.length === 1 ? '' : 's'} · ${M.top.filter(onlineNow).length} online` : 'Real players'}</p></div>
+      ${alone}${seg(t, [['caravan', 'Caravan', al], ['arena', 'Arena', S.online.log.some((l) => l.win && !l.revenged)], ['board', 'Wardens'], ['square', 'Square', unread('world')]], 'mptab')}${body}`;
   };
   KH.mp.helpable = helpable;
 })();

@@ -5,7 +5,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { start } = require('./helpers');
+const http = require('node:http');
+const { start, openStream } = require('./helpers');
 
 test('health, headers and CORS', async (t) => {
   const s = await start();
@@ -129,4 +130,42 @@ test('cloud save: put, get, 404 before, 512 KB cap', async (t) => {
   // another player can't read it
   const q = await s.player('bo');
   assert.equal((await s.req('GET', '/v1/save', { token: q.token })).status, 404);
+});
+
+test('a chunked body over 600 KB is refused without buffering it all', async (t) => {
+  const s = await start();
+  t.after(s.stop);
+  const p = await s.player('ann');
+  const { port } = s.server.address();
+  const status = await new Promise((resolve, reject) => {
+    const req = http.request({ host: '127.0.0.1', port, method: 'PUT', path: '/v1/telemetry', headers: { Authorization: 'Bearer ' + p.token, 'Content-Type': 'application/json' } }, (res) => {
+      res.resume();
+      resolve(res.statusCode);
+    });
+    req.on('error', reject);
+    req.write('{"pad":"');
+    const chunk = 'x'.repeat(64 * 1024);
+    for (let i = 0; i < 12; i++) req.write(chunk); // 768 KB, sent chunked
+    req.end('"}');
+  });
+  assert.equal(status, 413);
+});
+
+test('request logs carry method, path and status, never a token', async (t) => {
+  const lines = [];
+  const s = await start({ log: (l) => lines.push(l) });
+  t.after(s.stop);
+  const p = await s.player('ann');
+  await s.req('GET', '/v1/me', { token: p.token });
+  await s.req('GET', '/v1/me', { token: 'wrong-token-value' });
+  const st = await openStream(s.url, p.token);
+  await st.next((e) => e.type === 'hello');
+  st.close();
+  assert.ok(lines.some((l) => l.startsWith('GET /v1/me 200')));
+  assert.ok(lines.some((l) => l.startsWith('GET /v1/stream 200')));
+  assert.ok(lines.some((l) => l.startsWith('POST /v1/auth 200')));
+  for (const l of lines) {
+    assert.ok(!l.includes(p.token), 'token in log: ' + l);
+    assert.ok(!l.includes('wrong-token-value') && !l.includes('test-device'), 'secret in log: ' + l);
+  }
 });

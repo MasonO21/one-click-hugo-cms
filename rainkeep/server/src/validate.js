@@ -116,6 +116,8 @@ function cleanAlliance(b, create) {
   if (c) out.color = c;
   const o = bool(b.open, null);
   if (o !== null) out.open = o;
+  // a leader hands over to a member (the route checks the id belongs to a member)
+  if (typeof b.leader === 'string' && b.leader && b.leader.length <= 64) out.leader = b.leader;
   return out;
 }
 

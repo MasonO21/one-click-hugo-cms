@@ -26,9 +26,15 @@ class Hub {
     return sub;
   }
 
+  // Ends a stream and closes its connection: kept alive, it would hold up a shutdown until the idle timeout.
   drop(sub) {
     this.subs.delete(sub);
-    try { sub.res.end(); } catch (e) { /* already gone */ }
+    const sock = sub.res.socket;
+    try {
+      sub.res.end(() => { if (sock) sock.destroy(); });
+    } catch (e) {
+      if (sock) sock.destroy();
+    }
   }
 
   write(sub, chunk) {

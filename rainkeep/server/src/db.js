@@ -95,11 +95,11 @@ function allianceOut(r) {
 }
 
 function chatOut(r) {
-  return { id: String(r.mid), by: r.author, name: r.name || '', at: r.at, text: r.text };
+  return { mid: String(r.mid), by: r.author, name: r.name || '', at: r.at, text: r.text };
 }
 
 function battleOut(r) {
-  return { id: r.bid, att: r.att, def: r.def, win: !!r.win, at: r.at, d: r.d, ap: r.ap, dp: r.dp };
+  return { bid: r.bid, att: r.att, def: r.def, win: !!r.win, at: r.at, d: r.d, ap: r.ap, dp: r.dp };
 }
 
 function openDb(file) {
@@ -236,9 +236,12 @@ function openDb(file) {
       q(`INSERT OR IGNORE INTO reports (channel, mid, author, text, msg_at, reporter, at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`).run(r.channel, r.mid, r.author, r.text, r.msgAt, r.reporter, r.at);
     },
+    // the shape the game's playtest sheet reads: rid (report), ch, mid, by (author), text, at (sent), rep (reporter), rat (reported)
     reports: (limit) => q('SELECT * FROM reports ORDER BY id DESC LIMIT ?').all(limit).map((r) => ({
-      id: r.id, channel: r.channel, mid: String(r.mid), by: r.author, text: r.text, msgAt: r.msg_at, reporter: r.reporter, at: r.at,
+      rid: String(r.id), ch: r.channel, mid: String(r.mid), by: r.author, text: r.text, at: r.msg_at, rep: r.reporter, rat: r.at,
     })),
+    deleteReport: (rid) => q('DELETE FROM reports WHERE id = ?').run(rid).changes,
+    deleteChat: (channel, mid) => q('DELETE FROM chat WHERE channel = ? AND mid = ?').run(channel, mid).changes,
 
     // ---- help requests
     addHelp: (h) => q(`INSERT INTO helps (rid, aid, pid, plot, label, at, end_at, need) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -304,8 +307,9 @@ function openDb(file) {
 
     // ---- Arena battles
     addBattle: (b) => q('INSERT INTO battles (bid, att, def, win, at, d, ap, dp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(b.id, b.att, b.def, b.win ? 1 : 0, b.at, b.d, b.ap, b.dp),
+      .run(b.bid, b.att, b.def, b.win ? 1 : 0, b.at, b.d, b.ap, b.dp),
     attacksSince: (att, since) => q('SELECT COUNT(*) AS n FROM battles WHERE att = ? AND at >= ?').get(att, since).n,
+    attacked: (att, def, since) => !!q('SELECT 1 AS x FROM battles WHERE att = ? AND def = ? AND at >= ? LIMIT 1').get(att, def, since),
     battlesAgainst: (def, since, limit) => q('SELECT * FROM battles WHERE def = ? AND at > ? ORDER BY at, bid LIMIT ?')
       .all(def, since, limit).map(battleOut),
     pruneBattles: (before) => q('DELETE FROM battles WHERE at < ?').run(before),
@@ -324,7 +328,7 @@ function openDb(file) {
 }
 
 function helpOut(r, hs) {
-  return { id: r.rid, aid: r.aid, by: r.pid, plot: r.plot, label: r.label, at: r.at, end: r.end_at, need: r.need, hs: hs || {} };
+  return { rid: r.rid, aid: r.aid, by: r.pid, plot: r.plot, label: r.label, at: r.at, end: r.end_at, need: r.need, hs: hs || {} };
 }
 
 module.exports = { openDb, profileOut, SCHEMA };

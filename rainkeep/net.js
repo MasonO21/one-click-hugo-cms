@@ -115,10 +115,14 @@
       postBattle: (rec) => safe(db.collection('bt').add({ ...rec, att: me, at: Date.now() }).then(() => true), false),
       battlesAgainst: (since) => safe(db.collection('bt').where('def', '==', me).where('at', '>', since).limit(50).get().then((s) => docs(s).map((d) => cleanBattle(d.id, d.data()))), []),
       dropBattles: (before) => safe(db.collection('bt').where('def', '==', me).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`bt/${d.id}`).delete()))), null),
-      // a reported chat message, for the owner's Playtest sheet; the owner removes it from there
-      report: (r) => safe(db.collection('rp').add({ ch: str(r.ch, 60), mid: idOf(r.mid), by: idOf(r.by), text: str(r.text, 200), at: num(r.at, 0, 1e14), rep: me, rat: Date.now() }).then(() => true), false),
-      reports: () => safe(db.collection('rp').orderBy('rat', 'desc').limit(50).get().then((s) => docs(s).map((d) => ({ rid: d.id, ch: str(d.data().ch, 60), mid: idOf(d.data().mid), by: idOf(d.data().by), text: str(d.data().text, 200), rep: idOf(d.data().rep), rat: num(d.data().rat, 0, 1e14) }))), []),
-      removeMessage: (ch, mid, rid) => safe(Promise.all([/^(world|al-[\w:@+.~-]+)$/.test(ch) && idOf(mid) ? db.doc(`chat/${ch}/m/${mid}`).delete() : null, rid ? db.doc(`rp/${rid}`).delete() : null]).then(() => true), false),
+      // moderation (the owner): a reported message is deleted and remembered as removed in cfg/mod, so the
+      // reports that name it (they travel in the reporters' own playtest reports, playtest.js) drop off the sheet
+      removeMessage: (ch, mid) => {
+        if (!/^(world|al-[\w:@+.~-]+)$/.test(ch) || !idOf(mid)) return Promise.resolve(false);
+        const mod = db.doc('cfg/mod');
+        return safe(db.doc(`chat/${ch}/m/${mid}`).delete().then(() => write('cfg/mod', async () => { const d = await mod.get(); if (d.exists) await mod.update({ removed: { [mid]: Date.now() } }); else await mod.set({ removed: { [mid]: Date.now() } }); })), false);
+      },
+      moderation: () => safe(db.doc('cfg/mod').get().then((d) => (d.exists && d.data().removed && typeof d.data().removed === 'object' ? d.data().removed : {})), {}),
       putTelemetry: (doc) => write(`pt/${me}`, () => db.doc(`pt/${me}`).set(doc)),
       allTelemetry: () => safe(db.collection('pt').limit(1000).get().then((s) => docs(s).map((d) => ({ id: d.id, ...d.data() }))), []),
       config: () => safe(db.doc('cfg/live').get().then((d) => (d.exists ? d.data() : null)), null),
@@ -134,7 +138,7 @@
     alliances: () => Promise.resolve([]), alliance: none, createAlliance: none, updateAlliance: none, joinAlliance: none, leaveAlliance: none,
     watchChat: () => () => {}, sendChat: () => Promise.resolve(false), askHelp: none, giveHelp: () => Promise.resolve(false), dropHelp: none, watchHelps: () => () => {}, oldHelps: none,
     boss: none, hitBoss: () => Promise.resolve(false), postBattle: () => Promise.resolve(false), battlesAgainst: () => Promise.resolve([]), dropBattles: none,
-    putTelemetry: () => Promise.resolve(false), allTelemetry: () => Promise.resolve([]), config: none, report: () => Promise.resolve(false), reports: () => Promise.resolve([]), removeMessage: () => Promise.resolve(false),
+    putTelemetry: () => Promise.resolve(false), allTelemetry: () => Promise.resolve([]), config: none, removeMessage: () => Promise.resolve(false), moderation: () => Promise.resolve({}),
   };
 
   // KH.net forwards to the backend once it is known; until then (and without one) it is offline

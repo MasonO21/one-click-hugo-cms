@@ -58,7 +58,7 @@ test('list: newest first with member counts, limit capped at 50', async (t) => {
   assert.equal((await s.req('GET', '/v1/alliances?limit=2', { token: q.token })).body.length, 2);
 });
 
-test('edits are leader only; name and leader are not editable', async (t) => {
+test('edits are leader only; the name is not editable; the lead passes only to a member', async (t) => {
   const s = await start();
   t.after(s.stop);
   const a = await s.player('a');
@@ -68,7 +68,7 @@ test('edits are leader only; name and leader are not editable', async (t) => {
   const no = await s.req('PATCH', `/v1/alliances/${aid}`, { token: b.token, body: { motto: 'mine now' } });
   assert.equal(no.status, 403);
   assert.equal(no.body.error, 'not_leader');
-  const ok = await s.req('PATCH', `/v1/alliances/${aid}`, { token: a.token, body: { motto: 'Water first', color: '#112233', open: false, name: 'Renamed', leader: b.id } });
+  const ok = await s.req('PATCH', `/v1/alliances/${aid}`, { token: a.token, body: { motto: 'Water first', color: '#112233', open: false, name: 'Renamed' } });
   assert.equal(ok.status, 200);
   assert.equal(ok.body.motto, 'Water first');
   assert.equal(ok.body.color, '#112233');
@@ -76,6 +76,12 @@ test('edits are leader only; name and leader are not editable', async (t) => {
   assert.equal(ok.body.name, 'Lions');
   assert.equal(ok.body.leader, a.id);
   assert.equal((await s.req('PATCH', '/v1/alliances/nope', { token: a.token, body: {} })).status, 404);
+  // handing over the lead: only to a member, and then the old leader can no longer edit
+  const stranger = await s.player('stranger');
+  assert.equal((await s.req('PATCH', `/v1/alliances/${aid}`, { token: a.token, body: { leader: stranger.id } })).body.error, 'bad_leader');
+  assert.equal((await s.req('PATCH', `/v1/alliances/${aid}`, { token: a.token, body: { leader: b.id } })).body.leader, b.id);
+  assert.equal((await s.req('PATCH', `/v1/alliances/${aid}`, { token: a.token, body: { motto: 'back' } })).status, 403);
+  assert.equal((await s.req('PATCH', `/v1/alliances/${aid}`, { token: b.token, body: { open: true } })).body.open, true);
 });
 
 test('join: closed Caravans refuse, the 31st member is refused, one Caravan at a time', async (t) => {

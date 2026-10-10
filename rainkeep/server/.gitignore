@@ -1,0 +1,2 @@
+# the local development database (DB_PATH defaults to server/data/rainkeep.db)
+data/

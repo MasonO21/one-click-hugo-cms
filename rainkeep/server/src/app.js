@@ -179,13 +179,13 @@ function createServer(opts = {}) {
 
   async function handle(req, res) {
     const t0 = process.hrtime.bigint();
-    let path = '-';
+    // the path only: the query can carry the stream's token, and headers are never logged
+    const path = String(req.url || '').split('?')[0].slice(0, 200);
     try {
       common(req, res);
       if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
       let url;
       try { url = new URL(req.url, 'http://localhost'); } catch (e) { fail(400, 'bad_url', 'Bad URL.'); }
-      path = url.pathname;
       const m = match(req.method, url.pathname);
       if (!m) fail(404, 'not_found', 'No such route.');
       if (m === 405) fail(405, 'method_not_allowed', 'That method is not allowed on this route.');
@@ -207,7 +207,6 @@ function createServer(opts = {}) {
         send(res, 500, { error: 'server_error', message: 'Something went wrong on the server.' });
       }
     } finally {
-      // the path only: the query can carry the stream's token, and headers are never logged
       const ms = Number(process.hrtime.bigint() - t0) / 1e6;
       log(`${req.method} ${path} ${res.statusCode} ${ms.toFixed(1)}ms`);
     }
@@ -338,12 +337,19 @@ function createServer(opts = {}) {
     a.members = db.members(a.aid);
     return a;
   });
+  // Leader only: motto, colour, open, and handing the lead to another member (the game does that before a leader
+  // leaves; a leader who leaves without handing over is replaced by the longest-standing member).
   route('PATCH', '/v1/alliances/:aid', (c) => {
     const a = mustAlliance(c.params.aid);
     if (a.leader !== c.me.id) fail(403, 'not_leader', 'Only the leader can change the Caravan.');
-    db.updateAlliance(a.aid, V.cleanAlliance(c.body, false));
+    const f = V.cleanAlliance(c.body, false);
+    if (f.leader !== undefined && f.leader !== a.leader) {
+      const p = db.playerById(f.leader);
+      if (!p || p.aid !== a.aid) fail(400, 'bad_leader', 'The new leader must be a member of the Caravan.');
+    }
+    db.updateAlliance(a.aid, f);
     const out = db.alliance(a.aid);
-    hub.to(db.memberIds(a.aid), 'alliance', { type: 'update', aid: a.aid, alliance: out });
+    hub.to(db.memberIds(a.aid), 'alliance', { type: 'update', aid: a.aid, alliance: out, leader: out.leader });
     return out;
   });
   route('POST', '/v1/alliances/:aid/join', (c) => {
@@ -390,7 +396,7 @@ function createServer(opts = {}) {
     const ch = chatChannel(c);
     const msg = /^\d{1,15}$/.test(c.params.mid) ? db.chatMsg(ch, Number(c.params.mid)) : null;
     if (!msg) fail(404, 'no_message', 'That message is gone.');
-    db.addReport({ channel: ch, mid: Number(msg.id), author: msg.by, text: msg.text, msgAt: msg.at, reporter: c.me.id, at: c.now });
+    db.addReport({ channel: ch, mid: Number(msg.mid), author: msg.by, text: msg.text, msgAt: msg.at, reporter: c.me.id, at: c.now });
     return { ok: true };
   });
 
@@ -419,16 +425,16 @@ function createServer(opts = {}) {
     const n = Object.keys(r.hs).length;
     if (n >= r.need) fail(409, 'help_full', 'This request has all the help it needs.');
     if (r.end <= c.now) fail(409, 'ended', 'That build has finished.');
-    db.addHelpHit(r.id, c.me.id, c.now);
-    hub.to(db.memberIds(r.aid), 'help', { type: 'help', aid: r.aid, rid: r.id, by: c.me.id, n: n + 1 });
+    db.addHelpHit(r.rid, c.me.id, c.now);
+    hub.to(db.memberIds(r.aid), 'help', { type: 'help', aid: r.aid, rid: r.rid, by: c.me.id, n: n + 1 });
     return { ok: true, n: n + 1 };
   });
   route('DELETE', '/v1/helps/:rid', (c) => {
     const r = db.help(c.params.rid);
     if (!r) fail(404, 'no_request', 'That help request is gone.');
     if (r.by !== c.me.id) fail(403, 'not_yours', 'Only the player who asked can remove a request.');
-    db.deleteHelp(r.id);
-    hub.to(db.memberIds(r.aid), 'help', { type: 'drop', aid: r.aid, rid: r.id });
+    db.deleteHelp(r.rid);
+    hub.to(db.memberIds(r.aid), 'help', { type: 'drop', aid: r.aid, rid: r.rid });
     return { ok: true };
   });
 
@@ -468,7 +474,9 @@ function createServer(opts = {}) {
 
   // ---- Arena
   // The attacker's game fights the battle and reports the result; the server checks the limits, takes both
-  // powers and Arena points from its own records (the request's ap/dp are ignored) and moves the points itself.
+  // powers and Arena points from its own records (the request's ap/dp/d are ignored) and moves the points itself.
+  // A revenge attack (on a keep that attacked the caller in the last three days) may be outside the power band,
+  // as the game offers it whatever the gap: the attacker chose that fight.
   route('POST', '/v1/battles', (c) => {
     const defId = typeof c.body.def === 'string' ? c.body.def : '';
     if (!defId) fail(400, 'bad_def', "def (the defender's id) is required.");
@@ -481,11 +489,13 @@ function createServer(opts = {}) {
     if (used >= ATTACKS_PER_DAY) {
       fail(429, 'attack_limit', `${ATTACKS_PER_DAY} Arena attacks a day.`, { 'Retry-After': String(Math.ceil((dayStart + DAY - c.now) / 1000)) });
     }
-    if (!inBand(c.me.power, def.power)) fail(403, 'out_of_range', 'Arena opponents must be within 40% of your power.');
+    if (!inBand(c.me.power, def.power) && !db.attacked(def.id, c.me.id, c.now - BATTLE_TTL)) {
+      fail(403, 'out_of_range', 'Arena opponents must be within 40% of your power.');
+    }
     const win = c.body.win;
     const d = win ? arenaPoints(c.me.lp, def.lp) : 0;
     const lp = win ? c.me.lp + d : Math.max(0, c.me.lp - LOSS_COST);
-    const rec = { id: newId(9), att: c.me.id, def: def.id, win, at: c.now, d, ap: c.me.power, dp: def.power };
+    const rec = { bid: newId(9), att: c.me.id, def: def.id, win, at: c.now, d, ap: c.me.power, dp: def.power };
     db.tx(() => {
       db.addBattle(rec);
       db.setLp(c.me.id, lp);
@@ -493,7 +503,7 @@ function createServer(opts = {}) {
     });
     db.pruneBattles(c.now - BATTLE_TTL);
     hub.to([def.id], 'battle', rec);
-    return { bid: rec.id, win, d, lp, left: ATTACKS_PER_DAY - used - 1 };
+    return { bid: rec.bid, win, d, lp, left: ATTACKS_PER_DAY - used - 1 };
   });
   route('GET', '/v1/battles', (c) => db.battlesAgainst(c.me.id, Math.max(V.time(c.q.get('since'), 0), c.now - BATTLE_TTL), 100));
 
@@ -504,6 +514,20 @@ function createServer(opts = {}) {
   });
   route('GET', '/v1/admin/telemetry', () => db.allTelemetry(), { auth: 'admin' });
   route('GET', '/v1/admin/reports', (c) => db.reports(V.int(c.q.get('limit'), 1, 500, 200)), { auth: 'admin' });
+  // a moderator removes a reported message (from every reader's list) and closes the report
+  route('DELETE', '/v1/admin/chat/:channel/:mid', (c) => {
+    const ch = c.params.channel;
+    if (!/^(world|al-.+)$/.test(ch) || !/^\d{1,15}$/.test(c.params.mid)) fail(404, 'no_message', 'That message is gone.');
+    if (!db.deleteChat(ch, Number(c.params.mid))) fail(404, 'no_message', 'That message is gone.');
+    const removed = { channel: ch, removed: c.params.mid };
+    if (ch === 'world') hub.all('chat', removed);
+    else hub.to(db.memberIds(ch.slice(3)), 'chat', removed);
+    return { ok: true };
+  }, { auth: 'admin' });
+  route('DELETE', '/v1/admin/reports/:rid', (c) => {
+    if (!/^\d{1,15}$/.test(c.params.rid) || !db.deleteReport(Number(c.params.rid))) fail(404, 'no_report', 'No such report.');
+    return { ok: true };
+  }, { auth: 'admin' });
   route('GET', '/v1/config', () => db.getConfig() || DEFAULT_CONFIG);
   route('PUT', '/v1/admin/config', (c) => {
     const cfg = V.cleanConfig(c.body);
