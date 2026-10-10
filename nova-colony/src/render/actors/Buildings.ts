@@ -133,6 +133,8 @@ const _c = new THREE.Color();
 const _o = new THREE.Vector3();
 const _d = new THREE.Vector3();
 const _targets = new Float64Array(6);
+/** A lamp below this intensity counts as out (see updateLights). */
+const LAMP_OFF = 1e-3;
 /** Strongest occlusion fade (a faint stipple keeps the building readable). */
 const FADE_MAX = 0.85;
 /** Sight-line margin (world units) around a building's footprint. */
@@ -1111,6 +1113,11 @@ export class Buildings {
       const target = ls.intensity * 7 * night * flicker;
       l.intensity += (target - l.intensity) * (1 - Math.exp(-dt * 6));
     }
+    // by day every lamp has faded out: the lit shaders skip their point-light loop (materials LambertUniforms.lamps;
+    // a lamp this faint adds under a thousandth of its light, invisible)
+    let lamps = 0;
+    for (let i = 0; i < this.lights.length; i++) if (this.lights[i].intensity > lamps) lamps = this.lights[i].intensity;
+    ctx.mats.lambert.lamps.value = lamps > LAMP_OFF ? lamps : 0;
   }
 
   private updateShields(dt: number): void {

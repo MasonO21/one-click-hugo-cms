@@ -244,7 +244,7 @@ export class Characters {
     this.hatGlass.renderOrder = 3;
     this.hatOrbit = new Batch(this.group, emptyGeometry(), mats, 3, {});
     this.all.push(this.hat, this.outfitExtra, this.uniBody, this.uniHead, this.hatOrbit);
-    this.vehicle = new THREE.Mesh(vehicleGeometry('atv'), mats);
+    this.vehicle = new THREE.Mesh(vehicleGeometry('atv'), ctx.mats.litPlain);
     this.vehicle.castShadow = true;
     for (const m of [this.hatGlass, this.vehicle]) {
       m.matrixAutoUpdate = false;

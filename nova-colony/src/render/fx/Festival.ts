@@ -215,7 +215,7 @@ export class Festival {
       strand(b, pts[i * 3], pts[i * 3 + 1], pts[i * 3 + 2], pts[j * 3], pts[j * 3 + 1], pts[j * 3 + 2], i);
     }
     if (b.isEmpty) return;
-    const mesh = new THREE.Mesh(b.build(), ctx.mats.lit);
+    const mesh = new THREE.Mesh(b.build(), ctx.mats.litPlain);
     mesh.position.set(this.cx, this.cy, this.cz);
     mesh.castShadow = false;
     mesh.receiveShadow = false;

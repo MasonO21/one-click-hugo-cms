@@ -114,7 +114,27 @@ export interface LambertUniforms {
   desat: THREE.IUniform<number>;
   /** Saturation of the lit result: 1 = as painted, > 1 more vivid (sunny daytime grade). */
   sat: THREE.IUniform<number>;
+  /**
+   * Brightest lamp (point light) intensity, 0 when every lamp is out (Buildings.updateLights). At 0 the shaders skip
+   * the point-light loop: by day the three lamps would otherwise cost every lit pixel three light evaluations that
+   * add exactly nothing. A uniform branch: no program change at dusk or dawn.
+   */
+  lamps: THREE.IUniform<number>;
 }
+
+/**
+ * three's lights_fragment_begin with the point-light loop behind `uLamps > 0.0`. Falls back to the stock chunk if a
+ * three.js update changes its text (the branch is an optimisation, never needed for the look).
+ */
+export const LIGHTS_BEGIN_LAMPS: string = (() => {
+  const src = THREE.ShaderChunk.lights_fragment_begin;
+  const start = /#pragma unroll_loop_start\s*\n\s*for \( int i = 0; i < NUM_POINT_LIGHTS; i \+\+ \) \{/.exec(src);
+  if (!start) return src;
+  const end = src.indexOf('#pragma unroll_loop_end', start.index);
+  if (end < 0) return src;
+  const after = end + '#pragma unroll_loop_end'.length;
+  return src.slice(0, start.index) + 'if ( uLamps > 0.0 ) {\n\t' + src.slice(start.index, after) + '\n\t}' + src.slice(after);
+})();
 
 /**
  * Apply the shared shading model to a MeshLambertMaterial's compiled shader: wrapped N·L, the night
@@ -126,9 +146,11 @@ export interface LambertUniforms {
 export function patchLambert(shader: { uniforms: Record<string, THREE.IUniform>; fragmentShader: string }, u: LambertUniforms, rim: boolean | THREE.IUniform<number> = true): void {
   shader.uniforms.uDesat = u.desat;
   shader.uniforms.uSat = u.sat;
+  shader.uniforms.uLamps = u.lamps;
   shader.fragmentShader = shader.fragmentShader
     .replace('#include <lights_lambert_pars_fragment>', LAMBERT_WRAP_PARS)
-    .replace('#include <common>', '#include <common>\nuniform float uDesat;\nuniform float uSat;')
+    .replace('#include <common>', '#include <common>\nuniform float uDesat;\nuniform float uSat;\nuniform float uLamps;')
+    .replace('#include <lights_fragment_begin>', LIGHTS_BEGIN_LAMPS)
     .replace(OUTGOING_LINE, OUTGOING_GRADED);
   if (rim) {
     shader.uniforms.uRim = u.rim;
@@ -233,7 +255,7 @@ export class Materials {
   private readonly uGlow = { value: 1 };
   private readonly uGlass = { value: DAY_GLASS.clone() };
   /** Shading-model uniforms (sky rim, night desaturation, day saturation) shared with the terrain material. */
-  readonly lambert: LambertUniforms = { rim: { value: new THREE.Color(0, 0, 0) }, desat: { value: 0 }, sat: { value: 1 } };
+  readonly lambert: LambertUniforms = { rim: { value: new THREE.Color(0, 0, 0) }, desat: { value: 0 }, sat: { value: 1 }, lamps: { value: 1 } };
   /** LOD band uniforms: focus (x, z) and (near - band, 1 / band, mid - band, 1 / band). */
   private readonly uLodFocus = { value: new THREE.Vector2() };
   private readonly uLod = { value: new THREE.Vector4(1e9, 1, 1e9, 1) };
@@ -245,6 +267,12 @@ export class Materials {
   readonly lit: THREE.MeshLambertMaterial;
   /** Alias kept for callers that think in "material sets" — it is the same single material. */
   readonly set: THREE.Material;
+  /**
+   * `lit` for plain (non-instanced) meshes: the player's vehicle and pet body, the festival dressing. The same program
+   * as theirs, but a material of its own: three re-resolves a material's program each time consecutive draws switch
+   * between instanced and plain meshes, and `set` draws dozens of instanced batches.
+   */
+  readonly litPlain: THREE.MeshLambertMaterial;
   /** `lit` with the softer foliage rim: near nature nodes (the LOD variants below carry it too). Same program as `lit`. */
   readonly nature: THREE.MeshLambertMaterial;
   /** `lit` + per-instance dither fade (buildings that occlude the player). */
@@ -282,6 +310,7 @@ export class Materials {
   constructor() {
     this.lit = this.makeLit();
     this.set = this.lit;
+    this.litPlain = this.makeLit();
     const rim = this.uRimNature;
     this.nature = this.makeLit({}, { rim });
     this.litFade = this.makeLit({}, { dither: 'attr' });

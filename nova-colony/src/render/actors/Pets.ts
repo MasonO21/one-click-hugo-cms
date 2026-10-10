@@ -36,7 +36,7 @@ export class PetActor {
     parent: THREE.Object3D,
   ) {
     const mats = ctx.mats.set;
-    this.body = new THREE.Mesh(EMPTY, mats);
+    this.body = new THREE.Mesh(EMPTY, ctx.mats.litPlain);
     this.body.matrixAutoUpdate = false;
     this.body.castShadow = true;
     this.body.visible = false;

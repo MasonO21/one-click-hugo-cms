@@ -2,11 +2,13 @@
  * Mobile performance guarantees of the render core (no WebGL needed: three.js objects only):
  *  - Batch uploads only what was written or changed (update ranges), nothing for an empty batch, and never makes
  *    three.js switch a shared material between program variants (every batch carries instance colours);
- *  - the alien far LOD keeps each model's silhouette data (height) at a fraction of the triangles.
+ *  - the alien far LOD keeps each model's silhouette data (height) at a fraction of the triangles;
+ *  - the lit shaders skip the point-light loop while every lamp is out (a uniform branch, same program).
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Batch, queueRange } from '../src/render/core/Batch';
+import { LIGHTS_BEGIN_LAMPS, Materials, patchLambert } from '../src/render/core/materials';
 import { alienGeometry, KNOWN_ALIEN_MODELS } from '../src/render/models/aliens';
 
 const tris = (g: THREE.BufferGeometry) => (g.index ? g.index.count : g.attributes.position.count) / 3;
@@ -137,5 +139,29 @@ describe('alien far LOD', () => {
     alienGeometry('crawler', false, 1);
     expect(alienGeometry('crawler')).toBe(a);
     expect(alienGeometry('crawler', false, 0)).toBe(a);
+  });
+});
+
+describe('lamps off: point-light loop skipped by day', () => {
+  it('the patched chunk wraps the point-light loop in a uniform branch (and keeps it unrollable)', () => {
+    expect(LIGHTS_BEGIN_LAMPS).not.toBe(THREE.ShaderChunk.lights_fragment_begin);
+    const i = LIGHTS_BEGIN_LAMPS.indexOf('if ( uLamps > 0.0 ) {');
+    expect(i).toBeGreaterThan(0);
+    // the branch opens right before the point-light pragma and closes right after its loop
+    const after = LIGHTS_BEGIN_LAMPS.slice(i);
+    expect(after).toMatch(/^if \( uLamps > 0\.0 \) \{\s*#pragma unroll_loop_start\s*for \( int i = 0; i < NUM_POINT_LIGHTS; i \+\+ \) \{/);
+    expect(after).toMatch(/#pragma unroll_loop_end\s*\}/);
+    // spot lights and the rest of the chunk are untouched
+    expect(LIGHTS_BEGIN_LAMPS.replace(/if \( uLamps > 0\.0 \) \{\s*/, '').replace(/(#pragma unroll_loop_end)\s*\}/, '$1').replace(/\s+/g, '')).toBe(THREE.ShaderChunk.lights_fragment_begin.replace(/\s+/g, ''));
+  });
+
+  it('patched shaders get the shared lamps uniform', () => {
+    const mats = new Materials();
+    const shader = { uniforms: {} as Record<string, THREE.IUniform>, fragmentShader: THREE.ShaderLib.lambert.fragmentShader };
+    patchLambert(shader, mats.lambert);
+    expect(shader.uniforms.uLamps).toBe(mats.lambert.lamps);
+    expect(shader.fragmentShader).toContain('uniform float uLamps;');
+    expect(shader.fragmentShader).toContain('if ( uLamps > 0.0 )');
+    expect(shader.fragmentShader).not.toContain('#include <lights_fragment_begin>');
   });
 });
