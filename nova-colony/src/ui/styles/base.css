@@ -139,6 +139,17 @@
   font-size: 0.92em;
   border-radius: 0.85em;
 }
+/* a small button keeps its compact look but takes a finger-sized tap: its hit area reaches 44 px tall (an invisible
+   pseudo-element; .ad uses ::before for its play icon and is never small) */
+.nv-root .btn.small:not(.ad)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: max(100%, 44px);
+  transform: translateY(-50%);
+}
 .nv-root .btn.big {
   min-height: 4em;
   font-size: 1.2em;

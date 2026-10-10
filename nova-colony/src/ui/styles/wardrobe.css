@@ -440,10 +440,11 @@
   font-size: 0.95em;
 }
 .wd-effects li::before {
-  content: '✿';
+  /* the brass star of the section headings (a pink flower read as cute, not grown-up) */
+  content: '✦';
   position: absolute;
-  left: 0;
-  color: var(--pink);
+  left: 0.1em;
+  color: var(--gold-d);
 }
 .wd-colors {
   display: flex;
