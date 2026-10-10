@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CONSENT_DELAY, stepConsent, type ConsentTimer } from '../src/ui/ConsentPrompt';
 
-const fresh = (): ConsentTimer => ({ wait: CONSENT_DELAY, shown: false, away: false });
+const fresh = (): ConsentTimer => ({ armed: true, wait: CONSENT_DELAY, shown: false, away: false });
 const run = (t: ConsentTimer, busy: boolean, seconds: number) => {
   for (let s = 0; s < seconds; s += 0.1) stepConsent(t, busy, 0.1);
 };
@@ -12,7 +12,17 @@ describe('analytics consent card timing (QA: it covered the build cards the tuto
     run(t, false, CONSENT_DELAY - 0.5);
     expect(t.shown).toBe(false);
     run(t, false, 1);
-    expect(t).toEqual({ wait: 0, shown: true, away: false });
+    expect(t).toEqual({ armed: true, wait: 0, shown: true, away: false });
+  });
+
+  it('waits for a good moment (the first tier-up or a Welcome Back): nothing counts down until it is armed', () => {
+    const t: ConsentTimer = { armed: false, wait: CONSENT_DELAY, shown: false, away: false };
+    run(t, false, 120); // the whole guided opening, screen free or not
+    expect(t.shown).toBe(false);
+    expect(t.wait).toBe(CONSENT_DELAY);
+    t.armed = true;
+    run(t, false, CONSENT_DELAY + 0.5);
+    expect(t.shown).toBe(true);
   });
 
   it('does not count down while a panel, the build drawer or build mode is up', () => {
@@ -31,6 +41,6 @@ describe('analytics consent card timing (QA: it covered the build cards the tuto
     stepConsent(t, true, 0.016);
     expect(t.away).toBe(true);
     stepConsent(t, false, 0.016);
-    expect(t).toEqual({ wait: 0, shown: true, away: false });
+    expect(t).toEqual({ armed: true, wait: 0, shown: true, away: false });
   });
 });

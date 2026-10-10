@@ -59,7 +59,7 @@ export const MISSIONS: MissionDef[] = [
     id: 'm08_turret', chain: 'main', name: 'Something Stirs', description: 'Strange noises at night... Build a Scrap Turret.',
     type: 'build', target: 'scrap_turret', count: 1, reward: R({ resources: { wood: 30, stone: 25 }, xp: 20 }), next: ['m09_defend'],
     hint: 'Place the turret between your camp and the wilds.', guide: { kind: 'build_menu', ref: 'scrap_turret' },
-    onComplete: { attack: { delay: 20, warning: 120 } },
+    onComplete: { attack: { delay: 20, warning: 60 } },
   },
   {
     id: 'm09_defend', chain: 'main', name: 'First Contact', description: 'Defend the colony from the alien attack.',

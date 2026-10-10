@@ -84,6 +84,34 @@ describe('tutorial: guide target resolution', () => {
     expect(t.flag('buildPanelOpen')).toBe(true);
   });
 
+  it('the first raid\'s warning: while waiting, place a trap by the turret; then "stand near your turret" again', () => {
+    const g = makeGame();
+    advanceMainTo(g, 'm09_defend');
+    const st = g.game.state;
+    st.resources.amounts.wood = 50;
+    st.resources.amounts.stone = 50;
+    // no warning yet: the step's own guidance
+    expect(guideNow(g)!.text).toContain('Stand near your turret');
+    st.combat.phase = 'warning';
+    st.combat.nextAt = st.playTime + 60;
+    const g1 = guideNow(g)!;
+    expect(g1.text).toBe('While you wait: place a Spike Trap near your turret to slow them down.');
+    expect(g1.ui).toBe('#btn-build');
+    expect(g1.mission).toBe('m09_defend');
+    // too little time left, or nothing to pay with: back to the turret
+    st.combat.nextAt = st.playTime + 10;
+    expect(guideNow(g)!.text).toContain('Stand near your turret');
+    st.combat.nextAt = st.playTime + 60;
+    st.resources.amounts.wood = 0;
+    expect(guideNow(g)!.text).toContain('Stand near your turret');
+    // a trap is down: done
+    st.resources.amounts.wood = 50;
+    st.buildings.list.push(fakeBuilding('spike_trap', 991));
+    g.game.bus.emit('building:changed', {});
+    (g.game.sys.buildings as unknown as { rebuild?: () => void }).rebuild?.();
+    expect(guideNow(g)!.text).toContain('Stand near your turret');
+  });
+
   it('build_menu while placing that building: rings the confirm button once the spot is valid', () => {
     const g = makeGame();
     advanceMainTo(g, 'm02_shelter');

@@ -259,9 +259,11 @@ export class UI {
     // stack covers the joystick) is the world's, as if it had started there; only a quick, still tap opens the toast
     this.toasts.handoff = (id, type, x0, y0, t0, x, y) => this.input.adopt(id, type, x0, y0, t0, x, y);
 
-    this.consent = new ConsentPrompt(ctx, el, () => this.screenBusy());
-    // notifications card (iOS / Android): after the first tier-up or Welcome Back, never over the consent card
-    this.notifyPrompt = new NotifyPrompt(ctx, el, () => this.screenBusy() || this.consent.shown);
+    // analytics card: after the first tier-up's celebration or a Welcome Back, never over the notifications card
+    this.consent = new ConsentPrompt(ctx, el, () => this.screenBusy() || !!this.notifyPrompt?.shown);
+    // notifications card (iOS / Android): after the first tier-up or Welcome Back, never over the consent card; when
+    // the consent card takes that moment, the notifications card waits for the next one (one ask at a time)
+    this.notifyPrompt = new NotifyPrompt(ctx, el, () => this.screenBusy() || this.consent.shown || this.consent.pending);
 
     this.seenTier = this.game.state.colony.tier;
     this.installGlobalHandlers();
@@ -1086,7 +1088,10 @@ export class UI {
     if (!this.newsChecked) safe('ui news', () => this.maybeShowNews());
     if (this.photo.active) safe('ui photo', () => this.photo.update(dt));
     else safe('ui input', () => this.input.update(dt));
-    safe('ui consent', () => this.consent.update(dt));
+    safe('ui consent', () => {
+      this.consent.update(dt);
+      if (this.consent.pending) this.notifyPrompt.disarm();
+    });
     safe('ui notify', () => this.notifyPrompt.update(dt));
     safe('ui sync', () => this.syncSettings());
     safe('ui build', () => {

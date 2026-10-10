@@ -53,8 +53,11 @@ export class BuildMenuPanel extends Panel {
    * is pinned to the front of it), or undefined.
    */
   private guidedBuild(): string | undefined {
-    const m = /data-build="([^"]+)"/.exec(this.game.sys.tutorial.guide()?.ui ?? '');
+    const gd = this.game.sys.tutorial.guide();
+    const m = /data-build="([^"]+)"/.exec(gd?.ui ?? '');
     if (m) return this.data.building(m[1]) ? m[1] : undefined;
+    // a build step the guide made up for the moment (the first raid's "place a Spike Trap while you wait")
+    if (gd?.kind === 'build_menu' && gd.ref && this.data.building(gd.ref)) return gd.ref;
     // the guide still points at #btn-build while the drawer is opening (or at the research a locked goal needs):
     // use the mission's target directly
     const cur = this.game.sys.missions.current();

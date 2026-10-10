@@ -1,9 +1,10 @@
 /**
- * First-launch analytics consent card. Analytics are opt-in: nothing is collected until the player taps
- * "Sure" here (or enables it in Settings). The card is small, non-blocking and waits a few seconds so it
- * never covers the crash-landing moment; it also waits while the screen is busy (any panel, the build
- * drawer, build mode) and, once shown, steps aside whenever the player opens something — it sits at the
- * bottom of the screen and would otherwise cover the build cards the tutorial points at.
+ * Analytics consent card. Analytics are opt-in: nothing is collected until the player taps "Sure" here (or enables
+ * it in Settings). The card is small and non-blocking. It is armed at a calm, happy moment instead of during the
+ * guided opening (where it covered the mission card ~1:30 in): the first tier-up once its celebration has closed, or
+ * collecting a Welcome Back; a colony already past the opening that was never asked is armed at launch. It then
+ * waits a few seconds of free screen (no panel, drawer or build mode) and, once shown, steps aside whenever the
+ * player opens something.
  */
 import './styles/consent.css';
 import type { UiCtx } from './ctx';
@@ -13,23 +14,27 @@ import { btn } from './widgets';
 /** Seconds of play before the card appears on a first launch. */
 export const CONSENT_DELAY = 6;
 
-/** The card's timer: seconds left before it shows, whether it is up, and whether it has stepped aside. */
+/**
+ * The card's timer: armed (a good moment happened), seconds left before it shows, whether it is up, and whether it
+ * has stepped aside.
+ */
 export interface ConsentTimer {
+  armed: boolean;
   wait: number;
   shown: boolean;
   away: boolean;
 }
 
 /**
- * Advance the timer by one frame (in place): it only counts down while the screen is free; once the card is
- * up it steps aside while the screen is busy and comes back when it is free again.
+ * Advance the timer by one frame (in place): once armed it only counts down while the screen is free; once the
+ * card is up it steps aside while the screen is busy and comes back when it is free again.
  */
 export function stepConsent(t: ConsentTimer, busy: boolean, dt: number): void {
   if (t.shown) {
     t.away = busy;
     return;
   }
-  if (busy) return;
+  if (!t.armed || busy) return;
   t.wait -= dt;
   if (t.wait <= 0) {
     t.wait = 0;
@@ -40,10 +45,29 @@ export function stepConsent(t: ConsentTimer, busy: boolean, dt: number): void {
 
 export class ConsentPrompt {
   private el: HTMLElement | null = null;
-  private readonly timer: ConsentTimer = { wait: CONSENT_DELAY, shown: false, away: false };
+  private readonly timer: ConsentTimer = { armed: false, wait: CONSENT_DELAY, shown: false, away: false };
 
   /** `busy`: a panel, the build drawer or build mode is up — the card must not cover it. */
-  constructor(private readonly ctx: UiCtx, private readonly parent: HTMLElement, private readonly busy: () => boolean) {}
+  constructor(private readonly ctx: UiCtx, private readonly parent: HTMLElement, private readonly busy: () => boolean) {
+    const g = ctx.game;
+    const bus = g.bus;
+    bus.on('colony:tierUp', () => this.arm());
+    bus.on('offline:claimed', () => this.arm());
+    // a colony past the guided opening that was never asked (an older save): at launch
+    if (g.state.colony.tier >= 1 || g.state.tutorial.done) this.arm();
+  }
+
+  /** A good moment happened: show the card once the screen has been free for CONSENT_DELAY seconds. */
+  arm(): void {
+    if (this.timer.armed || this.ctx.game.state.settings.analyticsAsked) return;
+    this.timer.armed = true;
+    this.timer.wait = CONSENT_DELAY;
+  }
+
+  /** Armed and not answered yet: the card is coming (or up). The notifications card waits for another moment. */
+  get pending(): boolean {
+    return this.timer.armed && !this.ctx.game.state.settings.analyticsAsked;
+  }
 
   /** The card is on screen (or stepped aside, waiting to come back). */
   get shown(): boolean {

@@ -46,6 +46,11 @@ export class NotifyPrompt {
     this.wait = NOTIFY_PROMPT_DELAY;
   }
 
+  /** Not this time (the analytics card took this moment): wait for the next tier-up or Welcome Back. */
+  disarm(): void {
+    if (!this.el) this.armed = false;
+  }
+
   /** Call every frame. */
   update(dt: number): void {
     const n = this.ctx.game.notifications;

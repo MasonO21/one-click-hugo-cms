@@ -35,11 +35,18 @@ export interface GuideTarget {
   mission?: string;
   /** Which kind of target was resolved (additive field for the UI). */
   kind?: NonNullable<MissionDef['guide']>['kind'];
+  /** The guide's ref (the building of a build_menu guide), additive. */
+  ref?: string;
 }
 
 const GATHER_VERB: Record<string, string> = { wood: 'chop', stone: 'mine', fiber: 'cut', food: 'pick' };
 /** "Go gather" guidance only considers nodes within this many world units (per axis) of the player. */
 const GATHER_SEARCH = 90;
+
+/** The warning's "while you wait" task is offered only with at least this many seconds left. */
+const WARNING_TASK_MIN_LEFT = 15;
+
+const bagSumOf = (b: ResourceBag): number => Object.values(b).reduce<number>((s, v) => s + (v ?? 0), 0);
 
 /** Seconds a build/tier step may be unaffordable before a supply drone helps out. */
 export const SUPPLY_DRONE_AFTER = 60;
@@ -185,8 +192,10 @@ export class TutorialSystem extends System {
   }
 
   private resolve(def: MissionDef): GuideTarget {
+    const wait = this.warningTask(def);
+    if (wait) return this.resolve(wait);
     const text = def.hint ?? def.description;
-    const base: GuideTarget = { text, world: null, ui: null, mission: def.id, kind: def.guide?.kind };
+    const base: GuideTarget = { text, world: null, ui: null, mission: def.id, kind: def.guide?.kind, ref: def.guide?.ref };
     const g = def.guide;
     if (!g) return base;
     const ref = g.ref ?? '';
@@ -238,6 +247,27 @@ export class TutorialSystem extends System {
       }
     }
     return base;
+  }
+
+  /**
+   * A guided defence step while the attack warning counts down (the first raid's minute): something small to do in
+   * the meantime — place the cheapest trap by the turret — as long as there is time, it is affordable and the colony
+   * has none yet. Then the step's own guidance ("Stand near your turret") takes over again.
+   */
+  private warningTask(def: MissionDef): MissionDef | null {
+    const { state, data } = this.game;
+    const c = state.combat;
+    if (def.type !== 'defend' || c.phase !== 'warning' || c.nextAt - state.playTime < WARNING_TASK_MIN_LEFT) return null;
+    const { buildings, economy } = this.game.sys;
+    let trap: (typeof data.buildings)[number] | undefined;
+    for (const d of data.buildings) {
+      if (!d.trap || d.trap.antiAir || !buildings.isUnlocked(d.id)) continue;
+      if (buildings.countOf(d.id) > 0) return null; // one is already down (or going up)
+      if (!trap || bagSumOf(buildings.cost(d.id)) < bagSumOf(buildings.cost(trap.id))) trap = d;
+    }
+    if (!trap || !economy.canAfford(buildings.cost(trap.id))) return null;
+    // resolved as a build step (not 'defend' again)
+    return { ...def, type: 'build', target: trap.id, hint: `While you wait: place a ${trap.name} near your turret to slow them down.`, guide: { kind: 'build_menu', ref: trap.id } };
   }
 
   /**
