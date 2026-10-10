@@ -24,7 +24,7 @@ export class RiteButton {
     const asc = !!(D && D.asc && run.loadout.mastery && run.loadout.mastery.asc); // Hero Mastery rank 5: the Ascended Rite
     this.el = h(`<button class="rite ${D ? '' : 'none'} ${asc ? 'asc' : ''}" aria-label="${D ? (asc ? 'Ascended ' : '') + D.name : 'Rite'}" style="--rc:${hero.css}">
       <svg class="ring" viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="46"/><circle class="fg" cx="50" cy="50" r="46"/></svg>
-      <span class="core">${riteIcon(id)}<b>${D ? D.short : ''}</b></span><em class="cd"></em>${asc ? '<i class="rite-asc" aria-hidden="true"></i>' : ''}<i class="rite-echo" aria-hidden="true">2</i></button>`);
+      <span class="core">${riteIcon(id)}<b>${D ? D.short : ''}</b></span><em class="cd"></em>${asc ? '<i class="rite-asc" aria-hidden="true"></i>' : ''}${asc && id === 'nyx' ? '<i class="rite-echo" aria-hidden="true">2</i>' : ''}</button>`);
     ui.el.appendChild(this.el); // inside the HUD, so .lefty mirrors it
     this.fg = $(this.el, '.fg'); this.cdEl = $(this.el, '.cd');
     // pointerdown + stopPropagation: the tap fires at once and never reaches the joystick

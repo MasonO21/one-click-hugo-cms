@@ -2556,12 +2556,13 @@ errs = await session(async (page) => {
     // the War Council: four picks before the first boss, titled, while the clock waits
     const titles = new Set(); let t0 = -1, t1 = -1;
     const go = (sec) => { for (let i = 0; i < Math.round(sec * 30) && !r.ended; i++) {
-      if (r.levelPending) { const ti = document.querySelector('.lvl-title b')?.textContent; if (ti) titles.add(ti); const c = document.querySelector('.lvl-back .card'); if (c && r.t - (r._pk || 0) > 0.35) { r._pk = r.t; if (ti === 'WAR COUNCIL') { if (t0 < 0) t0 = r.time; t1 = r.time; } c.click(); } }
+      if (r.levelPending) { const ti = document.querySelector('.lvl-title b')?.textContent; if (ti) titles.add(ti); const c = document.querySelector('.lvl-back .card'); if (c && r.t - (r._pk || 0) > 0.35) { r._pk = r.t; if (ti === 'WAR COUNCIL') { if (t0 < 0) t0 = r.time; t1 = r.time; r._wc = (r._wc || 0) + 1; } c.click(); } }
       if (!r.levelPending && (r.levelQueue > 0 || r.chestQueue > 0)) r.showLevelUp();
       r.update(1 / 30);
     } };
     r.player.hurt = () => {};
-    go(4); out.draft = { titles: [...titles], clock: +(t1 - t0).toFixed(2), picks: Object.values(r.skillLv).reduce((a, b) => a + b, 0) - out.start.picks };
+    // picks are counted as War Council cards taken (an evolution card raises no skill level, so a level sum undercounts)
+    go(4); out.draft = { titles: [...titles], clock: +(t1 - t0).toFixed(2), picks: r._wc || 0, levels: Object.values(r.skillLv).reduce((a, b) => a + b, 0) - out.start.picks };
     // the five bosses in turn, each at its chapter's scaling; between them a chest, souls and a heal
     out.bosses = []; out.hud = [];
     for (let k = 0; k < 5; k++) {
