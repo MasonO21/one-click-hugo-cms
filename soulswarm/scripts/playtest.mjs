@@ -2382,7 +2382,7 @@ errs = await session(async (page) => {
       order.push(r.boss.id);
       const e = r.bossEnemy; if (!e) break;
       e.hp = 1; r.enemies.damage(e, 50); go(1.5);
-      if (k < 10) { r.time = r.nextBossAt - 8.5; go(0.6); }
+      if (k < 10) { const n0 = warned.length; r.time = r.nextBossAt - 8.5; for (let t = 0; t < 30 && warned.length === n0; t++) { go(0.1); await new Promise((f) => setTimeout(f, 20)); } } // (a level-up's cards render on a timer: let it run)
       if (k === 9) out.returns = warned[warned.length - 1] || '';
       r.time = r.nextBossAt - 0.05; go(3);
     }
