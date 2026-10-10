@@ -60,7 +60,7 @@ export function metricValue(game: Game, m: AchievementMetric): number {
     case 'loginDays':
       return s.liveops.daily.streak;
     case 'charted':
-      return s.expeditions.frontier.charted.length;
+      return Math.max(s.expeditions.frontier.total ?? 0, s.expeditions.frontier.charted.length);
     case 'buildingTypes':
       return buildingTypes(game);
     case 'alienTypes':

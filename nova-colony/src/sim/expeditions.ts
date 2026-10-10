@@ -70,6 +70,11 @@ export interface MilestoneView extends FrontierMilestone {
 }
 
 const SECOND = 1;
+/**
+ * Sites the Star Chart keeps (the latest ones). After Titanium an engaged player charts about fifteen a day; the
+ * lifetime count lives in `frontier.total`.
+ */
+export const CHART_KEEP = 120;
 
 export class ExpeditionSystem extends System {
   private acc = 0;
@@ -226,7 +231,7 @@ export class ExpeditionSystem extends System {
   frontierSites(): FrontierSite[] {
     if (!this.frontierUnlocked()) return [];
     const fr = this.game.state.expeditions.frontier;
-    return frontierSites(this.game.data, this.game.state.seed, fr.signal, fr.charted.length);
+    return frontierSites(this.game.data, this.game.state.seed, fr.signal, this.chartedCount());
   }
 
   /** Resolve a destination id or a Frontier site id to its trip. */
@@ -476,17 +481,22 @@ export class ExpeditionSystem extends System {
     const fr = g.state.expeditions.frontier;
     const site = e.site;
     const best = this.bestFind(reward);
+    const count = this.chartedCount() + 1;
     const charted: ChartedSite = {
       id: site?.id ?? `f?-${e.id}`,
       name: site?.name ?? 'Uncharted site',
       biome: site?.biome ?? 'crash_valley',
-      depth: fr.charted.length + 1,
+      depth: count,
       at: g.now(),
       ...(best ? { find: best } : {}),
     };
     fr.charted.push(charted);
-    g.bus.emit('expedition:charted', { site: charted, count: fr.charted.length });
-    const m = this.milestones().find((x) => x.count === fr.charted.length);
+    fr.total = count;
+    // the chart keeps the latest stretch of the journey (about fifteen sites a day after Titanium would grow the save
+    // and the drawing for ever); the lifetime count carries depth, milestones and medals
+    if (fr.charted.length > CHART_KEEP) fr.charted.splice(0, fr.charted.length - CHART_KEEP);
+    g.bus.emit('expedition:charted', { site: charted, count });
+    const m = this.milestones().find((x) => x.count === count);
     if (m) g.toast(`Star Chart milestone: ${m.title}! Claim it on the Frontier tab.`, 'reward', '🏅');
     return charted;
   }
@@ -502,15 +512,22 @@ export class ExpeditionSystem extends System {
     return undefined;
   }
 
+  /** The Star Chart: the latest CHART_KEEP sites, oldest first (chartedCount() is the lifetime total). */
   charted(): ChartedSite[] {
     return this.game.state.expeditions.frontier.charted;
+  }
+
+  /** Frontier sites charted in all (the chart itself keeps the latest CHART_KEEP). */
+  chartedCount(): number {
+    const fr = this.game.state.expeditions.frontier;
+    return Math.max(Number.isFinite(fr.total) ? fr.total! : 0, fr.charted.length);
   }
 
   /** Star Chart milestones up to (and including) the next unreached one, with their state. */
   milestones(): MilestoneView[] {
     const fr = this.rules.frontier;
     const st = this.game.state.expeditions.frontier;
-    const n = st.charted.length;
+    const n = this.chartedCount();
     const list: FrontierMilestone[] = [...fr.milestones];
     const last = fr.milestones[fr.milestones.length - 1]?.count ?? 0;
     // endless: another legend every `repeat.every` sites past the last authored milestone
@@ -590,6 +607,9 @@ export class ExpeditionSystem extends System {
     if (!isNum(st.nextId) || st.nextId < nextId) st.nextId = nextId;
     const fr = st.frontier;
     fr.charted = (Array.isArray(fr.charted) ? fr.charted : []).filter((s) => !!s && typeof s.name === 'string');
+    // a save from before the cap: the count is the log's length, and the log keeps its latest stretch
+    if (!isNum(fr.total) || fr.total < fr.charted.length) fr.total = fr.charted.length;
+    if (fr.charted.length > CHART_KEEP) fr.charted.splice(0, fr.charted.length - CHART_KEEP);
     fr.claimed = (Array.isArray(fr.claimed) ? fr.claimed : []).filter(isNum);
     if (!isNum(fr.signal) || fr.signal < 0) fr.signal = 0;
     if (!isNum(st.launched)) st.launched = 0;

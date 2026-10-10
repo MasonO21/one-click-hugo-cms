@@ -446,6 +446,11 @@ export interface ExpeditionState {
     signal: number;
     /** Milestone counts already claimed. */
     claimed: number[];
+    /**
+     * Sites charted in all (the Star Chart keeps only the latest CHART_KEEP, sim/expeditions.ts). Missing in saves from
+     * before the cap: the log's length is the count then.
+     */
+    total?: number;
     /** The "Frontier is open" card was shown. */
     announced: boolean;
   };

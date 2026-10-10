@@ -106,7 +106,7 @@ export class ExpeditionsPanel extends Panel {
     const fr = st.expeditions.frontier;
     return [
       this.view, this.tab, this.target, this.squad.join('.'), this.vehicle, this.picked, trips, st.colony.tier, st.colonists.list.length, away,
-      st.world.regionsDiscovered.length, st.player.vehicles.join('.'), st.player.vehicle, fr.charted.length, fr.claimed.length, fr.signal, ex.unlocked() ? 1 : 0,
+      st.world.regionsDiscovered.length, st.player.vehicles.join('.'), st.player.vehicle, ex.chartedCount(), fr.claimed.length, fr.signal, ex.unlocked() ? 1 : 0,
     ].join('|');
   }
 
@@ -568,15 +568,16 @@ export class ExpeditionsPanel extends Panel {
     const ex = g.sys.expeditions;
     const rules = this.data.expeditionRules;
     const charted = ex.charted();
+    const total = ex.chartedCount();
     const wrap = h('div', { class: 'stack-v exp-chart' });
 
     // milestone progress
     const next = ex.nextMilestone();
     const prevCount = [...ex.milestones()].reverse().find((m) => m.reached)?.count ?? 0;
     const head = h('div', { class: 'card exp-ms-next' });
-    head.appendChild(h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'h3', text: `${charted.length} site${charted.length === 1 ? '' : 's'} charted` }), next ? h('div', { class: 'mute small', text: `Next: ${next.title} at ${next.count} (${next.count - charted.length} to go)` }) : null), h('span', { class: 'exp-ms-ic', text: '🏅' })));
+    head.appendChild(h('div', { class: 'row' }, h('div', { class: 'grow' }, h('div', { class: 'h3', text: `${total} site${total === 1 ? '' : 's'} charted` }), next ? h('div', { class: 'mute small', text: `Next: ${next.title} at ${next.count} (${next.count - total} to go)` }) : null), h('span', { class: 'exp-ms-ic', text: '🏅' })));
     if (next) {
-      head.appendChild(bar((charted.length - prevCount) / Math.max(1, next.count - prevCount), 'purple thick', `${charted.length} / ${next.count}`));
+      head.appendChild(bar((total - prevCount) / Math.max(1, next.count - prevCount), 'purple thick', `${total} / ${next.count}`));
       head.appendChild(rewardChips(this.data, next.reward));
     }
     wrap.appendChild(head);
@@ -608,7 +609,7 @@ export class ExpeditionsPanel extends Panel {
     wrap.appendChild(section('Uncharted signals'));
     if (!ex.freeSlots()) wrap.appendChild(h('div', { class: 'mute small', text: 'Every squad is out. Plan the next jump while you wait!' }));
     for (const site of ex.frontierSites()) wrap.appendChild(this.siteRow(site));
-    const nf = nextFrontierFind(rules, charted.length + 1);
+    const nf = nextFrontierFind(rules, total + 1);
     if (nf) wrap.appendChild(h('div', { class: 'card tint small exp-next-find', text: `🔭 Deeper sites hold rarer things: ${nf.label} from site ${nf.from}.` }));
 
     // milestone ladder

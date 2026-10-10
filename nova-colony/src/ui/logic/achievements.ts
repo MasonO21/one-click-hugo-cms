@@ -220,7 +220,7 @@ export function colonyRecords(game: Game): RecordRow[] {
     row('looted', '🎒', poiArt('supply_cache'), 'Treasures looted', c('loot')),
     row('expeditions', '🥾', buildingArt('radio_tower'), 'Expeditions sent', s.expeditions.launched),
     row('hauls', '📦', itemArt('supply_crate'), 'Hauls brought home', s.expeditions.collected),
-    row('charted', '🌠', poiArt('beacon'), 'Frontier sites charted', s.expeditions.frontier.charted.length),
+    row('charted', '🌠', poiArt('beacon'), 'Frontier sites charted', Math.max(s.expeditions.frontier.total ?? 0, s.expeditions.frontier.charted.length)),
     row('gifts', '🎁', rewardArt('daily_gift'), 'Daily gifts collected', s.liveops.daily.streak),
     row('medals', '🏅', hudArt('journal'), 'Achievements earned', `${sum.unlocked} / ${sum.total}`),
   ];
