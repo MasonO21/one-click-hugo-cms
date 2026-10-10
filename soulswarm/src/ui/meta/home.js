@@ -1,5 +1,6 @@
 // Battle tab (home): hero header, floating side buttons, chapter selector and the big BATTLE button.
 // The middle of the screen stays empty so the 3D hero showcase reads through.
+import { canPurchase } from '../../meta/privacy.js';
 import { h, $, fmt, fmtTime, toast, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
 import { ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER, BOSSES, bossFor, ENDLESS_ID, chapterById, actOf } from '../../game/data.js';
@@ -46,19 +47,20 @@ export function createHome(ctx) {
 
     // Right column offers
     const right = [];
-    if (starterAvailable(p)) {
+    const store = canPurchase(p); // restricted mode (meta/privacy.js): no paid offers on the home screen
+    if (store && starterAvailable(p)) {
       right.push(fab('starter', icon('chest'), 'Starter',
         `<span class="fab-rib">${SKUS.starter_pack.value}</span><span class="fab-cd">${cd(p.purchases.starterExpires)}</span>`, 'fab-gold fab-offer'));
     }
     if (pactDailyAvailable(p)) right.push(fab('pactClaim', icon('gems'), 'Claim 100', '<i class="badge-dot"></i>', 'fab-gem fab-offer'));
-    else right.push(fab('pact', icon('gems'), pactActive(p) ? 'Pact' : 'Soul Pact', '', 'fab-gem'));
+    else if (store || pactActive(p)) right.push(fab('pact', icon('gems'), pactActive(p) ? 'Pact' : 'Soul Pact', '', 'fab-gem'));
     if (freeChestAvailable(p)) right.push(fab('chest', icon('chest'), 'Free', `<span class="fab-tag">${icon('ad')}</span><i class="badge-dot"></i>`, 'fab-ad fab-offer'));
     else right.push(fab('chestDone', icon('chest'), 'Free', `<span class="fab-cd">${cd(nextMidnight())}</span>`, 'fab-ad fab-spent'));
 
     // Chapter status line
     let status;
     if (locked) status = `<span class="chap-lock">${icon('lock')} Clear Chapter ${sel - 1}</span>`;
-    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}${best.depth ? ` · depth ${best.depth}` : ''}</span>` : '<span class="chap-best t-dim">No time limit. A boss rises every 5:00, the five in turn.</span>';
+    else if (ch.endless) status = best ? `<span class="chap-best">${icon('trophy')} Deepest run ${fmtTime(best.time)}${best.depth ? ` · depth ${best.depth}` : ''}</span>` : '<span class="chap-best t-dim">No time limit. A boss rises every 5:00, all ten in turn.</span>';
     else if (best?.cleared) status = `<span class="pill pill-soul">${icon('check')} Cleared</span><span class="chap-best t-dim">Best ${fmtTime(best.time)}</span>`;
     else if (best) status = `<span class="chap-best">${icon('hourglass')} Best ${fmtTime(best.time)} <span class="t-dim">/ 06:00</span></span>`;
     else status = `<span class="chap-best t-dim">Survive 6:00 and slay ${BOSSES[bossFor(ch)].name}</span>`;

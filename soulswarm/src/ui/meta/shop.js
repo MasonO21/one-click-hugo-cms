@@ -1,4 +1,5 @@
 // Shop tab: starter pack, Soul Pact, daily gem deals and the six gem tiers.
+import { canPurchase } from '../../meta/privacy.js';
 import { h, $, fmt, toast, purchaseFlow, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
 import { GEM_ART } from '../art.js';
@@ -116,6 +117,8 @@ export function createShop(ctx) {
         </button>`;
       }).join('')}</div>`);
 
+    // restricted mode (meta/privacy.js): a younger player's store stays visible but closed
+    if (!canPurchase(app.profile)) parts.unshift(`<div class="shop-locked">${icon('lock')} Purchases are switched off for younger players. Everything in SOULSWARM can be earned by playing.</div>`);
     // Footer
     parts.push(`<div class="shop-foot">
       <button class="btn btn-ghost btn-sm" data-act="restore">Restore purchases</button>

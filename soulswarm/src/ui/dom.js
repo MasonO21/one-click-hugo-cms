@@ -4,6 +4,8 @@ import { relicArt } from './art.js';
 import { HEROES, RELICS, RARITY_COLOR, RARITY_LABEL, SKUS, SKINS, formatRelicValue } from '../game/data.js';
 import { Store } from '../meta/store.js';
 import { applyPurchase, commit, firstPurchaseBonus } from '../meta/economy.js';
+import { purchaseBlock, spendCap, adsPersonalised } from '../meta/privacy.js';
+import { analytics } from '../meta/analytics.js';
 
 export const uiRoot = () => document.getElementById('ui');
 
@@ -104,6 +106,12 @@ export function purchaseFlow(app, skuId, { onDone } = {}) {
   if (buying) { toast('A purchase is in progress'); return; }
   const sku = SKUS[skuId];
   const p = app.profile;
+  const block = purchaseBlock(p, sku.price); // restricted mode or a teen's monthly limit (meta/privacy.js)
+  if (block) {
+    toast(block === 'age' ? 'Purchases are switched off for younger players.' : `Monthly spending limit reached ($${spendCap(p)} for your age). It resets on the 1st.`);
+    analytics.track('purchase_blocked', { sku: skuId, reason: block });
+    return;
+  }
   const bonus = firstPurchaseBonus(p, skuId);
   let contents = '';
   if (sku.kind === 'gems') contents = `<div class="pf-line">${icon('gems')} <b>${fmt(sku.gems * (bonus ? 2 : 1))}</b> Gems ${bonus ? '<span class="pill pill-hot">First-buy ×2</span>' : ''}</div>`;
@@ -128,6 +136,7 @@ export function purchaseFlow(app, skuId, { onDone } = {}) {
           if (!res.ok) { toast('Purchase cancelled'); return; }
           const items = applyPurchase(p, skuId);
           commit(p);
+          analytics.track('purchase', { sku: skuId, usd: sku.price, first: !!bonus });
           app.audio && app.audio.sfx('purchase');
           app.haptic && app.haptic('success');
           rewardPopup(items, { title: 'Thank you!', audio: app.audio, onClose: onDone });
@@ -143,8 +152,10 @@ export async function watchAd(app, placement) {
   const { pactActive } = await import('../meta/economy.js');
   if (pactActive(app.profile)) { toast('Soul Pact: reward granted, no ad needed'); return true; }
   app.audio && app.audio.setMuted && app.audio.setMuted(true);
-  const ok = await Store.rewardedAd(placement);
+  const personalised = adsPersonalised(app.profile); // the consent sheet's choice; never for under-18s (meta/privacy.js)
+  const ok = await Store.rewardedAd(placement, { personalised });
   app.audio && app.audio.setMuted && app.audio.setMuted(!!app.profile.settings.muted);
+  analytics.track('ad_reward', { placement, completed: !!ok, personalised });
   return ok;
 }
 

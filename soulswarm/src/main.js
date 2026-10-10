@@ -19,6 +19,10 @@ import { RunUI } from './ui/runui.js';
 import { createMeta } from './ui/meta/index.js';
 import { CHAPTERS, CLOCK, ENDLESS_ID, ENDLESS_UNLOCK, chapterById } from './game/data.js';
 import { toast } from './ui/dom.js';
+import { analytics } from './meta/analytics.js';
+import { needsGate, needsConsent, answerGate, setConsent } from './meta/privacy.js';
+import { openAgeGate, openConsent } from './ui/meta/privacy.js';
+import { actOf } from './game/data.js';
 
 const profile = loadProfile();
 
@@ -48,11 +52,14 @@ const app = {
   clock, // QA: the clock instance the game uses (a dev server's HMR can serve a second copy to a fresh import)
   heroModels, // QA: likewise, the painted-model cache
   foeModels, // QA: the painted foes' cache
+  analytics, // QA and Settings → Privacy: the gameplay event queue (meta/analytics.js)
+  privacy: { openAgeGate: (done) => openAgeGate(app, done), openConsent: (where, done) => openConsent(app, where, done) }, // QA
 };
 window.__soulswarm = app; // handy for QA scripts
 
 /** Wipe all progress: blank the live profile (so an unload save cannot restore it), persist, reload. */
 function resetProgress() {
+  analytics.clear(); // "Delete my data": the queued events go with the save
   const fresh = newProfile();
   for (const k of Object.keys(profile)) delete profile[k];
   Object.assign(profile, fresh);
@@ -95,6 +102,10 @@ function beginRun(chapter, opts) {
   app.meta.hide();
   const loadout = computeLoadout(profile);
   const run = new Run(app.engine, { app, loadout, chapter, ...opts });
+  const mode = opts.tutorial ? 'tutorial' : opts.rush ? 'rush' : opts.mutators ? 'trial' : chapter.endless ? 'endless' : 'campaign';
+  const base = { mode, chapter: chapter.id, act: chapter.act || 0, difficulty: opts.difficulty || 'normal', hero: profile.selectedHero };
+  analytics.track(opts.tutorial ? 'tutorial_start' : 'run_start', { ...base, page: opts.page || '', bloodMoon: !!opts.bloodMoon, level: profile.level });
+  const unlocked0 = profile.chapter.unlocked;
   const runUI = new RunUI(app, run);
   app.run = run; app.runUI = runUI;
   app.engine.setController(run);
@@ -102,6 +113,10 @@ function beginRun(chapter, opts) {
   run.onEnd = (result) => {
     const outcome = applyRunResult(profile, result);
     commit(profile);
+    if (mode === 'tutorial') analytics.track('ftue_complete', { skipped: !!(outcome && outcome.ended), time: result.time });
+    else analytics.track('run_end', { ...base, victory: !!result.victory, time: result.time, kills: result.kills, level: result.level, legion: result.bestLegion,
+      bossKills: result.bossKills, boss: run.bossId, deathMinute: result.victory ? undefined : Math.floor((result.time || 0) / 60), firstClear: !!(outcome && outcome.firstClear) });
+    if (profile.chapter.unlocked > unlocked0) analytics.track('chapter_unlock', { chapter: profile.chapter.unlocked, act: actOf(profile.chapter.unlocked).n });
     runUI.showResults(result, outcome);
   };
   return true;
@@ -133,6 +148,14 @@ function boot() {
   app.meta = createMeta(app);
   document.getElementById('ui').appendChild(app.meta.el);
   app.meta.show('battle');
+  // Update 14: the neutral age gate (once), then the consent sheet when the policy is new to this player; nothing is
+  // measured before. Automated test browsers (navigator.webdriver) answer as an adult who chose "Necessary only".
+  analytics.init(profile);
+  const sessionStart = () => analytics.track('session_start', { returning: profile.stats.runs > 0, days: Math.floor((clock.now() - profile.createdAt) / 864e5), level: profile.level, chapter: profile.chapter.unlocked });
+  if (navigator.webdriver && needsGate(profile)) { answerGate(profile, new Date(clock.now()).getFullYear() - 30, false); setConsent(profile, { analytics: false, ads: false }); commit(profile); }
+  if (needsGate(profile)) openAgeGate(app, sessionStart);
+  else if (needsConsent(profile)) openConsent(app, 'policy', sessionStart);
+  else sessionStart();
   // the painted foes load behind the home screen, so the first run's horde is painted from its first frame
   setTimeout(() => foeModels.loadFoeModels(), 600);
 

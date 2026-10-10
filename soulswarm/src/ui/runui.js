@@ -391,7 +391,7 @@ export class RunUI {
       ${masteryRow(outcome.mastery)}
       ${rush ? (outcome.milestones && outcome.milestones.length ? `<div class="res-tip">Event reward${outcome.milestones.length > 1 ? 's' : ''} unlocked: ${outcome.milestones.map((i) => (i + 1 === nB ? 'the Court cleared' : `${i + 1} ${i ? 'bosses' : 'boss'} beaten`)).join(', ')}.</div>` : win ? '' : '<div class="res-tip">Each boss beaten in one attempt unlocks an event reward. Talents, relics and a stronger hero carry you further.</div>')
         : tut ? `<div class="res-tip">You are ready, Shepherd. Spend your gold on <b>Talents</b>, then take on Chapter 1: survive 6:00 and slay ${BOSSES[bossFor(CHAPTERS[0])].name}.</div>`
-        : result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, the five in turn, stronger each time. How deep can your legion go?</div>'
+        : result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, all ten in turn, stronger each time. How deep can your legion go?</div>'
         : !win ? `<div class="res-tip">Tip: Talents and Relics make every run stronger. ${BOSSES[bossFor(this.run.chapter)].name} waits at 6:00.</div>`
         : actTip(result, outcome)}
     </div>`);

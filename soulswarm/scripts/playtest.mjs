@@ -393,7 +393,7 @@ errs = await session(async (page) => {
     out.elites = { ch5: elitesBy300(5), ch1: elitesBy300(1) };
 
     // Endless: the modifier set rotates Ch2 → Ch3 → … with each Gravemaw kill
-    r = start(6);
+    r = start(100);
     const d1 = r.mods.burn ? 'ch2' : '?';
     r.bossKills = 1; r.director(0);
     out.endless = { d1, d2: r.mods.ice ? 'ch3' : '?' };
@@ -2297,7 +2297,7 @@ errs = await session(async (page) => {
       const m = models[i]; if (!m) return [id, null];
       const g = m.geometry; g.computeBoundingBox(); const b = g.boundingBox;
       return [id, { tris: (g.index ? g.index.count : g.attributes.position.count) / 3, h: +(b.max.y - b.min.y).toFixed(2), want: F.FOES[id].h, floor: +b.min.y.toFixed(3),
-        cx: +((b.min.x + b.max.x) / 2).toFixed(3), wide: F.FOES[id].yaw ? b.max.z - b.min.z > b.max.x - b.min.x : b.max.x - b.min.x > b.max.z - b.min.z, // (a side-on quadruped is long along +Z) map: !!(m.map && m.map.image), hip: +m.gait.a.x.toFixed(2) }];
+        cx: +((b.min.x + b.max.x) / 2).toFixed(3), wide: F.FOES[id].yaw ? b.max.z - b.min.z > b.max.x - b.min.x : b.max.x - b.min.x > b.max.z - b.min.z, map: !!(m.map && m.map.image), hip: +m.gait.a.x.toFixed(2) }];
     }));
     const start = (q) => {
       E.setQuality(q); p.energy = 30; app.startRun(1); E.manual = true;
@@ -2372,18 +2372,18 @@ errs = await session(async (page) => {
     let r = window.__bossRun(3), b = r.boss; r.weapons.update = () => {}; b.cd = 99; b.force('lances');
     const marks = r.hazards.teles.length; b.phaseT = 99; window.__hit(r, 0.6); window.__step(r, 1 / 30);
     out.withdraw = { marks, roar: b.state, pending: b.zones.filter((z) => z.t < 0).length, teles: r.hazards.teles.filter((t) => t.t < t.dur).length };
-    // the Endless Abyss brings the five back in turn: the warning banner names each; the sixth "returns"
+    // the Endless Abyss brings all ten back in turn (Act I's, then the act finales'): the warning banner names each; the eleventh "returns"
     // (a level-up or the relic chest each boss drops would pause the clock: take the first card)
     r = window.__bossRun(100); const order = [];
     // the boss warnings as shown (a jumped clock can bring an elite or event banner over one before it is read)
     const warned = []; { const b0 = r.ui.banner.bind(r.ui); r.ui.banner = (t, sub, kind) => { if (kind === 'boss') warned.push(t); return b0(t, sub, kind); }; }
     const go = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) { if (r.levelPending) document.querySelector('.lvl-back .card')?.click(); r.update(1 / 30); } };
-    for (let k = 0; k < 6; k++) {
+    for (let k = 0; k < 11; k++) {
       order.push(r.boss.id);
       const e = r.bossEnemy; if (!e) break;
       e.hp = 1; r.enemies.damage(e, 50); go(1.5);
-      if (k < 5) { r.time = r.nextBossAt - 8.5; go(0.6); }
-      if (k === 4) out.returns = warned[warned.length - 1] || '';
+      if (k < 10) { r.time = r.nextBossAt - 8.5; go(0.6); }
+      if (k === 9) out.returns = warned[warned.length - 1] || '';
       r.time = r.nextBossAt - 0.05; go(3);
     }
     out.order = order;
@@ -2404,8 +2404,8 @@ errs = await session(async (page) => {
   check('chapter bosses: Smite drops pillars where the Shepherd stands; Blood Lances fan orbs down a marked cone',
     C[4].marks >= 1 && C[4].fell && C[4].hurt > 0 && C[5].cone && C[5].orbs >= 13 && C[5].recovered, JSON.stringify({ a: C[4], v: C[5] }));
   check('chapter bosses: a phase roar withdraws marks that have not gone off', s.withdraw.marks >= 15 && s.withdraw.roar === 'roar' && s.withdraw.pending === 0 && s.withdraw.teles === 0, JSON.stringify(s.withdraw));
-  check('chapter bosses: the Endless Abyss brings the five back in turn, and they return', s.order.join() === 'gravemaw,pyrexa,vaulkar,azrathel,vesperine,gravemaw'
-    && s.returns === 'THE HOLLOW KING RETURNS' && s.byType.vesperine === 1 && s.byType.gravemaw === 2, // each kill counts for its own boss
+  check('chapter bosses: the Endless Abyss brings all ten back in turn (the act finales after Act I\'s), and they return', s.order.join() === 'gravemaw,pyrexa,vaulkar,azrathel,vesperine,morwenna,gorrath,mire,kaelthar,nihl,gravemaw'
+    && s.returns === 'THE HOLLOW KING RETURNS' && s.byType.vesperine === 1 && s.byType.nihl === 1 && s.byType.gravemaw === 2, // each kill counts for its own boss
     JSON.stringify({ order: s.order, ret: s.returns, by: s.byType }));
   check('chapter bosses: every boss has its portrait, warning art, model, Bestiary entry and announcer lines; the home card names it',
     s.assets.every((a) => a.slice(1).every(Boolean)) && s.home.join() === 'Gravemaw,Pyrexa,Vaulkar,Azrathel,Vesperine', JSON.stringify({ a: s.assets, h: s.home }));
@@ -3923,6 +3923,132 @@ errs = await session(async (page) => {
     s.map.open && s.map.acts === 6 && s.map.tiles === 30 && s.map.locked === 22 && s.map.on === '100' && s.map.lockedTap === 100 && s.map.picked === 3 && s.map.closed && /Act I · Chapter 3/.test(s.map.label), JSON.stringify(s.map));
 });
 check('update 13 bosses and map: no runtime errors', !errs.length, errs[0] || '');
+
+// 50. Update 14: privacy, consent and analytics. A neutral age gate (once) sets a band; adults and older teens get a
+//     consent sheet (analytics and personalised ads, both off until chosen); children get restricted mode (no purchases,
+//     nothing measured, non-personalised ads). Settings → Privacy shows the player ID and the choices, exports the data
+//     and deletes it. Events queue on the device only with consent, carrying only their listed properties.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), PV = await import('/src/meta/privacy.js'), save = await import('/src/meta/save.js'), eco = await import('/src/meta/economy.js');
+    const app = window.__soulswarm, p = app.profile, A = app.analytics, out = {};
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), q = (sel) => document.querySelector(sel), qa = (sel) => [...document.querySelectorAll(sel)];
+    const year = new Date().getFullYear();
+    // automated browsers answer as an adult who chose "Necessary only"; nothing was shown or measured
+    out.auto = { band: p.privacy.band, asked: p.privacy.asked, consent: { ...p.privacy.consent }, gate: !!q('.mm-gate'), id: /^ss-[0-9a-f]{12}$/.test(p.privacy.id), events: A.events().length };
+    // the gate, as a new player meets it: no year suggested, Continue waits for one, then the consent sheet
+    p.privacy = PV.blankPrivacy(); A.clear();
+    let done = 0; app.privacy.openAgeGate(() => { done++; }); await wait(50);
+    const sel = q('.mm-gate .pv-year'), go = q('.mm-gate .pv-go');
+    out.gate = { open: !!q('.mm-gate'), placeholder: sel.value === '', disabled: go.disabled, years: sel.options.length - 1, dismiss: !q('.mm-gate .modal-x') };
+    sel.value = String(year - 30); sel.dispatchEvent(new Event('change')); go.click(); await wait(50);
+    out.gate.band = p.privacy.band; out.gate.closed = !q('.mm-gate');
+    const sheet = q('.mm-consent');
+    out.sheet = { open: !!sheet, toggles: qa('.mm-consent .tgl').length, offAll: qa('.mm-consent .tgl').every((t) => !t.classList.contains('on')), buttons: qa('.mm-consent .modal-actions .btn').map((b) => b.textContent).join('|') };
+    qa('.mm-consent .modal-actions .btn').find((b) => b.textContent === 'Necessary only').click(); await wait(50);
+    out.sheet.after = { ...p.privacy.consent, asked: p.privacy.asked, done, events: A.events().length };
+    // changing one's mind in Settings: analytics on → runs are measured, only with their listed properties
+    app.privacy.openConsent('settings'); await wait(50);
+    q('.mm-consent .tgl[data-k="analytics"]').click(); qa('.mm-consent .modal-actions .btn').find((b) => b.textContent === 'Save my choices').click(); await wait(50);
+    out.on = { ...p.privacy.consent };
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off'; p.energy = 30;
+    app.startRun(1); const r = app.run; r.player.hurt = () => {}; app.engine.manual = true;
+    for (let i = 0; i < 30 * 3; i++) app.engine.step(1 / 30);
+    r.end(false); await wait(50); app.exitRun(); app.engine.manual = false; await wait(50);
+    const ev = A.events(), names = ev.map((e) => e.n);
+    const start = ev.find((e) => e.n === 'run_start'), end = ev.find((e) => e.n === 'run_end');
+    out.events = { names: [...new Set(names)].join(','), start: start && start.p, end: end && end.p, user: ev.every((e) => e.u === p.privacy.id), session: new Set(ev.map((e) => e.s)).size,
+      allowed: ev.every((e) => Object.keys(e.p).every((k) => D.ANALYTICS.events[e.n].includes(k))), noYear: !JSON.stringify(ev).includes(String(year - 30)) };
+    out.track = { unknown: A.track('made_up', { x: 1 }), text: (A.track('quest_claim', { quest: 'free text with spaces!' }), A.events().slice(-1)[0].p) };
+    for (let i = 0; i < 600; i++) A.track('screen_view', { screen: 'shop' });
+    out.cap = A.events().length;
+    // withdrawing consent empties the queue and stops measuring
+    app.privacy.openConsent('settings'); await wait(50);
+    qa('.mm-consent .modal-actions .btn').find((b) => b.textContent === 'Necessary only').click(); await wait(50);
+    out.off = { queue: A.events().length, tracked: A.track('screen_view', { screen: 'shop' }) };
+    // a child: restricted mode (no consent sheet, no purchases or paid offers, non-personalised ads)
+    p.privacy = PV.blankPrivacy(); done = 0;
+    app.privacy.openAgeGate(() => { done++; }); await wait(50);
+    q('.mm-gate .pv-year').value = String(year - 9); q('.mm-gate .pv-year').dispatchEvent(new Event('change')); q('.mm-gate .pv-go').click(); await wait(80);
+    out.child = { band: p.privacy.band, sheet: !!q('.mm-consent'), done, purchase: PV.canPurchase(p), ads: PV.adsPersonalised(p), track: PV.canTrack(p) };
+    p.purchases.starterExpires = Date.now() + 864e5; p.purchases.starterBought = false; eco.commit(p); app.meta.show('battle'); app.meta.refresh(); await wait(80);
+    out.child.starterFab = !!q('.hm [data-act="starter"]'); out.child.pactFab = !!q('.hm [data-act="pact"]');
+    const { purchaseFlow } = await import('/src/ui/dom.js');
+    purchaseFlow(app, D.GEM_SKUS[0]); await wait(50); out.child.buySheet = !!q('.modal-purchase');
+    q('[data-nav="shop"]').click(); await wait(250); out.child.banner = !!q('.shop-locked');
+    q('[data-nav="battle"]').click(); await wait(100);
+    // teens: an EU 15-year-old is asked nothing (analytics and personalised ads stay off); elsewhere, analytics only
+    const t = { privacy: PV.blankPrivacy() }; PV.answerGate(t, year - 16, true); out.teenEU = { band: t.privacy.band, consent: PV.needsConsent(t), a: PV.canAskAnalytics(t), ads: PV.canAskAds(t) };
+    const u = { privacy: PV.blankPrivacy() }; PV.answerGate(u, year - 16, false); out.teen = { band: u.privacy.band, consent: PV.needsConsent(u), a: PV.canAskAnalytics(u), ads: PV.canAskAds(u) };
+    // teens' monthly spending limits: $50 under 16, $100 at 16–17, this calendar month's list prices
+    const buyer = (age, spent) => ({ privacy: (() => { const o = { privacy: PV.blankPrivacy() }; PV.answerGate(o, year - age - 1, false); return o.privacy; })(), purchases: { history: spent ? [{ sku: 'x', t: Date.now(), price: spent }, { sku: 'y', t: Date.now() - 40 * 864e5, price: 500 }] : [] } });
+    const b15 = buyer(15, 45), b17 = buyer(17, 95), b30 = buyer(30, 999);
+    out.caps = { cap15: PV.spendCap(b15), ok15: PV.purchaseBlock(b15, 4.99), no15: PV.purchaseBlock(b15, 9.99), cap17: PV.spendCap(b17), no17: PV.purchaseBlock(b17, 9.99), adult: PV.purchaseBlock(b30, 99.99), child: PV.purchaseBlock(buyer(9, 0), 0.99) };
+    // saves: one from before Update 14 meets the gate once and gets an ID; a tampered band follows the year; a new policy asks again
+    const KEY = 'soulswarm.save.v1', load = (v) => { localStorage.setItem(KEY, JSON.stringify(v)); const x = save.loadProfile(); localStorage.removeItem(KEY); return x; };
+    const old = load({ v: 2, gold: 5 }), bad = load({ v: 2, privacy: { id: 'x', band: 'adult', birthYear: year - 8, consent: { analytics: true, ads: true }, asked: 1 } });
+    out.save = { gate: PV.needsGate(old), id: /^ss-/.test(old.privacy.id), bad: [bad.privacy.band, bad.privacy.consent.analytics, bad.privacy.consent.ads, /^ss-/.test(bad.privacy.id)].join() };
+    const adult = { privacy: PV.blankPrivacy() }; PV.answerGate(adult, year - 40, false); PV.setConsent(adult, { analytics: true, ads: false });
+    out.policy = { now: PV.needsConsent(adult) }; adult.privacy.asked = D.PRIVACY.version - 1; out.policy.bumped = PV.needsConsent(adult);
+    // Settings → Privacy: the ID, the state, the choices, the policy, export; "Delete my data" says what it erases
+    p.privacy = PV.blankPrivacy(); PV.answerGate(p, year - 30, false); PV.setConsent(p, { analytics: true, ads: true }); eco.commit(p);
+    q('.hm [data-act="settings"]').click(); await wait(150);
+    const st = q('.mm-settings');
+    out.settings = { id: st.querySelector('.pv-id')?.textContent === p.privacy.id, state: /analytics: on/i.test(st.querySelector('.pv-state')?.textContent || ''), choices: !!st.querySelector('[data-act="consent"]'),
+      policy: st.querySelector('a[href="' + D.PRIVACY.policyUrl + '"]')?.target === '_blank', del: /Delete my data/.test(st.textContent) };
+    st.querySelector('[data-act="reset"]').click(); out.settings.erases = /privacy choices/.test(st.querySelector('.st-confirm')?.textContent || '');
+    st.querySelector('[data-act="export"]').click(); await wait(80);
+    const json = q('.mm-export .pv-json')?.value || '';
+    out.settings.export = (() => { try { const o = JSON.parse(json); return !!(o.profile && o.profile.privacy && Array.isArray(o.events)); } catch (e) { return false; } })();
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    return out;
+  });
+  check('privacy: test browsers answer the gate as an adult with "Necessary only" (no sheet, nothing measured, a random player ID)',
+    s.auto.band === 'adult' && s.auto.asked === 1 && !s.auto.consent.analytics && !s.auto.consent.ads && !s.auto.gate && s.auto.id && s.auto.events === 0, JSON.stringify(s.auto));
+  check('privacy: the neutral age gate (no year suggested, Continue waits, cannot be dismissed), then the consent sheet with both choices off and equal-weight buttons',
+    s.gate.open && s.gate.placeholder && s.gate.disabled && s.gate.years === 101 && s.gate.dismiss && s.gate.band === 'adult' && s.gate.closed && s.sheet.open && s.sheet.toggles === 2 && s.sheet.offAll
+    && s.sheet.buttons === 'Necessary only|Allow all|Save my choices' && !s.sheet.after.analytics && !s.sheet.after.ads && s.sheet.after.asked === 1 && s.sheet.after.done === 1 && s.sheet.after.events === 0, JSON.stringify({ g: s.gate, c: s.sheet }));
+  const E = s.events;
+  check('analytics: with consent a run records run_start and run_end (mode, chapter, act, difficulty, hero; result, time, death minute) under the player ID, and the consent change itself',
+    s.on.analytics && !s.on.ads && /run_start/.test(E.names) && /run_end/.test(E.names) && /consent/.test(E.names) && E.start && E.start.mode === 'campaign' && E.start.chapter === 1 && E.start.act === 1 && E.start.hero
+    && E.end && E.end.victory === false && E.end.deathMinute === 0 && E.user && E.session === 1, JSON.stringify(E));
+  check('analytics: events carry only their listed properties (no free text, never the birth year); unknown events are refused; the queue keeps 500; withdrawing consent empties it',
+    E.allowed && E.noYear && s.track.unknown === false && !('quest' in s.track.text) && s.cap === 500 && s.off.queue === 0 && s.off.tracked === false, JSON.stringify({ t: s.track, cap: s.cap, off: s.off }));
+  check('privacy: a child is in restricted mode (no consent sheet, no purchases, no Starter or Pact offers, a closed shop banner, nothing measured, non-personalised ads)',
+    s.child.band === 'child' && !s.child.sheet && s.child.done === 1 && !s.child.purchase && !s.child.ads && !s.child.track && !s.child.starterFab && !s.child.pactFab && !s.child.buySheet && s.child.banner, JSON.stringify(s.child));
+  check('privacy: an EU 15-year-old is asked nothing; elsewhere a teen is asked about analytics only; personalised ads stay off under 18',
+    s.teenEU.band === 'teen' && !s.teenEU.consent && !s.teenEU.a && !s.teenEU.ads && s.teen.band === 'teen' && s.teen.consent && s.teen.a && !s.teen.ads, JSON.stringify({ eu: s.teenEU, t: s.teen }));
+  check('privacy: teens\' monthly spending limits ($50 under 16, $100 at 16–17, this month only); none for adults; children cannot buy',
+    s.caps.cap15 === 50 && s.caps.ok15 === '' && s.caps.no15 === 'cap' && s.caps.cap17 === 100 && s.caps.no17 === 'cap' && s.caps.adult === '' && s.caps.child === 'age', JSON.stringify(s.caps));
+  check('privacy saves: an old save meets the gate once and gets an ID; a tampered band follows the year (choices off); a new policy version asks again',
+    s.save.gate && s.save.id && s.save.bad === 'child,false,false,true' && !s.policy.now && s.policy.bumped, JSON.stringify({ s: s.save, p: s.policy }));
+  check('privacy settings: the player ID, the state, Privacy choices, the policy link, Export my data (JSON) and Delete my data (it says what it erases)',
+    s.settings.id && s.settings.state && s.settings.choices && s.settings.policy && s.settings.del && s.settings.erases && s.settings.export, JSON.stringify(s.settings));
+});
+check('update 14 privacy: no runtime errors', !errs.length, errs[0] || '');
+
+// 51. Update 14: the Endless Abyss rotates through the later acts' realms too (after Act I's twists: the Drowned Coast,
+//     the Thornwood, the Plague Fens, the Storm Spire and the Hollow Moon, with their hazards and foes) and brings all ten
+//     bosses back in turn.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), app = window.__soulswarm, p = app.profile, out = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off'; p.chapter.unlocked = 6; p.energy = 30;
+    app.startRun(100); const r = app.run; r.player.hurt = () => {};
+    const depth = (k) => { r.bossKills = k; r.bossSpawned = false; r.director(0); r.time = 200;
+      const n = {}; for (let i = 0; i < 3000; i++) { const t = r.pickType(); n[t] = (n[t] || 0) + 1; }
+      return { tide: !!r.mods.tide, brambles: !!r.mods.brambles, miasma: !!r.mods.miasma, lightning: !!r.mods.lightning, gravity: !!r.mods.gravity, boss: D.bossFor(r.chapter, k),
+        foes: ['siren', 'thornback', 'rat', 'caller', 'stalker'].filter((t) => n[t]).join('+') }; };
+    out.d = [4, 5, 6, 7, 8, 9].map(depth);
+    app.exitRun();
+    return out;
+  });
+  const d = s.d;
+  check('endless: after Act I\'s twists the Abyss shifts through each later realm (its hazard and foe), with the act finales as its bosses; then it cycles',
+    d[0].tide && d[0].foes === 'siren' && d[0].boss === 'vesperine' && d[1].brambles && d[1].foes === 'thornback' && d[1].boss === 'morwenna' && d[2].miasma && d[2].foes === 'rat' && d[2].boss === 'gorrath'
+    && d[3].lightning && d[3].foes === 'caller' && d[3].boss === 'mire' && d[4].gravity && d[4].foes === 'stalker' && d[4].boss === 'kaelthar' && !d[5].tide && !d[5].gravity && !d[5].foes && d[5].boss === 'nihl', JSON.stringify(d));
+});
+check('update 14 endless: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

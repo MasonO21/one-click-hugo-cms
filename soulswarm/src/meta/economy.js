@@ -10,6 +10,7 @@ import {
 import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard, hoardOdds } from './difficulty.js';
+import { analytics } from './analytics.js';
 import { BESTIARY, TUTORIAL, BOSS_RUSH } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 import { newPages } from './grimoire.js';
@@ -153,12 +154,14 @@ export function heroAction(p, id) {
   if (!h.owned) {
     if (h.shards < HERO_UNLOCK_SHARDS) return { ok: false };
     h.shards -= HERO_UNLOCK_SHARDS; h.owned = true; h.stars = 1;
+    analytics.track('hero_upgrade', { hero: id, stars: 1, unlocked: true });
     return { ok: true, unlocked: true };
   }
   if (h.stars >= HERO_MAX_STARS) return { ok: false };
   const cost = HERO_STAR_COST[h.stars];
   if (h.shards < cost) return { ok: false };
   h.shards -= cost; h.stars += 1;
+  analytics.track('hero_upgrade', { hero: id, stars: h.stars, unlocked: false });
   return { ok: true, stars: h.stars };
 }
 export function heroNextCost(p, id) {
@@ -197,6 +200,7 @@ export function ascendRelic(p, uid) {
   const c = ascendCost(r);
   if (!spend(p, 'gold', c.gold)) return 0;
   r.dups -= c.shards; r.stars = c.star;
+  analytics.track('relic_ascend', { type: r.type, rarity: r.rarity, stars: r.stars });
   return r.stars;
 }
 export function upgradeTalent(p, key) {
@@ -205,6 +209,7 @@ export function upgradeTalent(p, key) {
   const cost = talentCost(lv);
   if (!spend(p, 'gold', cost)) return false;
   p.talents[key] = lv + 1;
+  analytics.track('talent_up', { talent: key, level: lv + 1 });
   return true;
 }
 
@@ -246,6 +251,7 @@ export function summon(p, count, payWith) {
     }
     return res;
   });
+  analytics.track('altar_pull', { count, payWith, epic: rolls.filter((r) => r === 'epic').length, legendary: rolls.filter((r) => r === 'legendary').length });
   return { ok: true, results };
 }
 export const freeSummonAvailable = (p) => p.altar.freeDate !== todayKey();
@@ -277,6 +283,7 @@ export function claimQuest(p, id) {
   if (!q || !q.done || q.claimed) return null;
   p.quests.claimed.push(id);
   weekly(p).done++;
+  analytics.track('quest_claim', { quest: id });
   return grant(p, q.rewards);
 }
 
@@ -595,6 +602,7 @@ export function claimBestiary(p, id) {
   const e = BESTIARY.order.includes(id) ? bestiaryEntry(p, id) : null, t = e && e.tiers[e.claimed];
   if (!t || !t.ready) return null;
   p.bestiary.claimed[id] = e.claimed + 1;
+  analytics.track('bestiary_claim', { id, tier: e.claimed + 1 });
   return grant(p, t.rewards);
 }
 

@@ -10,6 +10,7 @@ import {
 } from '../../meta/economy.js';
 import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portrait, delegate, energyFullIn } from './util.js';
 import { LOGO_ART } from '../art.js';
+import { privacySection, privacyActions } from './privacy.js';
 
 const ENERGY_AD = 10, ENERGY_BANK = 99; // a video gives +10 as often as wanted (ads are never capped); energy banks up to 99 (economy.grant)
 const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords', chest: 'chest', elite: 'crown', legion: 'helm', evolve: 'star', boss: 'trophy', trial: 'star' };
@@ -207,12 +208,14 @@ export function openSettings(ctx) {
     <div class="st-row"><span class="st-l">${icon('nova')} Auto-Nova</span><button class="tgl" role="switch" data-t="autoNova"><i></i></button><small class="t-dim">at 100%, legion 50+</small></div>
     <div class="st-row"><span class="st-l">${icon('left')} Left-handed</span><button class="tgl" role="switch" data-t="lefty"><i></i></button><small class="t-dim">NOVA on the left</small></div>
     <div class="st-sep"></div>
+    ${privacySection(app)}
+    <div class="st-sep"></div>
     <button class="btn btn-ghost btn-block" data-act="tutorial">Replay the tutorial</button>
     <button class="btn btn-ghost btn-block" data-act="restore">Restore purchases</button>
     <div class="st-danger">
-      <button class="btn btn-ghost btn-block st-reset" data-act="reset">Reset progress</button>
+      <button class="btn btn-ghost btn-block st-reset" data-act="reset">Delete my data</button>
       <div class="st-confirm" hidden>
-        <p>${icon('info')} This permanently erases your heroes, relics and currencies on this device.</p>
+        <p>${icon('info')} This permanently erases your progress (heroes, relics, currencies), your privacy choices and any queued gameplay events on this device.</p>
         <div class="row"><button class="btn btn-ghost" data-act="cancel">Cancel</button><button class="btn btn-danger" data-act="wipe">Erase</button></div>
       </div>
     </div>
@@ -244,7 +247,9 @@ export function openSettings(ctx) {
   $$(body, '.seg button').forEach((b) => b.addEventListener('click', () => {
     st.quality = b.dataset.q; sync(); app.applySettings(); commit(p); tap(app);
   }));
+  let sheet = null;
   delegate(body, {
+    ...privacyActions(app, () => sheet && sheet.close()),
     tutorial: () => { // the free beginner tutorial (game/tutorial.js), from the home screen only
       if (app.run) return;
       tap(app); document.querySelectorAll('.modal-back').forEach((n) => n.remove());
@@ -261,7 +266,7 @@ export function openSettings(ctx) {
       try { app.resetProgress(); } catch (e) { toast('Please restart the game.'); }
     },
   });
-  modal({ title: 'Settings', body, cls: 'mm-settings scroll' });
+  sheet = modal({ title: 'Settings', body, cls: 'mm-settings scroll' });
 }
 
 // ---------------------------------------------------------------- starter pack

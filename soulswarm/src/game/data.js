@@ -297,13 +297,15 @@ export const BOSSES = {
     phases: [['EVENTIDE', 'The dark pulls you in: walk against it'], ['ECHOES OF THE FALLEN', 'Every fallen realm returns: read each mark'], ['THE FIRST NIGHT', 'Its night comes at half its strength: circle with the spiral']],
     dirge: ['ENDLESS NIGHT', 'The stars go out: +50% damage and attack speed'] },
 };
-export const BOSS_ORDER = ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine']; // Act I's bosses; Endless and the Boss Rush cycle them
+export const BOSS_ORDER = ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine']; // Act I's bosses: the Boss Rush's Hollow Court
+// the Endless Abyss brings all ten back in turn, Act I's then the act finales' (Update 14), by depth
+export const ENDLESS_BOSSES = [...BOSS_ORDER, 'morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'];
 export const LATE_BOSSES = ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl']; // the bosses of Acts II–VI (Update 13)
 // A returning boss (chapter tier > 1) fights harder: attack rate × (1 + rate × (tier − 1)), one more gap-ring wave from
 // tier 3, and its soft enrage `dirge` s sooner per tier (never before `dirgeMin` s). Its banner carries the act's epithet.
 export const BOSS_TIER = { rate: 0.06, waveFrom: 3, dirge: 12, dirgeMin: 120 };
 /** The boss a run faces next: its chapter's, or in the Endless Abyss the next in turn by depth. */
-export const bossFor = (ch, depth = 0) => (ch.endless ? BOSS_ORDER[depth % BOSS_ORDER.length] : ch.bossId || 'gravemaw');
+export const bossFor = (ch, depth = 0) => (ch.endless ? ENDLESS_BOSSES[depth % ENDLESS_BOSSES.length] : ch.bossId || 'gravemaw');
 // The chapter bosses' three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the boss's touch damage.
 // Every damaging telegraph is >= minTele (accessibility floor) in every chapter, phase and enrage state.
 export const BOSS_PHASES = {
@@ -518,7 +520,7 @@ export const CHAPTERS = [
 for (const c of CHAPTERS) if (!c.boss) c.boss = BOSSES[c.bossId].color;
 // Unlocked by clearing Chapter 5. No time limit; the run ends when you fall. It plays at chapter level 6.
 export const ENDLESS = { id: ENDLESS_ID, lvl: 6, act: 0, name: 'Endless Abyss', endless: true, ground: 0x2c2848, groundB: 0x120e22, rune: 0x6b7bff, fog: 0x05040c, rim: 0xa8b4ff, enemy: 0xff4a6a, boss: 0xff3df0, hpMul: 4.0, rate: 1.4,
-  biome: 'abyss', floor: 'abyss', art: 'endless', mods: { rotate: [2, 3, 4, 5] } };
+  biome: 'abyss', floor: 'abyss', art: 'endless', mods: { rotate: [2, 3, 4, 5, 7, 13, 18, 22, 27] } }; // Act I's twists, then one chapter of each later act (its hazard and foe; Update 14)
 export const ENDLESS_UNLOCK = 6; // chapter.unlocked: a first Chapter 5 clear opens it
 // Campaign rewards past Act I (economy.applyRunResult): clear gems stop growing at Chapter 10; a Normal first clear pays
 // 40 + 18c gems and a Sigil in Act I, then `late` gems and a Sigil, and an act's last chapter (its own boss) `finale`
@@ -562,7 +564,7 @@ export const HAZARDS = {
   gravity: { cell: 16, chance: 0.4, radius: 6, coreR: 1.3, period: [7, 9.5], warn: 1.2, pull: 1.6, strength: 5, dmg: 12 },
 };
 export const RUN_LENGTH = 360; // seconds until the boss arrives
-export const ENDLESS_BOSS_EVERY = 300; // Endless Abyss: a boss every 5:00 (the five in turn), stronger each time
+export const ENDLESS_BOSS_EVERY = 300; // Endless Abyss: a boss every 5:00 (the ten in turn, ENDLESS_BOSSES), stronger each time
 export const ENERGY_COST = 5;
 export const ENERGY_MAX = 30;
 export const ENERGY_REGEN_SEC = 360;
@@ -1157,4 +1159,44 @@ export const GRIMOIRE = {
 
 export const SKINS = {
   eclipse_vael: { hero: 'vael', name: 'Eclipse Vael', color: 0xffd04a, body: 0x1a1020, legion: 0xffe9a0 },
+};
+
+// ---------------------------------------------------------------- Privacy, consent and analytics (Update 14, GDD §19)
+// A neutral age gate runs once before anything is measured; its answer sets a band (meta/privacy.js):
+//   child: under minAge: no purchases, no analytics, non-personalised ads only, no consent sheet;
+//   teen:  under adultAge: personalised ads stay off; analytics needs consent, and in the EU (under euConsentAge) it stays off;
+//   adult: the consent sheet asks for analytics and personalised ads, both off until chosen.
+// `version` is the privacy policy's: raising it shows the consent sheet again. `policyUrl` is the studio's hosted policy
+// (docs/PRIVACY_POLICY.md; a placeholder until the studio publishes it).
+export const PRIVACY = { version: 1, minAge: 13, euConsentAge: 16, adultAge: 18, oldest: 100, policyUrl: 'https://example.com/soulswarm/privacy',
+  // monthly spending limits for teens (MONETIZATION.md §11), in USD of list prices this calendar month: [under this age, cap]
+  spendCaps: [[16, 50], [18, 100]] };
+
+// Gameplay analytics (meta/analytics.js, LIVEOPS.md §5): events queue on the device, at most queueMax, and only with
+// consent. There is no analytics service in this build (`endpoint` empty), so nothing leaves the device; the store build
+// plugs its SDK in with analytics.setTransport. Each event lists the properties it may carry (anything else is dropped,
+// so no free text or personal data slips in).
+export const ANALYTICS = {
+  queueMax: 500, batch: 50, flushEvery: 30, endpoint: '',
+  events: {
+    session_start: ['returning', 'days', 'level', 'chapter'],
+    age_gate: ['band', 'eu'],
+    consent: ['analytics', 'ads', 'where'],
+    tutorial_start: [],
+    ftue_complete: ['skipped', 'time'],
+    run_start: ['mode', 'chapter', 'act', 'difficulty', 'hero', 'page', 'bloodMoon', 'level'],
+    run_end: ['mode', 'chapter', 'act', 'difficulty', 'hero', 'victory', 'time', 'kills', 'level', 'legion', 'bossKills', 'boss', 'deathMinute', 'firstClear'],
+    chapter_unlock: ['chapter', 'act'],
+    card_pick: ['id', 'level', 'kind'],
+    purchase: ['sku', 'usd', 'first'],
+    purchase_blocked: ['sku', 'reason'],
+    ad_reward: ['placement', 'completed', 'personalised'],
+    altar_pull: ['count', 'payWith', 'epic', 'legendary'],
+    hero_upgrade: ['hero', 'stars', 'unlocked'],
+    talent_up: ['talent', 'level'],
+    relic_ascend: ['type', 'rarity', 'stars'],
+    quest_claim: ['quest'],
+    bestiary_claim: ['id', 'tier'],
+    screen_view: ['screen'],
+  },
 };

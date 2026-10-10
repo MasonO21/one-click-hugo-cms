@@ -21,7 +21,8 @@ import { Urns } from './urns.js';
 import { computeStats, rollChoices, applyChoice, banishesPerRun } from './skills.js';
 import { Streak } from './streak.js';
 import { Tutorial } from './tutorial.js';
-import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
+import { analytics } from '../meta/analytics.js';
+import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, ENDLESS_BOSSES, CAMPAIGN_LENGTH, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
 import { ENDLESS, ACTS, chapterLevel, foeDmgScale, sideScale } from './data.js';
 import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS, GRIMOIRE } from './data.js';
@@ -220,7 +221,7 @@ export class Run {
   // ---------------------------------------------------------------- director
   pickType() {
     const m = this.minute, w = this._mix || (this._mix = new Array(TYPES.length));
-    const row = MIX[Math.min(MIX.length - 1, Math.floor(m))], ch = this.lvl;
+    const row = MIX[Math.min(MIX.length - 1, Math.floor(m))], ch = this.endless ? CAMPAIGN_LENGTH : this.lvl; // the Abyss holds every act's foes (where its rotation calls them)
     // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches); Daily Trial banes can too (Witching Hour)
     const mul = this.mods.weights, mw = this.mut.weights;
     let total = 0;
@@ -384,7 +385,7 @@ export class Run {
   warnBoss() {
     this.warned = true;
     const B = BOSSES[this.bossId], tier = !this.endless && !this.rush ? this.chapter.tier || 1 : 1;
-    const back = (!this.rush && this.bossKills >= BOSS_ORDER.length) || tier > 1;
+    const back = (!this.rush && this.bossKills >= ENDLESS_BOSSES.length) || tier > 1;
     const sub = this.rush ? `Boss ${this.bossKills + 1} of ${BOSS_ORDER.length}` : this.bossKills ? `Stronger than before (×${this.bossKills + 1})`
       : tier > 1 ? `${ACTS[this.chapter.act - 1].epithet} ${B.name}: stronger than before` : 'Gather your legion';
     this.ui.bossColor(B.color);
@@ -511,6 +512,7 @@ export class Run {
     const draft = chest && this.draftPicks > 0 ? [BOSS_RUSH.draft - this.draftPicks + 1, BOSS_RUSH.draft] : null; // Boss Rush: the opening picks
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
+      analytics.track('card_pick', { id: c.id, level: this.level, kind: c.kind }); // pick rates (LIVEOPS.md §5)
       if (c.kind === 'evolution' || c.kind === 'union') this.celebrateEvolution(c); else this.audio.sfx('select');
       if (chest) { this.chestQueue--; if (draft) this.draftPicks--; } else this.levelQueue--;
       this.levelPending = false;

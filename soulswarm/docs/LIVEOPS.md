@@ -163,6 +163,21 @@
 
 Data flow: client and server events → Firebase Analytics → BigQuery (daily export plus streaming) → dashboards. Alerts go to the team channel at 09:00 UTC daily.
 
+**Client events in the build (taxonomy v1, Update 14; `ANALYTICS` in `data.js`, GDD §19).** Recorded only with the player's consent, with only the listed properties, queued on the device until the SDK's transport is plugged in. Every event carries the random player ID, a session id, a sequence number and the trusted time.
+
+| Event | Properties | Feeds |
+|---|---|---|
+| `session_start` | returning, days since install, level, chapter reached | DAU, D1/D7/D30, stickiness |
+| `age_gate` · `consent` | band · analytics, ads, where (first, policy, settings) | consent rates (no birth year is ever sent) |
+| `tutorial_start` · `ftue_complete` | — · skipped, time | FTUE completion |
+| `run_start` · `run_end` | mode, chapter, act, difficulty, hero, page, Blood Moon, level · victory, time, kills, level, peak legion, boss kills, boss, death minute, first clear | runs per DAU, clear rates, death-minute heatmap, act progress, Nightmare / Torment uptake |
+| `chapter_unlock` | chapter, act | act progress |
+| `card_pick` | id, level, kind | skill pick rates |
+| `purchase` · `purchase_blocked` | sku, USD, first · sku, reason (age, cap) | ARPDAU (IAP), conversion; restricted-mode and spend-cap hits |
+| `ad_reward` | placement, completed, personalised | ARPDAU (ads), ad engagement |
+| `altar_pull` · `hero_upgrade` · `talent_up` · `relic_ascend` | count, pay with, Epics, Legendaries · hero, stars, unlocked · talent, level · type, rarity, stars | economy sinks (`MONETIZATION.md` §12) |
+| `quest_claim` · `bestiary_claim` · `screen_view` | quest · id, tier · screen | retention loops, navigation |
+
 | Area | Metric | Definition | Target | Alert if |
 |---|---|---|---|---|
 | Acquisition | Installs (paid / organic) | Daily first opens by source | Organic ≥ 30% | Organic < 20% |

@@ -12,7 +12,7 @@ This policy explains what information the Soulswarm mobile game ("the Game") col
 ## 2. Information the Game stores on your device
 The Game saves your progress on your own device: heroes, relics, currencies, settings, quest and pass progress. This data stays on the device and is deleted when you uninstall the Game or use **Settings → Reset progress**.
 
-*Current build:* the Game sends no personal information to us or to third parties. To keep daily rewards fair it asks a time server for the current time (at launch, on resume and every 10 minutes). The request carries no player data, but like any web request the time server sees your IP address. Until our own backend exists these servers are Cloudflare (cloudflare.com/cdn-cgi/trace) and timeapi.io.
+*Current build:* the Game sends no personal information to us or to third parties. To keep daily rewards fair it asks a time server for the current time (at launch, on resume and every 10 minutes). The request carries no player data, but like any web request the time server sees your IP address. Until our own backend exists these servers are Cloudflare (cloudflare.com/cdn-cgi/trace) and timeapi.io. Since Update 14 the Game also asks, once, for your year of birth (kept on the device; it decides which features and choices apply to you), shows a consent screen for gameplay analytics and personalised ads (both off until you choose), and gives you a random player ID, an export of your data and a delete button in **Settings → Privacy**. With your consent, gameplay events are kept on the device; this build has no analytics service and sends none.
 
 ## 3. Information collected when online features are enabled *(Production)*
 | Data | Why | Shared with |

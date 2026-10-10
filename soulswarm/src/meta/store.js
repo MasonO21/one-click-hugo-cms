@@ -30,15 +30,16 @@ export const Store = {
     return { ok: true, restored: [] };
   },
 
-  /** Shows a stand-in rewarded video. Resolves true when the reward should be granted. */
-  rewardedAd(placement = 'generic') {
+  /** Shows a stand-in rewarded video. Resolves true when the reward should be granted. opts.personalised: the player's
+   *  consent (meta/privacy.js); production passes it to the mediation SDK (non-personalised ads otherwise). */
+  rewardedAd(placement = 'generic', opts = {}) {
     return new Promise((resolve) => {
       const root = document.getElementById('ui') || document.body;
       const el = document.createElement('div');
       el.className = 'ad-sim';
       el.innerHTML = `
         <div class="ad-sim-card">
-          <div class="t-label">Rewarded video · demo</div>
+          <div class="t-label">Rewarded video · demo${opts.personalised ? '' : ' · not personalised'}</div>
           <div class="ad-sim-title t-display">Your reward is on its way</div>
           <div class="ad-sim-ring"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28"/><circle class="p" cx="32" cy="32" r="28"/></svg><b>3</b></div>
           <div class="t-dim ad-sim-note">In the store build, a 15–30 second opt-in video plays here.</div>

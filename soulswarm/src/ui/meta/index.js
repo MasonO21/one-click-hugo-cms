@@ -1,5 +1,6 @@
 // Meta UI shell: top bar (player + currencies), five-tab bottom nav, tab panes and one shared 1 s ticker.
 // Tabs re-render only when the profile really changes (onChange + signature) or when they are shown dirty.
+import { analytics } from '../../meta/analytics.js';
 import './meta.css';
 import { h, $, $$, fmt, modal } from '../dom.js';
 import { icon } from '../icons.js';
@@ -98,6 +99,7 @@ export function createMeta(app) {
     const prev = current;
     if (dirty.has(tab)) renderTab(tab);
     if (prev !== tab) {
+      analytics.track('screen_view', { screen: tab });
       const dir = TABS.indexOf(tab) > TABS.indexOf(prev) ? 'in-r' : 'in-l';
       const pe = tabs[prev].el, ne = tabs[tab].el;
       pe.classList.remove('in-r', 'in-l');
