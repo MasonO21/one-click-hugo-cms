@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.31.0',
+  version: '4.32.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -772,6 +772,9 @@ const DATA = {
     { id: 'roadkit', name: 'Road Dice', usd: 1.99, daily: true, tag: 'Daily', needs: 'hall',
       grants: { dice: 20, lucky: 1 },
       desc: 'Twenty Road Dice and a Lucky Die for the Spice Road. Once per day, after you build the Caravan Hall.' },
+    { id: 'foundkit', name: 'Founding Chest', usd: 4.99, once: true, tag: 'Founding Week', when: (S) => !!(S.founding && S.founding.state === 'open'),
+      grants: { starglass: 500, shard_epic: 1, speed60: 3, beacons: 5 },
+      desc: '500 Starglass, an Epic Shard Pouch, three 60-minute speedups and five Beacon Tokens. Once, during your Founding Week.' },
     { id: 'digkit', name: "Digger's Kit", usd: 1.99, daily: true, tag: 'Daily', needsWyrm: 11,
       grants: { trowel: 30, charge: 2 },
       desc: 'Thirty Trowels and two Blasting Charges for the Buried City. Once per day, from Rainwyrm Lv 11.' },
@@ -1288,6 +1291,35 @@ const DATA = {
     warPts: 10,
   },
 
+  // ---------- The Founding Week ----------
+  // A new keep's first seven days: from Rainwyrm Lv 2 (for a keep that is still young) five missions open each day,
+  // each worth points; point chests along the way and, at the end, a Legendary hero of the player's choosing. A day
+  // opens each real day since the week began, or after each 24 hours of keep time, whichever comes first, and the
+  // week stays open two days past the seventh so a missed day can be caught up. Missions count from when the week
+  // opened (stat) or look at the keep as it stands (wyrm, stage).
+  founding: {
+    unlock: 2, youngUntil: 6, // opens at Rainwyrm Lv 2 for a keep no further than Lv 6
+    days: 7, grace: 2, pts: 20,
+    missions: [
+      [{ id: 'd1a', text: 'Finish 6 upgrades', stat: 'upgrades', n: 6 }, { id: 'd1b', text: 'Clear expedition stage 8', stage: 8 }, { id: 'd1c', text: 'Recruit 2 heroes at the Beacon', stat: 'pulls', n: 2 },
+        { id: 'd1d', text: 'Call the Rain twice', stat: 'rains', n: 2 }, { id: 'd1e', text: 'Raise the Rainwyrm to Lv 3', wyrm: 3 }],
+      [{ id: 'd2a', text: 'Train 150 troops', stat: 'trained', n: 150 }, { id: 'd2b', text: 'Clear expedition stage 16', stage: 16 }, { id: 'd2c', text: 'Finish 2 research projects', stat: 'researched', n: 2 },
+        { id: 'd2d', text: 'Send 3 marches to gather on the Dunes', stat: 'gathers', n: 3 }, { id: 'd2e', text: 'Raise the Rainwyrm to Lv 4', wyrm: 4 }],
+      [{ id: 'd3a', text: 'Hunt 5 beasts on the Dunes', stat: 'beasts', n: 5 }, { id: 'd3b', text: 'Clear expedition stage 24', stage: 24 }, { id: 'd3c', text: 'Recruit 8 heroes at the Beacon', stat: 'pulls', n: 8 },
+        { id: 'd3d', text: 'Land 4 fish at the spring', stat: 'fish', n: 4 }, { id: 'd3e', text: 'Raise the Rainwyrm to Lv 5', wyrm: 5 }],
+      [{ id: 'd4a', text: 'Finish 25 upgrades', stat: 'upgrades', n: 25 }, { id: 'd4b', text: 'Clear expedition stage 32', stage: 32 }, { id: 'd4c', text: 'Train 600 troops', stat: 'trained', n: 600 },
+        { id: 'd4d', text: 'Cook 2 dishes at the Cookfire', stat: 'cooked', n: 2 }, { id: 'd4e', text: 'Raise the Rainwyrm to Lv 6', wyrm: 6 }],
+      [{ id: 'd5a', text: 'Send 2 parties on Far Journeys', stat: 'journeys', n: 2 }, { id: 'd5b', text: 'Clear expedition stage 40', stage: 40 }, { id: 'd5c', text: 'Call the Rain 10 times', stat: 'rains', n: 10 },
+        { id: 'd5d', text: 'Finish 8 research projects', stat: 'researched', n: 8 }, { id: 'd5e', text: 'Raise the Rainwyrm to Lv 7', wyrm: 7 }],
+      [{ id: 'd6a', text: 'Hunt 20 beasts on the Dunes', stat: 'beasts', n: 20 }, { id: 'd6b', text: 'Clear expedition stage 48', stage: 48 }, { id: 'd6c', text: 'Recruit 20 heroes at the Beacon', stat: 'pulls', n: 20 },
+        { id: 'd6d', text: 'Donate to the Caravan 5 times', stat: 'donations', n: 5 }, { id: 'd6e', text: 'Raise the Rainwyrm to Lv 8', wyrm: 8 }],
+      [{ id: 'd7a', text: 'Win a raid on a rival keep', stat: 'rivalWins', n: 1 }, { id: 'd7b', text: 'Clear expedition stage 56', stage: 56 }, { id: 'd7c', text: 'Finish 50 upgrades', stat: 'upgrades', n: 50 },
+        { id: 'd7d', text: 'Train 2,000 troops', stat: 'trained', n: 2000 }, { id: 'd7e', text: 'Raise the Rainwyrm to Lv 9', wyrm: 9 }],
+    ],
+    chests: [[100, { journals: 2, speed15: 3 }], [200, { starglass: 100, beacons: 2 }], [300, { shard_epic: 1, speed60: 1 }], [450, { beacons: 4, starglass: 150 }],
+      [600, { starglass: 250, speed60: 2 }], [700, { shard_legendary: 1 }]],
+  },
+
   // ---------- The Buried City ----------
   // From Rainwyrm Lv 11 the well-diggers break into a city under the sand. Each layer is a grid of sand hiding five
   // relics (rectangles, either way round; the last is the layer's grand relic). A Trowel digs one tile; dug sand shows
@@ -1735,6 +1767,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.32', items: [
+      { icon: 'i-fw', name: 'The Founding Week', text: "A new keep's first seven days now come with missions: five open each day, each worth points, with chests along the way and a Legendary hero of your choosing at the end.", act: 'founding', open: (S) => !!(S.founding && S.founding.state === 'open'), needs: 'a new keep' },
+    ] },
     { v: '4.31', items: [
       { icon: 'i-dg-trowel', name: 'The Buried City', text: 'The well-diggers have broken into a city under the sand. Dig it out layer by layer with Trowels: the sand you dig shows how many relic pieces lie around it, so read it before you dig again. Every relic dug up whole pays, and five open the way down.', act: 'buriedcity', open: (S) => S.lv.wyrm >= 11, needs: 'Rainwyrm Lv 11' },
     ] },

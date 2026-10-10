@@ -337,7 +337,7 @@
   function panelShop() {
     const packs = KH.levelPackOpen() ? DATA.shop.filter((x) => x.levelPack) : [];
     if (packs.length) S.lvPack.seen = true;
-    const offers = [...packs, ...DATA.shop.filter((x) => !x.id.startsWith('sg') && !x.levelPack && (!x.needs || S.lv[x.needs]) && (!x.needsWyrm || S.lv.wyrm >= x.needsWyrm))];
+    const offers = [...packs, ...DATA.shop.filter((x) => !x.id.startsWith('sg') && !x.levelPack && (!x.needs || S.lv[x.needs]) && (!x.needsWyrm || S.lv.wyrm >= x.needsWyrm) && (!x.when || x.when(S)))];
     const offerArt = (id) => (KH.art.painted('offer', id) ? `<div class="offer-art art-o-${id}"></div>` : '');
     const offer = (o) => {
       if (o.levelPack) {

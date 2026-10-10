@@ -1345,3 +1345,24 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .dg-hall-item.on small { opacity: 1; }
 .dg-hall-item b { position: absolute; top: 2px; right: 5px; font-size: 11px; color: var(--gold); }
 .dg-relic .chip { margin-left: 6px; padding: 1px 7px; font-size: 11px; }
+
+/* The Founding Week */
+.fw-track { position: relative; height: 46px; margin: 4px 14px 0; }
+.fw-track .bar { position: absolute; left: 0; right: 0; top: 13px; }
+.fw-chest { position: absolute; top: 0; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0; padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
+.fw-chest .ic { width: 30px; height: 30px; filter: grayscale(0.8) brightness(0.7); }
+.fw-chest small { font-size: 10px; opacity: 0.75; }
+.fw-chest.ready .ic { filter: none; animation: fw-bob 1s ease-in-out infinite; }
+.fw-chest.done .ic { filter: none; opacity: 0.45; }
+.fw-chest.final .ic { width: 36px; height: 36px; }
+@keyframes fw-bob { 50% { transform: translateY(-4px) scale(1.08); } }
+.fw-tabs { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; }
+.fw-tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 3px; padding: 7px 11px; border-radius: 12px; border: 1px solid #ffffff22; background: #ffffff0a; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.fw-tab.on { background: linear-gradient(#f3c55a, #c98a2a); color: #2a1608; border-color: transparent; font-weight: 700; }
+.fw-tab.locked { opacity: 0.55; }
+.fw-tab .ic { width: 12px; height: 12px; }
+.fw-tab .dot { position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); }
+.fw-mission { gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #ffffff12; }
+.fw-mission:last-of-type { border-bottom: 0; }
+.fw-mission .bar { margin: 4px 0 2px; }
+.fw-mission.got { opacity: 0.6; }

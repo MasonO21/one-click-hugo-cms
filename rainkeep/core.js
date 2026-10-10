@@ -1165,6 +1165,7 @@
     if (item.daily && S.boughtDay[id] === today()) return 'Already bought today. Back tomorrow.';
     if (item.needs && !S.lv[item.needs]) return `Build the ${DATA.buildings[PLOT[item.needs].type].name} first.`;
     if (item.needsWyrm && S.lv.wyrm < item.needsWyrm) return `Opens at Rainwyrm Lv ${item.needsWyrm}.`;
+    if (item.when && !item.when(S)) return 'This offer has ended.';
     if (id === 'ledger' && S.pass.premium) return 'Premium is already active this season.';
     if (item.levelPack) {
       if (!levelPackOpen()) return S.lvPack && S.lvPack.lvl ? 'This Growth Pack has ended. New ones open at your next Rainwyrm level.' : `Growth Packs go on sale each time your Rainwyrm levels up, from Lv ${DATA.levelPacks.from}.`;
