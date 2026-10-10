@@ -432,7 +432,7 @@ errs = await session(async (page) => {
 });
 check('horde: no runtime errors', !errs.length, errs[0] || '');
 
-// 11. Daily Trial: seeded by date, free, one attempt (+1 by ad), mutators applied, records untouched
+// 11. Daily Trial: seeded by date, free, one attempt (then one more per ad until it is beaten), mutators applied, records untouched
 errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const eco = await import('/src/meta/economy.js');
@@ -454,7 +454,7 @@ errs = await session(async (page) => {
       hpRatio: Math.round(hpRatio * 100) / 100, hpExpected: mut.hp, gems: out.rewards.gems, sigils: out.rewards.sigils, bestUntouched: !p.chapter.best[t.chapter], unlocked: p.chapter.unlocked };
   });
   check('trial: locked until Chapter 1 is cleared, seeded by date', s.lockedAtStart && s.same && s.varies && s.chapterOk, JSON.stringify(s));
-  check('trial: free, one attempt, an ad buys one more', s.started && s.energyKept && s.trialFlag && s.ids.length === 2 && s.second === false && s.retry && s.third, JSON.stringify(s));
+  check('trial: free, one attempt, an ad buys another', s.started && s.energyKept && s.trialFlag && s.ids.length === 2 && s.second === false && s.retry && s.third, JSON.stringify(s));
   check('trial: mutators reach the horde, rewards paid, records untouched', Math.abs(s.hpRatio - s.hpExpected) < 0.02 && s.gems === 40 && !s.sigils && s.bestUntouched && s.unlocked === 3, JSON.stringify(s));
 });
 check('trial: no runtime errors', !errs.length, errs[0] || '');
@@ -2602,7 +2602,7 @@ errs = await session(async (page) => {
     && s.hud[0] === 'Boss 1 of 5' && s.hud[4] === 'Boss 5 of 5', JSON.stringify({ b: s.bosses, bt: s.between, hud: s.hud }));
   check('boss rush: clearing it reads "COURT CLEARED", pays every milestone once, records the best, and offers no ad doubling',
     s.ended && s.kills === 5 && s.res.head === 'COURT CLEARED' && s.res.best && !s.res.ad && s.res.rush.claimed === 5 && s.res.rush.best > 0 && s.res.rush.bestKills === 5 && s.res.rush.clears === 1, JSON.stringify(s.res));
-  check('boss rush: milestones pay once per event; three tries a day, then one by ad; a new day and a new event reset',
+  check('boss rush: milestones pay once per event; three tries a day, then one per ad (never banked ahead); a new day and a new event reset',
     s.again.milestones === 0 && s.again.gems === 0 && s.again.sigils === 0 && s.again.claimed === 5 && !s.day.available && s.day.retry && s.retryBtn && s.ad && !s.ad2 && s.newDay === 3
     && s.newEvent.claimed === 0 && s.newEvent.best === 0 && s.newEvent.allBest, JSON.stringify({ a: s.again, d: { av: s.day.available, re: s.day.retry }, rb: s.retryBtn, ad: s.ad, ad2: s.ad2, nd: s.newDay, ne: s.newEvent }));
 });
@@ -3327,6 +3327,62 @@ errs = await session(async (page) => {
     s.result === 4 && s.quest.pool && s.quest.progress === 4, JSON.stringify({ r: s.result, q: s.quest }));
 });
 check('update 8: no runtime errors', !errs.length, errs[0] || '');
+
+// 42. Rewarded ads are never capped: every placement that buys something repeatable can be watched again and again
+//     (energy videos, Daily Trial attempts until it is beaten, Boss Rush tries, level-up rerolls in §41). What an ad buys
+//     stays bounded by the game itself: energy banks to 99, the Trial's prize pays once a day, Rush milestones once per event.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js');
+    const out = {};
+    const ad0 = app.store.rewardedAd; let ads = 0; app.store.rewardedAd = async () => { ads++; return true; };
+    p.flags.tutorialDone = true; p.flags.coach = ''; p.chapter.unlocked = 3; p.energy = 0; eco.commit(p); app.meta.refresh(); await wait(200);
+    // energy: +10 a video, five in a row (no daily limit), until the bank of 99 is full
+    q('[data-top="energy"]').click(); await wait(300);
+    const note = [...document.querySelectorAll('.mm-energy .en-opt-tx small')].pop()?.textContent;
+    for (let i = 0; i < 5; i++) { q('.mm-energy [data-act="ad"]').click(); await wait(150); }
+    out.energy = { note, after: p.energy, ads };
+    p.energy = 99; eco.commit(p); await wait(100);
+    const b = q('.mm-energy [data-act="ad"]'); out.energy.full = { disabled: !!b && b.disabled, label: b && b.textContent.trim() };
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    // the Daily Trial: an ad buys another attempt as often as wanted until it is beaten; the prize pays once a day
+    { const t = save.newProfile(); t.chapter.unlocked = 3; t.flags.bloodMoon = 'off';
+      const res = (victory, time) => eco.applyRunResult(t, { chapter: 1, time, kills: 100, raised: 10, bestLegion: 10, novas: 0, gates: 0, victory, level: 5, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, trial: true });
+      const tr = { begin: eco.beginTrial(t), fail1: res(false, 190).rewards.gems, retries: [] };
+      for (let i = 0; i < 5; i++) tr.retries.push(eco.grantTrialRetry(t) && eco.beginTrial(t));
+      tr.fail2 = res(false, 400).rewards.gems; tr.fail3 = res(false, 400).rewards.gems;
+      tr.lastTry = eco.grantTrialRetry(t) && eco.beginTrial(t);
+      const w = res(true, 420); tr.win = { gems: w.rewards.gems, clears: t.trial.clears };
+      tr.after = { retry: eco.trialState(t).retry, grant: eco.grantTrialRetry(t), won: eco.trialState(t).won };
+      tr.again = { gems: res(true, 420).rewards.gems, clears: t.trial.clears };
+      out.trial = tr; }
+    // the panel: after an attempt, "Try again" (one video each), and the ad grants the attempt
+    eco.beginTrial(p); eco.commit(p); app.meta.refresh(); await wait(150);
+    q('[data-act="trial"]').click(); await wait(300);
+    out.trialUi = { btn: q('.mm-trial [data-act="retry"]')?.textContent.trim(), note: !!q('.mm-trial .tr-again') };
+    for (let i = 0; i < 3; i++) { q('.mm-trial [data-act="retry"]')?.click(); await wait(150); out.trialUi['go' + i] = !!q('.mm-trial [data-act="go"]'); eco.beginTrial(p); eco.commit(p); await wait(80); }
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    // Boss Rush: three free tries, then one per ad, as many as wanted (an unused one is never banked)
+    { const r = save.newProfile(); r.chapter.unlocked = 3; r.flags.bossRush = 'on';
+      for (let i = 0; i < 3; i++) eco.beginRush(r);
+      const tries = []; for (let i = 0; i < 6; i++) tries.push(eco.grantRushTry(r) && eco.beginRush(r));
+      const one = eco.grantRushTry(r), two = eco.grantRushTry(r);
+      out.rush = { tries, one, two, left: eco.rushState(r).triesLeft }; }
+    app.store.rewardedAd = ad0;
+    return out;
+  });
+  check('ads uncapped: energy videos give +10 again and again (five in a row), "as often as you like"; only a full bank of 99 stops them',
+    s.energy.after === 50 && s.energy.ads === 5 && /as often as you like/i.test(s.energy.note || '') && s.energy.full.disabled && s.energy.full.label === 'Full', JSON.stringify(s.energy));
+  check('ads uncapped: the Daily Trial takes an ad per attempt as often as wanted until it is beaten; fall-early gems top up to 40 a day, the prize pays once',
+    s.trial.begin && s.trial.fail1 === 24 && s.trial.retries.every(Boolean) && s.trial.retries.length === 5 && s.trial.fail2 === 16 && s.trial.fail3 === 0 && s.trial.lastTry
+    && s.trial.win.gems === 40 && s.trial.win.clears === 1 && !s.trial.after.retry && !s.trial.after.grant && s.trial.after.won && s.trial.again.gems === 0 && s.trial.again.clears === 1, JSON.stringify(s.trial));
+  check('ads uncapped: the Trial panel offers "Try again" with its note, and each video opens another attempt',
+    /Try again/.test(s.trialUi.btn || '') && s.trialUi.note && s.trialUi.go0 && s.trialUi.go1 && s.trialUi.go2, JSON.stringify(s.trialUi));
+  check('ads uncapped: Boss Rush sells a try per ad as often as wanted (six in a row), never banking one ahead',
+    s.rush.tries.length === 6 && s.rush.tries.every(Boolean) && s.rush.one && !s.rush.two && s.rush.left === 1, JSON.stringify(s.rush));
+});
+check('ads uncapped: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

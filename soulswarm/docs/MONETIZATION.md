@@ -55,7 +55,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Soul Pact | 300 now + 100 / day | | |
 | Starter Pack | 300 | | |
 | Daily free chest (rewarded ad) | 10 / day | | |
-| Daily Trial clear (once a day; a rewarded ad buys one retry) | 40 / day, plus 1 Sigil every 3rd clear | | |
+| Daily Trial clear (the prize pays once a day; rewarded ads buy more attempts until it is beaten) | 40 / day, plus 1 Sigil every 3rd clear | | |
 | New account | 150 (one-time) | | |
 | Weekly quest chest (25 daily quests) | 50 / week, plus 1 Sigil | | |
 | Bestiary milestones (GDD §5.2) | 50 per entry's third milestone (10,000 kills; 3,000 Corpse Priests; or 50 Soul Thieves / kills of a chapter boss), 650 in all (one-time, over months) | | |
@@ -65,7 +65,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 
 | Currency | Sources | Sinks | Design intent |
 |---|---|---|---|
-| **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10, 3/day), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run, on every difficulty (Nightmare and Torment cost the same: a harder run is not a reason to spend more of the session pacer). Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
+| **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10 each, as often as wanted), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run, on every difficulty (Nightmare and Torment cost the same: a harder run is not a reason to spend more of the session pacer). Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
 | **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), each Bestiary entry's second milestone (1, 13 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
 | **Hero Shards** | Epic rolls (4 Seraphine, 6 Nyx, 5 Liora or 5 Grimsby, equal chance), Legendary rolls (5 Mordrake, 6 Seraphine or 5 Osric, equal chance), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
 
@@ -130,7 +130,7 @@ The Grimoire (GDD §4.9) is a collection with no price tag: its eight pages unlo
 
 Every level-up and Relic Chest screen offers **Reroll · 50 gems** beside **Reroll (ad)**, as often as the player likes (`REROLL` in `data.js`; never on a Shrine of Souls blessing). Before Update 8 a run had one ad reroll.
 - **Why 50 gems:** under the 60-gem revive and about the 30-energy refill (50 gems), so it reads as a small, impulsive spend at the moment a build is one card away from an evolution. A daily player earns about 130 gems a day (§2.4), so two or three rerolls a day are affordable without paying; a heavy reroller is the gem pack's best customer.
-- **Why ads stay unlimited:** each ad reroll is a rewarded impression the player chose, at the most engaged moment of a run. The planned 12-ads-a-day global cap (table above) bounds it once it ships.
+- **Why ads stay unlimited:** each ad reroll is a rewarded impression the player chose, at the most engaged moment of a run. SOULSWARM never caps rewarded ads (§9).
 - **Guard rails:** the gem button dims when the wallet is short and a tap explains the price instead of opening the shop mid-run; a double tap pays once; the Soul Pact skips the ads, as everywhere.
 - **What to watch:** gems spent on rerolls per DAU, and whether heavy rerolling lowers Altar spend (a sign the price is too low). If rerolls crowd out pulls, raise the price on the third and later rerolls of a run.
 
@@ -257,7 +257,7 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 
 - Implemented as a **non-renewing 30-day purchase** (iOS non-renewing subscription; a Play one-time product with a server-side 30-day entitlement). Apple's auto-renew periods are calendar months, not 30 days. Non-renewing also removes any "forgot to cancel" complaint.
 - Value: 300 + 30 × 100 = 3,300 gems for $4.99 (661 gems/$, 4.4× the best gem pack). The first daily 100 is granted with the purchase. In the build, the daily 100 gems are claimed from the Pact card (home screen or shop), and a day that is not claimed is lost. *(Planned: claims through the mailbox, and **unclaimed days carry over for up to 3 days** (grace), then expire.)*
-- "Ad-free rewards": every rewarded-ad placement grants its reward instantly, with the same daily caps.
+- "Ad-free rewards": every rewarded-ad placement grants its reward instantly, on the same terms as the video (as often as the placement allows anyone).
 - The +20% gold applies to run gold only, not to quest, login or pass gold.
 - *(Planned)* Reminders at 3 days and 1 day before expiry (in-game only; push only if the player opted in).
 
@@ -265,18 +265,22 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 
 ## 9. Rewarded ads (opt-in only, no interstitials, ever)
 
-| Placement | Reward | Cap | Surface |
+**No ad caps.** SOULSWARM never caps rewarded ads: there is no daily or global limit on how many videos a player may watch, and no placement runs out of ads for the day. Every ad is opt-in and pays every time. What an ad buys is bounded by the game, not by an ad counter (energy banks to 99, the Daily Trial's prize pays once a day, a revive is once per run), so a heavy watcher gets more play, never an unbounded currency faucet.
+
+| Placement | Reward | How often | Surface |
 |---|---|---|---|
-| Revive | Revive at full HP, 2.5 s invulnerability, a blast that deals 50% max HP to enemies within 8 m, with knockback | 1 per run (shared with the 60-gem revive) | Death screen (10 s) |
-| Double run rewards | Run gold and gems granted again (stacks with Blood Moon's ×2) | 1 per run (Planned: 5 / day) | Results screen |
-| Free daily summon | 1 single Soul Altar pull | 1 / day | Soul Altar |
-| Energy refill | +10 energy | 3 / day | Energy popup |
-| Daily free chest | 800–1,499 gold + 10 gems + 1 relic (Common 85% / Rare 15%; showing these odds is Planned) | 1 / day | Shop and home screen |
-| Level-up reroll | Redraw the 3 cards (also on a Relic Chest; never a Shrine blessing) | As often as wanted, one ad each (or 50 gems each, below) | Level-up and Relic Chest screens |
-| **Global cap** | | **12 ads / day (Planned)** | |
+| Revive | Revive at full HP, 2.5 s invulnerability, a blast that deals 50% max HP to enemies within 8 m, with knockback | Once per run, by ad or 60 gems (a run rule: a second revive would let any run be watched to a win) | Death screen (10 s) |
+| Double run rewards | Run gold and gems granted again (stacks with Blood Moon's ×2) | Every results screen | Results screen |
+| Energy refill | +10 energy | **As often as wanted**, until the bank of 99 is full | Energy popup |
+| Daily Trial attempt | Another attempt at today's trial | **As often as wanted** until it is beaten (its prize pays once a day; fall-early gems top up to 40 a day across attempts) | Daily Trial panel |
+| Boss Rush try | Another try at the Hollow Court once the 3 free tries are used | **As often as wanted** (one at a time; milestones pay once per event) | Boss Rush panel |
+| Level-up reroll | Redraw the 3 cards (also on a Relic Chest; never a Shrine blessing) | **As often as wanted**, one ad each (or 50 gems each, §2.8) | Level-up and Relic Chest screens |
+| Free daily summon | 1 single Soul Altar pull | A daily gift, claimed with a video (the gift is daily, not the ads) | Soul Altar |
+| Daily free chest | 800–1,499 gold + 10 gems + 1 relic (Common 85% / Rare 15%; showing these odds is Planned) | A daily gift, claimed with a video | Shop and home screen |
 
 - *(Planned)* No ad offer appears during the tutorial or in run 1. No ad offer appears within 30 s of a purchase. (Build: every placement is offered from the first run.)
-- Soul Pact holders skip ads with the same caps.
+- Soul Pact holders skip ads on the same terms.
+- **What to watch without caps:** rewarded impressions per DAU (they can now run past the 2–3 target below, which is the point), eCPM decay for the heaviest watchers (networks pay less per view as a user's daily views climb), and whether energy videos lower gem refills. If a placement's eCPM collapses, change its reward rather than adding a cap.
 
 **Ad revenue model.** Ad ARPDAU = impressions per DAU × eCPM ÷ 1,000. Rough industry ranges for rewarded video (they vary a lot by season, network and year; Q4 is highest): US iOS ~$15–$40, US Android ~$8–$25, Tier-2 ~$3–$10, Tier-3 ~$0.5–$3. **Target:** 2.0–3.0 rewarded impressions per DAU and ad ARPDAU of $0.03–$0.06 in Tier-1 markets. Ads monetise the 95%+ who never pay.
 

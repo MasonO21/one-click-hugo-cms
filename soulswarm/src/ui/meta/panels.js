@@ -3,7 +3,6 @@
 import { h, $, $$, fmt, toast, modal, purchaseFlow, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
 import { SKUS, GEM_SHOP, ENERGY_MAX, ENERGY_REGEN_SEC, HEROES, CHAPTERS, MUTATORS, TRIAL } from '../../game/data.js';
-import { todayKey } from '../../meta/save.js';
 import { now as clockNow } from '../../meta/clock.js';
 import {
   onChange, commit, grant, questList, claimQuest, loginState, claimLogin, energyNextIn, buyGemShop,
@@ -12,7 +11,7 @@ import {
 import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portrait, delegate, energyFullIn } from './util.js';
 import { LOGO_ART } from '../art.js';
 
-const ENERGY_ADS_PER_DAY = 3;
+const ENERGY_AD = 10, ENERGY_BANK = 99; // a video gives +10 as often as wanted (ads are never capped); energy banks up to 99 (economy.grant)
 const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords', chest: 'chest', elite: 'crown', legion: 'helm', evolve: 'star', boss: 'trophy', trial: 'star' };
 
 /** Open a modal whose body re-renders whenever the profile changes. */
@@ -73,10 +72,7 @@ export function openEnergy(ctx) {
   const { app } = ctx; const p = app.profile;
   let lm = null;
   lm = liveModal({ title: 'Energy', cls: 'mm-energy' }, (body) => {
-    const today = todayKey();
-    const ads = p.flags.energyAds && p.flags.energyAds.date === today ? p.flags.energyAds.n : 0;
-    const left = Math.max(0, ENERGY_ADS_PER_DAY - ads);
-    const full = p.energy >= ENERGY_MAX;
+    const full = p.energy >= ENERGY_MAX, banked = p.energy >= ENERGY_BANK;
     body.innerHTML = `
       <div class="en-top">
         <div class="en-bolt">${icon('energy')}</div>
@@ -92,9 +88,9 @@ export function openEnergy(ctx) {
           <button class="btn btn-gem btn-sm" data-act="refill" ${full ? 'disabled' : ''}>${icon('gems')}<span class="price">${GEM_SHOP.energy.cost}</span></button>
         </div>
         <div class="en-opt">
-          <div class="en-opt-ic en-ad">${icon('ad')}<b>+10</b></div>
-          <div class="en-opt-tx"><b>Watch a video</b><small>${left} of ${ENERGY_ADS_PER_DAY} left today</small></div>
-          <button class="btn btn-ad btn-sm" data-act="ad" ${left <= 0 ? 'disabled' : ''}>${left <= 0 ? 'Tomorrow' : 'Free'}</button>
+          <div class="en-opt-ic en-ad">${icon('ad')}<b>+${ENERGY_AD}</b></div>
+          <div class="en-opt-tx"><b>Watch a video</b><small>As often as you like</small></div>
+          <button class="btn btn-ad btn-sm" data-act="ad" ${banked ? 'disabled' : ''}>${banked ? 'Full' : 'Free'}</button>
         </div>
       </div>`;
     $(body, '[data-act="refill"]')?.addEventListener('click', () => {
@@ -108,14 +104,10 @@ export function openEnergy(ctx) {
     $(body, '[data-act="ad"]')?.addEventListener('click', async (e) => {
       e.currentTarget.disabled = true;
       const ok = await watchAd(app, 'energy');
-      if (!ok) { lm && lm.draw(); return; }
-      const d = todayKey();
-      const n = p.flags.energyAds && p.flags.energyAds.date === d ? p.flags.energyAds.n : 0;
-      if (n >= ENERGY_ADS_PER_DAY) return;
-      const items = grant(p, { energy: 10 });
-      p.flags.energyAds = { date: d, n: n + 1 };
+      if (!ok || p.energy >= ENERGY_BANK) { lm && lm.draw(); return; }
+      const items = grant(p, { energy: ENERGY_AD });
       commit(p);
-      popRewards(app, items, { title: 'Energy +10' });
+      popRewards(app, items, { title: `Energy +${ENERGY_AD}` });
     });
   });
 }
@@ -349,8 +341,8 @@ export function openTrial(ctx) {
         <div class="tr-sig">${rewardChip({ kind: 'sigils', amount: 1 })}<span>${toSigil === 1 ? 'Your next clear also earns a Sigil!' : `A Sigil every ${TRIAL.sigilEvery} clears · ${toSigil} to go`}</span></div>
         <small class="t-dim">Free: no energy. Falling early still pays ${TRIAL.failGemsPerMin} gems a minute (up to ${TRIAL.failGemsMax}). Records and chapter progress are unaffected.</small></div>
       ${t.available ? '<button class="btn btn-primary btn-lg btn-block" data-act="go">Begin trial</button>'
-        : t.retry ? `<button class="btn btn-ad btn-lg btn-block" data-act="retry">${icon('ad')} One more attempt</button>`
-        : `<div class="tr-done">${icon('check')} Done for today</div>`}
+        : t.retry ? `<button class="btn btn-ad btn-lg btn-block" data-act="retry">${icon('ad')} Try again</button><small class="t-dim tr-again">One video per attempt, as many as it takes. The prize pays on your first clear today.</small>`
+        : `<div class="tr-done">${icon('check')} Beaten today</div>`}
       ${t.clears ? `<div class="tr-count t-dim">Trials cleared: <b>${t.clears}</b></div>` : ''}
     </div>`;
     $(body, '[data-act="go"]')?.addEventListener('click', () => {

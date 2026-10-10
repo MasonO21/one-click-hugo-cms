@@ -168,10 +168,11 @@ export const TUTORIAL = {
 // cap +`cap` and a legion of `legion`, then picks `draft` powers; each boss drops a Relic Chest, raises `souls` souls and
 // heals `heal` of max HP, and the next rises `gap` s later. A limited event: in the build it
 // runs every week on `days` (UTC; Tue–Thu); live, once per season through remote config (LIVEOPS.md §3.2). Free:
-// `tries` a day, `adTries` more by rewarded ad. Milestones (bosses beaten in one attempt) pay once per event.
+// `tries` a day, then one more try per rewarded ad, as many as wanted (ads are never capped). Milestones (bosses beaten in
+// one attempt) pay once per event.
 export const BOSS_RUSH = {
   name: 'The Hollow Court', unlockAt: 2, // chapter.unlocked: a first Chapter 1 clear
-  days: [2, 3, 4], tries: 3, adTries: 1,
+  days: [2, 3, 4], tries: 3,
   level: 20, auto: 14, cap: 40, legion: 70, draft: 4, first: 3, warn: 3, gap: 6, souls: 20, heal: 0.4,
   hp: [1, 0.85, 0.7, 0.6, 0.55],
   milestones: [{ gold: 1000 }, { gems: 20 }, { gold: 1500 }, { gems: 30 }, { sigils: 1, gems: 40 }],
@@ -809,8 +810,10 @@ export function difficultyLook(look, tint) {
 
 // ---------------------------------------------------------------- Daily Trial
 // One free run a day (no energy) on a cleared chapter with one boon and one bane, seeded by date. Unlocks once Chapter 1 is cleared.
+// A rewarded ad buys another attempt, as many as wanted until the trial is beaten (ads are never capped); the prize pays
+// once a day: the clear reward on the first clear, and the fall-early gems up to failGemsMax across the day's attempts.
 export const TRIAL = {
-  unlockAt: 2, adRetries: 1,
+  unlockAt: 2,
   clear: { gems: 40, passXp: 150 }, sigilEvery: 3, // on top of the normal gold and pass XP; every 3rd clear also gives a Sigil
   failGemsPerMin: 8, failGemsMax: 40,
 };

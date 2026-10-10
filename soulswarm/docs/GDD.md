@@ -666,8 +666,8 @@ These are upper bounds: when the alive limit is reached, the director skips spaw
 One free run a day (no energy) that twists the core loop. It unlocks once Chapter 1 is cleared (home screen, left column, gold "Trial" button with a badge while today's attempt is unused).
 
 - **Seeded by date.** The day's hash picks a chapter the player has cleared (1 to unlocked − 1, max 5), one **boon** and one **bane**. Everyone at the same progress sees the same trial; it resets at local midnight.
-- **One attempt a day,** plus one more through a rewarded ad (`trial_retry`). Starting the trial uses the attempt.
-- **Rewards:** the normal run gold and pass XP, plus on a clear **40 gems and +150 pass XP**; every 3rd clear also gives **1 Altar Sigil** (the panel counts down to it). A failed attempt pays 8 gems per full minute survived (max 40) instead of the normal run gems. Trials never change chapter records, unlocks or first-clear rewards.
+- **One attempt a day,** then another through a rewarded ad (`trial_retry`) as often as wanted until the trial is beaten (ads are never capped, `MONETIZATION.md` §9). Starting the trial uses the attempt.
+- **Rewards:** the normal run gold and pass XP, plus on a clear **40 gems and +150 pass XP**; every 3rd clear also gives **1 Altar Sigil** (the panel counts down to it). A failed attempt pays 8 gems per full minute survived (max 40 a day across the day's attempts) instead of the normal run gems. The clear prize pays on the day's first clear; after it the panel reads "Beaten today". Trials never change chapter records, unlocks or first-clear rewards.
 - **Always Normal difficulty.** The mutators are the trial's twist, so Nightmare and Torment (§8.2) never apply, whatever the chapter card is set to.
 - **Announced** in-run by a "DAILY TRIAL" banner at 0:03.6 naming both mutators; the pause screen lists them.
 
@@ -733,7 +733,7 @@ A limited event: the five chapter bosses back to back in one run. Numbers live i
 
 - **When.** In the build it runs every week, Tuesday 00:00 – Thursday 23:59 UTC; live it runs once per season (week 3) through remote config. `profile.flags.bossRush` ('on' / 'off') overrides the calendar for QA.
 - **Who.** Unlocked by a first Chapter 1 clear. The home screen's **Rush** button glows crimson while the Court is open and carries a dot while a free try is left.
-- **Cost.** Free: **3 tries a day** (no energy), one more by rewarded ad. Entering uses a try; abandoning or falling ends it.
+- **Cost.** Free: **3 tries a day** (no energy), then one more per rewarded ad, as many as wanted (one at a time). Entering uses a try; abandoning or falling ends it.
 - **The run.** The Abyss map, titled "Boss Rush · The Hollow Court · Five bosses. One legion. No rest." The Shepherd starts where a campaign player stands at a boss:
   - level 20, a veteran build (the first card of 14 draws, applied at once), legion cap +40 and a legion of 70;
   - then the **War Council**: 4 picks of the player's own, while the clock waits.

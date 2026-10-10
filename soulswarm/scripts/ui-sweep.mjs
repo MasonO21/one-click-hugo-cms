@@ -466,7 +466,7 @@ function pageHelpers() {
       verify: () => ({ ok: p().gems === 0 && p().altar.pulls - B.n === 10 && qa('#ui > .rv').length === 1, detail: `gems ${p().gems}, pulls +${p().altar.pulls - B.n}, reveals ${qa('#ui > .rv').length}` }) },
     'energy refill': { setup: () => { Object.assign(p(), { energy: 0, gems: 500 }); commitRefresh(); click('[data-top="energy"]'); return '.mm-energy [data-act="refill"]'; },
       verify: () => ({ ok: p().gems === 450 && p().energy === 30, detail: `gems ${p().gems}, energy ${p().energy}` }) },
-    'energy ad': { wait: 700, setup: () => { S.fastStore(true, 300); p().energy = 0; delete p().flags.energyAds; commitRefresh(); click('[data-top="energy"]'); return '.mm-energy [data-act="ad"]'; },
+    'energy ad': { wait: 700, setup: () => { S.fastStore(true, 300); p().energy = 0; commitRefresh(); click('[data-top="energy"]'); return '.mm-energy [data-act="ad"]'; },
       verify: () => ({ ok: p().energy === 10, detail: `energy ${p().energy}` }) },
     'gem shop buy (confirm)': { setup: async () => { p().gems = 500; commitRefresh(); nav('shop'); click('.deal[data-key="gold_s"]'); await S.settle(); B = { o: p().gold }; return '.modal .btn-gem'; },
       verify: () => ({ ok: p().gems === 440 && p().gold - B.o === 5000, detail: `gems ${p().gems}, gold +${p().gold - B.o}` }) },
@@ -822,12 +822,12 @@ async function economyPhase() {
       Date.now = realNow; }
 
     TAG = 'trial';
-    // E7. the Daily Trial: locked before a Chapter 1 clear; one attempt plus one ad retry a day; resets the next day
+    // E7. the Daily Trial: locked before a Chapter 1 clear; one attempt, then one more per ad (uncapped) until beaten; resets the next day
     { const p = fresh(); let t = new Date(2026, 9, 7, 9).getTime(); Date.now = () => t;
       if (eco.beginTrial(p) || eco.trialState(p).unlocked) fail('trial open before a Chapter 1 clear');
       p.chapter.unlocked = 2;
       const seq = [eco.beginTrial(p), eco.beginTrial(p), eco.grantTrialRetry(p), eco.grantTrialRetry(p), eco.beginTrial(p), eco.beginTrial(p), eco.grantTrialRetry(p)];
-      if (seq.join() !== 'true,false,true,false,true,false,false') fail(`trial attempts ${seq}`);
+      if (seq.join() !== 'true,false,true,false,true,false,true') fail(`trial attempts ${seq}`);
       t += 864e5; const s2 = eco.trialState(p); if (!s2.available || eco.beginTrial(p) !== true) fail('trial did not reset the next day');
       Date.now = realNow; }
 
@@ -887,12 +887,13 @@ async function economyPhase() {
   check('gacha: every 10-pull has an Epic or better; the guarantee never adds Legendaries', G.noEpic === 0 && G.legendaryRateIn10 < 3.6, `no-Epic batches ${G.noEpic}/${G.tens}, Legendary rate ${G.legendaryRateIn10}%`);
   const chiEq = (ks) => { const v = ks.map((k) => G.shards[k] || 0), m = v.reduce((a, b) => a + b, 0) / v.length; return v.reduce((a, x) => a + (x - m) ** 2 / m, 0); };
   const epicKeys = Object.keys(G.shards).filter((k) => k.startsWith('epic:')), legKeys = Object.keys(G.shards).filter((k) => k.startsWith('legendary:'));
+  // p > 0.001: 4 Epic-pull shard pools (3 df: Nyx, Seraphine, Liora, Grimsby) and 3 Legendary-pull pools (2 df: Seraphine, Mordrake, Osric)
   const shardChi = [chiEq(epicKeys), chiEq(legKeys)].map((x) => +x.toFixed(2));
-  check('gacha: relic types and hero shards are equally likely (as the odds sheet says)', G.typeChi2 < 24.32 && shardChi[0] < 13.82 && shardChi[1] < 10.83 && epicKeys.length === 3 && legKeys.length === 2 && !T('gacha').length, `relic χ²=${G.typeChi2} shard χ²=${shardChi} ${JSON.stringify(G.shards)}`);
+  check('gacha: relic types and hero shards are equally likely (as the odds sheet says)', G.typeChi2 < 24.32 && shardChi[0] < 16.27 && shardChi[1] < 13.82 && epicKeys.length === 4 && legKeys.length === 3 && !T('gacha').length, `relic χ²=${G.typeChi2} shard χ²=${shardChi} ${JSON.stringify(G.shards)}`);
   check('economy: pass tiers claim once, only when reached, only real tiers, premium only with the pass', !T('pass').length, T('pass').join(' | '));
   check('economy: quests rotate by day, reset, and pay once; late quests stay gated', !T('quest').length, T('quest').join(' | '));
   check('economy: the weekly chest opens once and resets on Monday', !T('weekly').length, T('weekly').join(' | '));
-  check('economy: the Daily Trial allows one attempt plus one ad retry a day', !T('trial').length, T('trial').join(' | '));
+  check('economy: the Daily Trial allows one attempt, then one more per ad (uncapped) until it is beaten', !T('trial').length, T('trial').join(' | '));
   check('economy: first-clear gems once per chapter per difficulty (900 + 550 gems total), never from trials or Endless', !T('first').length, T('first').join(' | '));
   check('economy: energy regenerates across time jumps, including the clock going backwards', !T('energy').length, `${JSON.stringify(E.energy)} ${T('energy').join(' | ')}`);
   check('economy: login, free chest, free summon and Pact tribute pay once a day; first-buy ×2 once per tier', !T('daily').length, T('daily').join(' | '));

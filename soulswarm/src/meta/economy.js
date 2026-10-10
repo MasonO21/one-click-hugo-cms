@@ -377,7 +377,7 @@ export const accountXpFor = (lv) => 80 + lv * 40;
  */
 // ---------------------------------------------------------------- Daily Trial
 const hashStr = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
-const trialToday = (p) => { const t = todayKey(); if (p.trial.day !== t) Object.assign(p.trial, { day: t, done: false, ads: 0 }); return p.trial; };
+const trialToday = (p) => { const t = todayKey(); if (p.trial.day !== t) Object.assign(p.trial, { day: t, done: false, ads: 0, won: false, failPaid: 0 }); return p.trial; };
 /** Today's trial: a chapter the player has cleared, one boon and one bane, picked from the date. */
 export function dailyTrial(p, day = todayKey()) {
   const h = hashStr('trial:' + day);
@@ -388,12 +388,12 @@ export function dailyTrial(p, day = todayKey()) {
 }
 export function trialState(p) {
   const t = trialToday(p), unlocked = p.chapter.unlocked >= TRIAL.unlockAt;
-  return { ...dailyTrial(p), unlocked, available: unlocked && !t.done, retry: unlocked && t.done && t.ads < TRIAL.adRetries, clears: t.clears };
+  return { ...dailyTrial(p), unlocked, available: unlocked && !t.done, retry: unlocked && t.done && !t.won, won: !!t.won, clears: t.clears };
 }
 /** Uses today's attempt. */
 export function beginTrial(p) { const t = trialToday(p); if (t.done || p.chapter.unlocked < TRIAL.unlockAt) return false; t.done = true; return true; }
-/** A rewarded ad buys one more attempt per day. */
-export function grantTrialRetry(p) { const t = trialToday(p); if (!t.done || t.ads >= TRIAL.adRetries) return false; t.ads++; t.done = false; return true; }
+/** A rewarded ad buys one more attempt, as many as wanted until today's trial is beaten. */
+export function grantTrialRetry(p) { const t = trialToday(p); if (!t.done || t.won) return false; t.ads++; t.done = false; return true; }
 
 // ---------------------------------------------------------------- Boss Rush (BOSS_RUSH in data.js, run.js rush)
 const DAY = 864e5;
@@ -422,11 +422,11 @@ export function rushState(p) {
   const R = rushNow(p), unlocked = p.chapter.unlocked >= BOSS_RUSH.unlockAt, open = rushOpen(p), T = rushTimes();
   const left = Math.max(0, BOSS_RUSH.tries + R.ads - R.tries);
   return { unlocked, open, ends: T.ends, starts: T.starts, triesLeft: left, available: unlocked && open && left > 0,
-    retry: unlocked && open && left === 0 && R.ads < BOSS_RUSH.adTries, claimed: R.claimed, best: R.best, bestKills: R.bestKills, allBest: R.allBest, clears: R.clears };
+    retry: unlocked && open && left === 0, claimed: R.claimed, best: R.best, bestKills: R.bestKills, allBest: R.allBest, clears: R.clears };
 }
 /** Uses one of today's tries. */
 export function beginRush(p) { const s = rushState(p); if (!s.available) return false; p.rush.tries++; return true; }
-/** A rewarded ad buys one more try a day. */
+/** A rewarded ad buys one more try, as many as wanted (ads are never capped). */
 export function grantRushTry(p) { const s = rushState(p); if (!s.retry) return false; p.rush.ads++; return true; }
 /** A Boss Rush attempt: the run's gold and pass XP, quests, Bestiary kills (each boss counts for itself), the milestones
  *  newly reached this event (bosses beaten in one attempt) and the fastest full clear. No chapter records. */
@@ -468,17 +468,24 @@ export function applyRunResult(p, result) {
   const D = resultDifficulty(result), hard = D.id !== 'normal'; // Nightmare / Torment (meta/difficulty.js)
   const firstClear = result.victory && !result.endless && !trial && !clearedOn(p, ch, D.id);
   const gold = Math.round((result.kills * 0.9 + result.time * 2.2 + (result.victory ? 400 * ch : 0)) * L.goldMul * D.gold + (result.bonusGold || 0));
-  const gems = trial ? (result.victory ? TRIAL.clear.gems : Math.min(TRIAL.failGemsMax, Math.floor(result.time / 60) * TRIAL.failGemsPerMin))
+  // the Daily Trial's prize pays once a day however many ad attempts it takes: the clear reward on the first clear, and
+  // the fall-early gems topped up to failGemsMax across the day's attempts
+  const T = p.trial, prize = trial && result.victory && !T.won;
+  const trialGems = !trial ? 0 : result.victory ? (prize ? TRIAL.clear.gems : 0)
+    : Math.max(0, Math.min(TRIAL.failGemsMax, Math.floor(result.time / 60) * TRIAL.failGemsPerMin) - (T.failPaid || 0));
+  if (trial && !result.victory) T.failPaid = (T.failPaid || 0) + trialGems;
+  if (prize) T.won = true;
+  const gems = trial ? trialGems
     : result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
     : result.victory ? 10 + 2 * ch : Math.floor(result.time / 120) * 2;
-  const baseXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0) + (trial && result.victory ? TRIAL.clear.passXp : 0));
+  const baseXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0) + (prize ? TRIAL.clear.passXp : 0));
   const passXp = Math.round(baseXp * D.passXp);
   const rewards = { gold: gold * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), gems: gems * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), passXp };
   // the first-clear bonus is flat: Blood Moon and the ad double only the clear gems (Normal: 40 + 18c on top, 50 + 20c in all)
   const firstGems = firstClear ? (hard ? D.firstClearGems : 40 + 18 * ch) : 0;
   if (firstGems) { rewards.gems += firstGems; rewards.firstClearGems = firstGems; }
   if (firstClear && !hard) rewards.sigils = 1;
-  if (trial && result.victory) { p.trial.clears = (p.trial.clears || 0) + 1; if (p.trial.clears % TRIAL.sigilEvery === 0) rewards.sigils = (rewards.sigils || 0) + 1; }
+  if (prize) { p.trial.clears = (p.trial.clears || 0) + 1; if (p.trial.clears % TRIAL.sigilEvery === 0) rewards.sigils = (rewards.sigils || 0) + 1; }
   if (result.victory) rewards.relic = D.hoard ? rollHoard(D.hoard, rand()) : ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';
   if (result.endless && result.bossKills) rewards.relic = result.bossKills >= 3 ? 'epic+' : result.bossKills >= 2 ? 'epic' : 'rare';
 

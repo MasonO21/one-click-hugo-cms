@@ -18,7 +18,7 @@ export function openRush(ctx) {
     const s = rushState(p), n = BOSS_ORDER.length;
     const action = !s.open ? `<div class="tr-done br-closed">${icon('hourglass')} Closed · opens again in ${cd(s.starts, 0, 'cd-strong')}</div>`
       : s.available ? `<button class="btn btn-primary btn-lg btn-block br-go" data-act="go"><span>Enter the Court</span><small>${s.triesLeft} free ${s.triesLeft === 1 ? 'try' : 'tries'} left today</small></button>`
-      : s.retry ? `<button class="btn btn-ad btn-lg btn-block" data-act="retry">${icon('ad')} One more try</button>`
+      : s.retry ? `<button class="btn btn-ad btn-lg btn-block" data-act="retry">${icon('ad')} One more try</button><small class="t-dim tr-again">One video per try, as many as you like</small>`
       : `<div class="tr-done">${icon('check')} No tries left today · more at midnight</div>`;
     body.innerHTML = `<div class="br">
       <div class="br-head"><span class="t-label">${s.open ? '<i class="br-live"></i>Live now' : 'Limited event'}</span><b class="t-display">${BOSS_RUSH.name}</b>
