@@ -301,9 +301,31 @@
   function traitRows(foe, heroes) {
     const TL = DATA.traits.list;
     const need = { armored: 'Sunder', regen: 'Volley or Charge', venom: 'Mend' };
-    return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span>${!traitAnswered(t, heroes) && need[t] ? `<div class="small tr-need">No hero in the squad has ${need[t]}.</div>` : ''}</div>
+    const swap = (t) => {
+      const c = traitAnswerer(t);
+      return c ? ` <button class="btn small alt tr-swap" data-act="traitswap" data-arg="${t}">Swap in ${esc(HERO[c].name.split(' ')[0])}</button>` : '';
+    };
+    return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span>${!traitAnswered(t, heroes) && need[t] ? `<div class="small tr-need">No hero in the squad has ${need[t]}.${swap(t)}</div>` : ''}</div>
       ${traitAnswered(t, heroes) ? `<span class="chip tr-ok" title="Your squad can answer it">${icon('i-check')}</span>` : `<span class="chip tr-no" title="No hero in the squad can answer it">!</span>`}</div>`).join('');
   }
+  // the strongest free hero whose skill answers a trait, to swap in for the squad's weakest
+  function traitAnswerer(t) {
+    const need = TRAIT_ANSWER[t];
+    if (!need || need[0] === 'breath') return null;
+    return Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && !(KH.heroBusy && KH.heroBusy(id)) && need.includes(KH.skillKind(id))).sort((a, b) => KH.heroPower(b) - KH.heroPower(a))[0] || null;
+  }
+  ACT.traitswap = (t) => {
+    const c = traitAnswerer(t);
+    if (!c) return;
+    const free = S.squad.filter((id) => !(KH.heroBusy && KH.heroBusy(id)));
+    if (S.squad.length < 3) S.squad.push(c);
+    else {
+      const out = (free.length ? free : S.squad).slice().sort((a, b) => KH.heroPower(a) - KH.heroPower(b))[0];
+      S.squad[S.squad.indexOf(out)] = c;
+      toast(`${HERO[c].name.split(' ')[0]} takes ${HERO[out].name.split(' ')[0]}'s place in the squad.`, 'good');
+    }
+    audio('tap');
+  };
   KH.traitRows = traitRows;
   const traitChips = (foe) => (foe.traits || []).map((t) => `<span class="chip tr-chip">${icon(DATA.traits.list[t].icon)}${esc(DATA.traits.list[t].name)}</span>`).join('');
 

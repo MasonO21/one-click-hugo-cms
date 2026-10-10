@@ -1420,3 +1420,4 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .tr-chip .ic { width: 18px; height: 18px; }
 .floaty.venom { color: #b4e05a; text-shadow: 0 0 10px #6a9a1a; }
 .tr-need { color: #f0a040; margin-top: 2px; }
+.tr-swap { margin-left: 6px; padding: 2px 10px; font-size: 12px; }
