@@ -1329,6 +1329,15 @@ const DATA = {
   // keep it in the squad too. Four seats, two more for Starglass; a seat whose hero leaves rests for twelve hours.
   spar: { unlock: 10, seats: 4, extra: [300, 600], cooldown: 43200 },
 
+  // ---------- Stage Stars ----------
+  // Three stars a story stage: the victory, ending the fight with half the squad's health or more, and winning within
+  // six rounds (eight against a boss). Any cleared stage can be fought again for the stars it is missing. A chapter's
+  // thirty stars fill three chests (resources and journals scale with the keep when claimed).
+  stars: {
+    unbroken: 0.5, swift: 6, swiftBoss: 8,
+    chests: [[10, { journals: 3, crate_food: 1, speed15: 2 }], [20, { journals: 5, starglass: 20, whetstone: 1 }], [30, { starglass: 40, beacons: 1, whetstone: 2 }]],
+  },
+
   // ---------- Hero Kinships ----------
   // Pairs of heroes whose stories are tied. A kinship forms once both are recruited and works whenever both march in
   // the same squad: one bonus for the whole squad (attack, defense, health, the Torrent, or damage taken), bigger for
@@ -1842,6 +1851,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.39', items: [
+      { icon: 'i-star', name: 'Stage Stars', text: "Every story stage now holds three stars: the victory, ending the fight with half the squad's health, and winning within six rounds. Tap a cleared stage on the Expedition tab to fight it again for the stars it is missing; each chapter's stars fill three chests.", act: 'stars', open: (S) => S.stage > 2, needs: 'Clear stage 2' },
+    ] },
     { v: '4.38', items: [
       { icon: 'i-duel', name: 'The Sparring Ring', text: "Up to four heroes sit in the ring on the Heroes tab and fight at the level of your third-best hero outside it, in the squad or anywhere else, so a kinship partner or the hero whose skill answers a foe's trait is ready when you need them.", act: 'tab:heroes', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
     ] },
@@ -2200,6 +2212,10 @@ const DATA = {
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
     { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 3 } },
+    { id: 'stars30', text: 'Win 30 stage stars', stat: 'stars', n: 30, reward: { journals: 3 } },
+    { id: 'stars150', text: 'Win 150 stage stars', stat: 'stars', n: 150, reward: { starglass: 100 } },
+    { id: 'stars300', text: 'Win 300 stage stars', stat: 'stars', n: 300, reward: { starglass: 200, beacons: 2 } },
+    { id: 'starfull20', text: 'Take all three stars on 20 stages', stat: 'starFull', n: 20, reward: { starglass: 60 } },
     { id: 'charm3', text: 'Have three heroes wear relic charms', stat: 'charmsWorn', n: 3, reward: { trowel: 10 } },
     { id: 'charm10', text: 'Raise a relic charm to Lv 10', stat: 'charmTop', n: 10, reward: { starglass: 300, charge: 2 } },
     { id: 'lev1', text: 'Attack the Sand Leviathan', stat: 'levAttacks', n: 1, reward: { whetstone: 3 } },

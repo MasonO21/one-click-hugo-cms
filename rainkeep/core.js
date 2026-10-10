@@ -1114,8 +1114,10 @@
         else if (result.win && foe.n === DATA.actTwoStage && !S.ending2Seen) after.push({ kind: 'ending', act: 2 });
         else if (result.win && foe.n === DATA.finalStage && !S.ending3Seen) after.push({ kind: 'ending', act: 3 });
         else if (result.win && chapterOf(S.stage).from !== chapterBefore && !S.story.chapters.includes(chapterOf(S.stage).from)) after.push({ kind: 'story', from: chapterOf(S.stage).from });
+        // Stage Stars (stars.js): the stars this clear took
+        const extra = result.win && KH.stageStars ? KH.stageStars(foe.n, result, team) : '';
         save();
-        return { rewards, after };
+        return { rewards, after, extra };
       },
     });
   };

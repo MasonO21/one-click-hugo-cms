@@ -170,7 +170,7 @@
 
   // the side rail's hubs: tiles that open each member's own sheet (with a way back)
   const HUBS = {
-    rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
+    rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'stars', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
     play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'clash', 'leviathan', 'derby', 'fishing', 'cookfire', 'buriedcity', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
     ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade', 'journeys'], blurb: "The keep's business out on the sand: outposts on the Dunes, trade caravans to the markets beyond, and heroes on far journeys." },
   };
@@ -380,7 +380,7 @@
         ${KH.formationRow ? KH.formationRow(foe) : ''}
         <div style="margin-top:12px"><div class="costs" style="margin-bottom:8px" title="First clear">${rewardHTML(KH.stageRewards(n))}</div><button class="btn wide ${home.length ? '' : 'off'}" data-act="fight" data-primary>${home.length ? 'Fight' : 'Squad is away on the Dunes'}</button></div>
       </div>
-      <div class="section-label">${esc(ch.name)}</div><div class="stage-list">${cells}</div>
+      ${endless || !KH.starList ? `<div class="section-label">${esc(ch.name)}</div><div class="stage-list">${cells}</div>` : ''}${KH.starList ? KH.starList(endless ? DATA.finalStage : ch.from) : ''}
       <div class="row" style="margin-top:12px"><button class="btn alt small" data-act="story" data-arg="${ch.from}">Read the chapter</button>${KH.sheets.chronicle ? '<button class="btn alt small" data-act="chronicle">Chronicle</button>' : ''}</div>`;
   }
 
