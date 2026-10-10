@@ -1834,6 +1834,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.36', items: [
+      { icon: 'i-tr-armored', name: 'Foe traits', text: 'From stage 16 every foe on the expedition has a trait, and bosses two: Armored, Regenerating, Venomous, Frenzied or Sand-shelled. Each has an answer, from a Sunder through armor to the Torrent against a frenzy, and the stage card says whether your squad has it.', act: 'tab:world', open: (S) => S.stage >= 16, needs: 'expedition stage 16' },
+    ] },
     { v: '4.35', items: [
       { icon: 'i-dg-idol', name: 'Relic Charms', text: 'Every kind of relic dug up in the Buried City can now be worn by a hero as a charm: health, attack, defense or skill power, a level for every one of its kind you find. Choose one on any hero\'s sheet.', act: 'buriedcity', open: (S) => !!(S.dig && S.dig.found && Object.keys(S.dig.found).length), needs: 'a relic from the Buried City' },
     ] },
