@@ -15,6 +15,7 @@
 | **Every 28 days** | **Soul Pass season** (30 tiers, new theme, new premium skin) | 28-day Soul Pass season | Yes |
 | **Monthly (once per season)** | **Limited Boss Rush** (72 h) | Monthly limited boss rush | Light (new modifiers / variant) |
 | **Every 1–2 seasons** | **New hero** (Shepherd) | New hero every 1–2 seasons | Yes (heavy) |
+| **Every season** | **A new Grimoire page** (GDD §4.9): a run-start boon with a price, unlocked by a new account goal or as a free Soul Pass reward (never sold, so the blank page stays a fair choice). Launch has 8 (Update 7, 2026-10-10) | Long-term goals, run variety | Light (1 painting, 1 hook) |
 | **Every 2–3 seasons** | **New foes**: a pair of horde foes with new AI, Bestiary entries (3 milestones each) and risen minion forms, and weapon upgrades alongside (Update 5, "The Deepening Horde", 2026-10-09: the Grave Wraith and the Corpse Priest; GDD §5) | Bestiary growth, horde variety | Yes (medium: 2 paintings, 2 models, AI) |
 | **Holidays** | Halloween, Winter, Lunar New Year, Spring, Anniversary | — | Medium (reskins + event track) |
 | **Roadmap features** | Clans ("Covens"), co-op **Legion Raids**, difficulty tiers beyond Torment | Clans and Legion Raids on roadmap (Nightmare and Torment are in the build) | Yes (heavy) |

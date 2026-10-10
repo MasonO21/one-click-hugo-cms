@@ -49,6 +49,14 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `skill-vampiricCommunion.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Vampiric Communion (evolution) ability icon | `70dd45f7-4616-4c71-896d-67ef0bd279e9` |
 | `skill-graveWard.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grave Ward (passive) ability icon | `5ff9eae7-8d13-4ea2-a5ce-17f99c6bc124` |
 | `skill-dreadReach.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Dread Reach (passive) ability icon | `de66c8f4-e03e-4e37-8597-987a1425a042` |
+| `page-banner.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Banner of the Damned (Update 7, 2026-10-10): the page picker, the home chip | `8cbd7de0-76de-4046-89c5-b49289d3d7df` |
+| `page-furnace.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Soul Furnace | `12cf89d7-42fb-44d6-bb7c-7be9ce135d9f` |
+| `page-glass.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Glass Shepherd | `ddcc1244-e8f5-454d-99c3-b260a25cb068` |
+| `page-restless.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Restless Graves | `9c1ec1d5-080e-4ac0-8562-c82c186d221a` |
+| `page-midnight.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Midnight Mass | `a77b269c-0c95-4ef5-8187-384e3a190b50` |
+| `page-tithe.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Ossuary Tithe | `68cb8154-ff2b-46ce-8d7c-c37595eab5db` |
+| `page-carrion.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Carrion Feast | `f796fcee-98dd-4f32-a973-c8eae9fd6256` |
+| `page-gate.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Gravecaller's Gate | `c5f5accb-b290-4360-a344-34024394d4cb` |
 | `skill-ossuaryBarrage.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Ossuary Barrage (evolution) ability icon: level-up cards, results | `04f7b31c-5d39-498d-bf97-23d6bcdcd103` |
 | `skill-requiem.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Requiem (evolution) ability icon: level-up cards, results | `b6e7e36a-d31c-418c-a1c0-55f4f1e6d564` |
 | `skill-witchfire.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Witchfire Lantern ability icon: level-up cards, results, hero detail | `0b7eb7ca-0203-47c7-b685-5bc8f524eb4a` |
@@ -159,7 +167,7 @@ To run it:
 - 9 Nano Banana Pro 2K images at 2 credits each, including Liora's splash;
 - 1 GPT Image 2.5 high image at 2.75 credits.
 
-The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more, and Update 6's six ability icons (2026-10-10; the Witchfire icons' prompt with the lantern as the reference) 12 more.
+The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more, and Update 6's six ability icons (2026-10-10; the Witchfire icons' prompt with the lantern as the reference) 12 more, and Update 7's eight Grimoire pages (the same recipe) 16 more.
 
 Re-cutting the ads in the sandbox costs no credits.
 

@@ -121,6 +121,10 @@ The Bestiary (GDD §5.2) has a painted entry for each of 13 foes (the horde's se
 
 ---
 
+### 2.7 The Grimoire (run-start pages, never sold)
+
+The Grimoire (GDD §4.9) is a collection with no price tag: its eight pages unlock from play (runs finished, chapter clears, minions raised, a kill streak, a legion size, foes slain). Every page is a trade (a boon with a price), so none is a straight power purchase, and the blank page stays a fair choice; for that reason pages are **never sold** for gems or money. They pay off monetization indirectly: they give a reason to keep playing (and to replay cleared chapters with a new twist) between hero releases, and new pages can arrive as free Soul Pass rewards to make the pass feel richer without touching its premium value.
+
 ## 3. Spend-depth ladder
 
 | Tier | Lifetime / monthly spend | Typical purchases | What they get | Share of players (target) |
