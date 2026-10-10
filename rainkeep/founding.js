@@ -46,7 +46,7 @@
       if (S.lv.wyrm < F.unlock) return;
       if (S.lv.wyrm > F.youngUntil) { w.state = 'skipped'; return; }
       Object.assign(w, { state: 'open', start: S.time, startReal: Date.now(), base: { ...S.stats }, got: [], chests: [] });
-      KH.mail('The Founding Week', `Every keep's first week decides what it becomes. Five missions open each day for seven days: collect each one for points, open the chests along the way, and at ${fmt(MAX)} points choose any Legendary hero to join you.`, {});
+      KH.mail('The Founding Week', `Every keep's first week decides what it becomes. Five missions open each day for seven days: collect each one for points, open the chests along the way, and at ${fmt(MAX)} points choose any Legendary hero to join you.`, null);
       KH.emit('foundingOpen', {});
       return;
     }
@@ -54,7 +54,7 @@
       w.state = 'ended';
       const left = {};
       F.chests.forEach(([need, g], i) => { if (points() >= need && !w.chests.includes(i)) for (const [k, v] of Object.entries(KH.scaleReward(g))) left[k] = (left[k] || 0) + v; });
-      KH.mail('The Founding Week is over', Object.keys(left).length ? 'The week has ended. Here are the chests you earned and did not open.' : 'The week has ended. The keep stands on what you built in it.', left);
+      KH.mail('The Founding Week is over', Object.keys(left).length ? 'The week has ended. Here are the chests you earned and did not open.' : 'The week has ended. The keep stands on what you built in it.', Object.keys(left).length ? left : null);
     }
   });
 
