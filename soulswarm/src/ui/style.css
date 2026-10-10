@@ -180,4 +180,4 @@ button { font: inherit; color: inherit; }
 }
 
 /* Painted relic and ability icons (art.js): each has a dark square backdrop that fades into whatever frame holds it. */
-.relic-art, .skill-art { display: block; object-fit: contain; -webkit-mask: radial-gradient(circle, #000 54%, transparent 71%); mask: radial-gradient(circle, #000 54%, transparent 71%); }
+.relic-art, .skill-art, .page-art { display: block; object-fit: contain; -webkit-mask: radial-gradient(circle, #000 54%, transparent 71%); mask: radial-gradient(circle, #000 54%, transparent 71%); }

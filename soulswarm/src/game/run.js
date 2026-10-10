@@ -22,7 +22,7 @@ import { Streak } from './streak.js';
 import { Tutorial } from './tutorial.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
 import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH } from './data.js';
-import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS } from './data.js';
+import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS, GRIMOIRE } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -40,7 +40,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false, rush = false }) {
+  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false, rush = false, page = null }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -77,7 +77,10 @@ export class Run {
     this.scene.add(this.shadowMesh);
 
     this.fx = new Effects(this);
-    this.mut = mergeMutators(mutators || []); // Daily Trial boon and bane (empty for normal runs)
+    // Daily Trial boon and bane (empty for normal runs) and the inscribed Grimoire page (never in the tutorial or Boss Rush)
+    this.mut = mergeMutators(mutators || [], tutorial || rush ? null : page);
+    this.page = this.mut.page; this.pageDef = this.page ? GRIMOIRE.pages[this.page] : null;
+    this.graveT = this.pageDef && this.pageDef.graves ? this.pageDef.graves.every : 0; this.feastBank = 0; // Restless Graves, Carrion Feast
     this.trial = !!(mutators && mutators.length);
     this.skillLv = { [loadout.hero.weapon]: Math.max(1, this.mut.startLv) };
     this.evolved = {};
@@ -168,7 +171,10 @@ export class Run {
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
     const ms = this.mut.stats, S = this.stats;
-    if (ms.raise) S.raise = Math.min(0.85, S.raise + ms.raise);
+    if (ms.raise) S.raise = Math.max(0, Math.min(0.85, S.raise + ms.raise));
+    if (ms.dmgMul) S.dmgMul *= ms.dmgMul; // the Glass Shepherd page
+    if (ms.ward) S.ward *= ms.ward; //   (damage taken)
+    if (ms.maxHp) S.maxHp = Math.round(S.maxHp * ms.maxHp); // Carrion Feast
     if (ms.cap) S.cap = Math.min(BASE.hardLegionMax, S.cap + ms.cap);
     if (ms.nova) S.novaMul *= ms.nova;
     if (ms.minionDmg) S.minionDmg *= ms.minionDmg;
@@ -209,6 +215,29 @@ export class Run {
     let r = Math.random() * total;
     for (let i = 0; i < TYPES.length; i++) { r -= w[i]; if (r <= 0 && w[i] > 0) return TYPES[i]; }
     return 'husk';
+  }
+
+  /** The inscribed Grimoire page's own clocks: Carrion Feast's healing bank refills; Restless Graves raise the fallen. */
+  updatePage(dt) {
+    const D = this.pageDef;
+    if (D.feast) this.feastBank = Math.min(D.feast.cap, this.feastBank + D.feast.cap * dt);
+    if (D.graves && (this.graveT -= dt) <= 0) { this.graveT = D.graves.every; this.raiseGraves(D.graves); }
+  }
+
+  /** Restless Graves: up to n of the horde's un-risen dead within r m of the Shepherd rise as Shades (the newest first,
+   *  under the legion cap; a corpse a Corpse Priest is chanting over is spared). Returns how many rose. */
+  raiseGraves(G) {
+    const L = this.corpses, P = this.player, life = ENEMIES.priest.raise.corpse, now = this.time;
+    let n = 0;
+    for (let i = L.length - 1; i >= 0 && n < G.n && this.legion.count < this.stats.cap; i--) {
+      const k = L[i];
+      if (k.claim || now - k.t >= life || (k.x - P.x) ** 2 + (k.z - P.z) ** 2 > G.r * G.r) continue;
+      k.claim = -1; // used up
+      this.legion.raise(k.x, k.z, { burstY: -0.6 });
+      this.counters.raised++; n++;
+    }
+    if (n) { this.particles.ring(P.x, P.z, G.r, 30, hdr(0x9dffb8, 2.4), { life: 0.5, size: 0.4, y: 0.2 }); this.audio.sfx('raise', { volume: 0.4, pitch: 0.8 }); }
+    return n;
   }
 
   /** A Corpse Priest claims up to n unclaimed corpses within reach (the newest first); null when there are none. */
@@ -417,11 +446,15 @@ export class Run {
       if (L.length >= CORPSES) L.shift();
       L.push({ x: e.x, z: e.z, t: this.time, claim: 0 });
     }
+    if (this.pageDef && this.pageDef.feast && !this.player.dead) { // Carrion Feast: each kill feeds the Shepherd, from a bank
+      const F = this.pageDef.feast, take = Math.min(F.heal, this.feastBank);
+      if (take > 0) { this.feastBank -= take; this.player.heal(take, true); }
+    }
     this.audio.sfx('kill', { volume: 0.35 });
   }
 
   addXp(v) {
-    this.xp += v * this.streak.xpMul * this.events.xpMul; // Soul Frenzy, Soul Feast blessing
+    this.xp += v * this.streak.xpMul * this.events.xpMul * this.mut.xp; // Soul Frenzy, Soul Feast blessing, the Soul Furnace page
     while (this.xp >= this.xpNeed) {
       this.xp -= this.xpNeed;
       this.level++;
@@ -740,7 +773,7 @@ export class Run {
       chapter: this.chapter.id, time: this.endless || this.rush ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
-      trial: this.trial, mutators: this.mut.ids, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
+      trial: this.trial, mutators: this.mut.ids, page: this.page, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events, rites: this.counters.rites,
       bestStreak: this.counters.bestStreak,
       byType: { ...this.counters.byType }, // Bestiary kills per foe
@@ -790,6 +823,7 @@ export class Run {
       this.rites.update(dt); // after the Shepherd moved: Shadow Step rides on top of her step
       if (!this.player.dead) this.weapons.update(dt);
       this.events.update(dt);
+      if (this.pageDef) this.updatePage(dt);
       this.enemies.update(dt);
       this.affixes.update(dt); // after the horde moves: the Commander aura queries a fresh grid
       this.legion.update(dt);

@@ -12,6 +12,7 @@ import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
 import { now as clockNow } from '../../meta/clock.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
 import { openRush } from './rush.js';
+import { grimoireChip, openGrimoire } from './grimoire.js';
 import { CHAPTER_ART } from '../art.js';
 
 const warmed = new Set();
@@ -113,6 +114,7 @@ export function createHome(ctx) {
         ${bloodMoon(p) ? `<div class="bm"><i class="bm-moon"></i><div><b>BLOOD MOON</b><span>2× elites · 2× gold and gems</span></div>${cd(bloodMoonTimes().ends, 0, 'bm-cd')}</div>` : ''}
         ${coach === 'talent' ? `<button class="ftue ftue-go" data-act="coachTalent"><span>Spend your gold on <b>Talents</b></span><i class="ftue-arrow ftue-side">${icon('right')}</i></button>`
           : ftue ? `<div class="ftue"><span>${train ? 'Begin your training, Shepherd.' : 'Chapter 1 awaits. Your legion is ready.'}</span><i class="ftue-arrow">${icon('right')}</i></div>` : ''}
+        ${train ? '' : grimoireChip(p, n.grimoire)}
         <div class="battle-wrap ${ftue ? 'is-ftue' : ''} d-${dsel}">
           <button class="btn btn-primary btn-battle ${locked ? 'is-locked' : ''} d-${dsel}" data-act="battle">
             <span class="bb-shine"></span>
@@ -140,6 +142,7 @@ export function createHome(ctx) {
     login: () => { tap(app); openLogin(ctx); },
     trial: () => { tap(app); openTrial(ctx); },
     rush: () => { tap(app); openRush(ctx); },
+    grimoire: () => { tap(app); openGrimoire(ctx); },
     settings: () => { tap(app); openSettings(ctx); },
     coachTalent: () => { tap(app); ctx.go('heroes', 'talents'); },
     starter: () => { tap(app, 'medium'); openStarter(ctx); },

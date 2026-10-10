@@ -2,7 +2,7 @@
 // so every access is guarded and the game still runs from in-memory state.
 import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, RELICS, RARITIES, RELIC_SLOTS, TALENTS, CHAPTERS } from '../game/data.js';
 import { migrateDifficulty } from './difficulty.js';
-import { BESTIARY } from '../game/data.js';
+import { BESTIARY, GRIMOIRE } from '../game/data.js';
 import { bestiaryGoals } from './bestiary.js';
 import { now as clockNow, today, dateKey, snapshot, restore } from './clock.js';
 
@@ -45,6 +45,7 @@ export function newProfile() {
     rush: { event: null, day: null, tries: 0, ads: 0, claimed: 0, best: 0, bestKills: 0, allBest: 0, clears: 0 }, // Boss Rush (economy.rushState)
     weekly: { week: null, done: 0, claimed: false },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
+    grimoire: { selected: '', seen: [] }, // meta/grimoire.js: the inscribed page and the unlocked pages already shown
     bestiary: { kills: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])), claimed: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])) }, // meta/bestiary.js
     settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     flags: { tutorialDone: false, tutorialPaid: false, hints: {}, coach: '' }, // tutorialPaid: its reward paid once; coach: the post-tutorial pointer ('talent' → 'battle' → '')
@@ -90,6 +91,7 @@ function migrate(p) {
   if (!(p && p.bestiary)) out.bestiary.kills.gravemaw = int(out.stats.clears, 0); // saves from before the Bestiary: every clear slew Gravemaw
   { const R = out.rush; for (const k of ['tries', 'ads', 'best', 'allBest', 'clears']) R[k] = int(R[k], 0); R.claimed = int(R.claimed, 0, 0, 5); R.bestKills = int(R.bestKills, 0, 0, 5); }
   if (!(p && p.flags && 'tutorialPaid' in p.flags)) out.flags.tutorialPaid = !!out.flags.tutorialDone; // saves from before the tutorial: their first run was it
+  { const G = out.grimoire; if (!GRIMOIRE.pages[G.selected]) G.selected = ''; G.seen = [...new Set(G.seen.filter((id) => GRIMOIRE.pages[id]))]; }
   return out;
 }
 

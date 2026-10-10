@@ -26,6 +26,7 @@ const LIFT = 0.3;
 const RADIUS = { shade: 0.35 };
 for (const k of GHOST_KINDS) { const E = ENEMIES[GHOSTS[k].model]; RADIUS[k] = E.radius * (MINIONS[k].scale || 1) / (E.scale || 1); }
 const MAX_ORBS = 120, MAX_CAND = 40;
+const TITHE_HDR = [3.2, 1.6, 0.6], FX_TITHE = { speed: 5, life: 0.35, size: 0.4, up: 1 }; // Ossuary Tithe's bursts
 const GOLD = new THREE.Color(0xffd04a), GOLD_HDR = [3.2, 2.3, 0.6], WHITE_HDR = [3.2, 3.3, 3.5], HEAL_HDR = [1.0, 3.2, 2.2], SHADE_DIE_HDR = [2.5, 2.5, 2.8];
 // shared option objects: enemies.damage and particles.burst read them at once and keep no reference
 const HIT = { kx: 0, kz: 0, knock: 0, source: 'minion', silent: false };
@@ -250,6 +251,7 @@ export class Legion {
     this.raiseSfxT -= dt; this.orbSfxT -= dt; this.blastSfxT -= dt;
     const run = this.run, P = run.player, S = run.stats, E = run.enemies, M = MINIONS;
     const BC = EVOLUTIONS.boneCrown, crownR2 = run.evolved.boneCrown ? BC.auraR * BC.auraR : -1; // Bone Crown: minions near the Shepherd hit harder
+    const tithe = run.pageDef && run.pageDef.tithe; // the Ossuary Tithe page: the fallen burst
     const boss = run.bossEnemy && run.bossEnemy.active ? run.bossEnemy : null;
     const list = this.list;
     const n = list.length;
@@ -262,6 +264,7 @@ export class Legion {
       const m = list[i];
       if (m.gone) { this.pool.push(m); continue; }
       if (m.hp <= 0) {
+        if (tithe) this.tithe(m, tithe, S);
         if (m.kind === 'shade') run.particles.burst(m.x, m.y, m.z, 5, SHADE_DIE_HDR, FX_DIE);
         else run.particles.burst(m.x, m.y, m.z, Math.round(8 * m.scale), c, FX_GHOST_DIE);
         this.pool.push(m);
@@ -381,6 +384,18 @@ export class Legion {
     T.length = tn;
     this.fadeOverflow(dt, fading);
     this.updateOrbs(dt);
+  }
+
+  /** Ossuary Tithe: a fallen minion bursts for T.dmg × minion damage within T.r m (as a Soul Bomb does, it passes
+   *  through Grave Wraiths). Numbers stay silent; a few are shown by the burst's own flash. */
+  tithe(m, T, S) {
+    const run = this.run;
+    this._bx = m.x; this._bz = m.z; this._bdmg = S.minionDmg * T.dmg * (m.champ ? MINIONS.champion.dmg : 1);
+    HIT.knock = 3; HIT.source = 'soulbomb'; HIT.silent = true;
+    run.enemies.query(m.x, m.z, T.r, this._blast);
+    HIT.source = 'minion'; HIT.silent = false;
+    run.particles.burst(m.x, Math.max(0.4, m.y), m.z, 10, TITHE_HDR, FX_TITHE);
+    if (this.blastSfxT <= 0) { this.blastSfxT = 0.12; run.audio.sfx('explosion', { volume: 0.22, pitch: 1.5 }); }
   }
 
   /** A Soul Priest's pulse: every minion within healR m mends heal × its max HP. */

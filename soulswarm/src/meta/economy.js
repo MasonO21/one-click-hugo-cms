@@ -11,6 +11,7 @@ import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './difficulty.js';
 import { BESTIARY, TUTORIAL, BOSS_RUSH } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
+import { newPages } from './grimoire.js';
 
 // ---------------------------------------------------------------- change notification
 const listeners = new Set();
@@ -564,5 +565,6 @@ export function notifications(p) {
     shop: (freeChestAvailable(p) ? 1 : 0) + (pactDailyAvailable(p) ? 1 : 0),
     heroes: HERO_ORDER.filter((id) => { const c = heroNextCost(p, id); return c && p.heroes[id].shards >= c; }).length,
     bestiary: bestiaryClaimable(p), // milestones ready (the Heroes tab dot)
+    grimoire: newPages(p).length, // pages unlocked since the Grimoire was last opened (the chip's dot)
   };
 }

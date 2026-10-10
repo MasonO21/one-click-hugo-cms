@@ -5,6 +5,7 @@ import { loadProfile, saveProfile, newProfile } from './meta/save.js';
 import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon, beginRush } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
+import { activePage } from './meta/grimoire.js';
 import { haptic, setHapticsEnabled, isNative } from './engine/platform.js';
 import { App as NativeApp } from '@capacitor/app';
 import { handleBack } from './ui/back.js';
@@ -84,7 +85,7 @@ function startRun(chapterId, opts = {}) {
   if (!difficultyUnlocked(profile, chapterId, difficulty)) return false;
   if (opts.trial ? !beginTrial(profile) : !spendEnergy(profile)) return false;
   if (!opts.trial) { profile.chapter.selected = chapterId; selectDifficulty(profile, chapterId, difficulty); }
-  return beginRun(chapter, { mutators, bloodMoon: !opts.trial && bloodMoon(profile), difficulty });
+  return beginRun(chapter, { mutators, bloodMoon: !opts.trial && bloodMoon(profile), difficulty, page: opts.trial ? null : activePage(profile) }); // the inscribed Grimoire page (not in the trial)
 }
 
 function beginRun(chapter, opts) {

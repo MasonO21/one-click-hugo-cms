@@ -17,7 +17,8 @@ export function showRunIntro(hud, run, reduceFlash) {
   const tag = run.rush ? 'Five bosses. One legion. No rest.' : run.guide ? 'Raise the dead. Lead the legion.' // the beginner tutorial (game/tutorial.js)
     : run.mods.tag ? (src ? `${src.name}: ${run.mods.tag}` : run.mods.tag) : `Survive 6:00, then slay ${BOSSES[bossFor(ch)].title}`;
   const kick = run.rush ? 'Boss Rush' : run.guide ? 'Tutorial' : ch.endless ? 'Endless' : `${run.trial ? 'Daily Trial · ' : ''}Chapter ${ROMAN[ch.id] || ch.id}`;
-  const pills = (D.id !== 'normal' ? `<em class="ri-pill" style="--dc:${D.css}">${D.name}</em>` : '') + (run.bloodMoon ? '<em class="ri-pill ri-bm">Blood Moon</em>' : '');
+  const pills = (D.id !== 'normal' ? `<em class="ri-pill" style="--dc:${D.css}">${D.name}</em>` : '') + (run.bloodMoon ? '<em class="ri-pill ri-bm">Blood Moon</em>' : '')
+    + (run.pageDef ? `<em class="ri-pill" style="--dc:${run.pageDef.color}">${run.pageDef.name}</em>` : ''); // the inscribed Grimoire page
   const el = h(`<div class="run-intro${reduceFlash ? ' rf' : ''}" aria-hidden="true" data-ch="${ch.id}" style="--rc:${hex(ch.rune)}">
     <i class="ri-art" style="background-image:url(${CHAPTER_ART[ch.id]})"></i>
     <div class="ri-text"><span class="ri-kick">${kick}${pills}</span><b class="ri-name">${run.rush ? BOSS_RUSH.name : run.guide ? 'The Waking' : ch.name}</b><i class="ri-line"></i><span class="ri-tag">${tag}</span></div>

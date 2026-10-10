@@ -3092,6 +3092,137 @@ errs = await session(async (page) => {
 });
 check('update 6: no runtime errors', !errs.length, errs[0] || '');
 
+// 40. Update 7, the Grimoire (GRIMOIRE in data.js, meta/grimoire.js, ui/meta/grimoire.js): eight pages unlocked by
+//     account goals, one inscribed before a campaign or Endless run (never the tutorial, the Daily Trial or Boss Rush),
+//     each a boon with a price folded into the run's modifiers, plus the pages' own hooks (Restless Graves, Ossuary Tithe,
+//     Carrion Feast, Gravecaller's Gate). The picker, the home chip and its "new page" dot; old saves migrate.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const D = await import('/src/game/data.js'), GM = await import('/src/meta/grimoire.js'), eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js');
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.coach = '';
+    const out = {};
+
+    // unlocks: a fresh account has none; each goal opens its page; a locked page can't be inscribed or carried
+    const t = save.newProfile();
+    out.fresh = { open: GM.unlockedPages(t).length, chip: null };
+    const goals = {};
+    t.stats.runs = 3; goals.banner = GM.pageUnlocked(t, 'banner') && !GM.pageUnlocked(t, 'furnace');
+    t.chapter.unlocked = 2; goals.furnace = GM.pageUnlocked(t, 'furnace') && !GM.pageUnlocked(t, 'glass');
+    t.chapter.unlocked = 3; goals.glass = GM.pageUnlocked(t, 'glass');
+    t.stats.raised = 1999; goals.restless0 = !GM.pageUnlocked(t, 'restless'); t.stats.raised = 2000; goals.restless = GM.pageUnlocked(t, 'restless');
+    t.stats.bestStreak = 300; t.stats.bestLegion = 150; t.stats.kills = 25000; t.chapter.unlocked = 5;
+    goals.all = GM.unlockedPages(t).length;
+    const t2 = save.newProfile(); t2.stats.raised = 500;
+    goals.progress = JSON.stringify(GM.pageProgress(t2, 'restless'));
+    goals.lockedInscribe = GM.inscribe(t2, 'restless'); t2.grimoire.selected = 'restless'; goals.lockedActive = GM.activePage(t2);
+    out.goals = goals;
+    // the dot: pages unlocked but unseen; opening the Grimoire clears it
+    const t3 = save.newProfile(); t3.stats.runs = 5; t3.chapter.unlocked = 2;
+    out.dot = { before: eco.notifications(t3).grimoire, marked: GM.markPagesSeen(t3), after: eco.notifications(t3).grimoire };
+    // old saves: the block is added; junk ids are dropped
+    const KEY = 'soulswarm.save.v1', load = (v) => { localStorage.setItem(KEY, JSON.stringify(v)); const x = save.loadProfile(); localStorage.removeItem(KEY); return x; };
+    out.migrate = { old: load({ v: 1, gold: 5 }).grimoire, junk: load({ v: 1, grimoire: { selected: 'nope', seen: ['banner', 'banner', 'zzz'] } }).grimoire };
+
+    // a campaign run carries the inscribed page; the Daily Trial and Boss Rush never do
+    const start = (id, ch = 1, opts = {}) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.stats.runs = 99; p.stats.raised = 1e5; p.stats.bestStreak = 999; p.stats.bestLegion = 400; p.stats.kills = 1e6; p.chapter.unlocked = 6;
+      p.grimoire.selected = id || ''; p.energy = 30; p.selectedHero = 'vael'; app.engine.manual = true;
+      if (!app.startRun(ch, opts)) return null;
+      const r = app.run; r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {}; r.player.hurt = () => {}; r.addXp = r.addXp.bind(r);
+      return r;
+    };
+    let r = start('banner'); out.carry = { campaign: r.page, intro: (q('.ri-kick')?.textContent || '').includes('Banner of the Damned') };
+    p.trial = { day: null, done: false, ads: 0, clears: 0 }; r = start('banner', 0, { trial: true }); out.carry.trial = r ? r.page : 'no run';
+    r = start('banner', 6); out.carry.endless = r.page;
+    const base = start(''); const S0 = { cap: base.stats.cap, minionHp: base.stats.minionHp, dmgMul: base.stats.dmgMul, ward: base.stats.ward, novaMul: base.stats.novaMul, minionDmg: base.stats.minionDmg, maxHp: base.stats.maxHp, raise: base.stats.raise, gateEvery: base.gateEvery };
+    const ratio = (a, b) => +(a / b).toFixed(2);
+    const fx = {};
+    r = start('banner'); fx.banner = [r.stats.cap - S0.cap, ratio(r.stats.minionHp, S0.minionHp)];
+    r = start('furnace'); { const x0 = r.xp; r.addXp(2); fx.furnace = [+(r.xp - x0).toFixed(2), r.mut.spawn]; } // (under the first level's 7)
+    r = start('glass'); { const P = r.player, h = P.hp; P.invuln = 0; Object.getPrototypeOf(P).hurt.call(P, 20); fx.glass = [ratio(r.stats.dmgMul, S0.dmgMul), +(h - P.hp).toFixed(1)]; }
+    r = start('midnight'); fx.midnight = [ratio(r.stats.novaMul, S0.novaMul), ratio(r.stats.minionDmg, S0.minionDmg)];
+    r = start('tithe'); fx.tithe = [r.stats.cap - S0.cap];
+    r = start('carrion'); fx.carrion = [ratio(r.stats.maxHp, S0.maxHp)];
+    r = start('restless'); fx.restless = [+(S0.raise - r.stats.raise).toFixed(2)];
+    r = start('gate'); fx.gate = [r.gateEvery, S0.gateEvery];
+    out.fx = fx;
+
+    // Gravecaller's Gate: +N gates give 25% more (rounded to 5), −N gates take 25% more; a plain run is unchanged
+    const ops = (id, L, seq) => {
+      const r = start(id); if (L) r.legion.addMany(L, r.player.x, r.player.z);
+      let i = 0; Math.random = () => seq[i++ % seq.length];
+      try { r.gates.spawnPair(); } finally { Math.random = rnd; }
+      return r.gates.pair.gates.map((g) => g.op.type + g.op.n).join();
+    };
+    out.gates = { plain: ops('', 0, [0.5]), page: ops('gate', 0, [0.5]), cullPlain: ops('', 40, [0.6, 0.5, 0.1, 0.9]), cullPage: ops('gate', 40, [0.6, 0.5, 0.1, 0.9]) };
+
+    // Restless Graves: every 8 s up to 3 un-risen corpses within 7 m rise as Shades; one 9 m away stays down
+    r = start('restless'); { const P = r.player;
+      for (let i = 0; i < 5; i++) r.corpses.push({ x: P.x + 2 + i * 0.5, z: P.z, t: r.time, claim: 0 });
+      r.corpses.push({ x: P.x + 9, z: P.z, t: r.time, claim: 0 });
+      const n0 = r.legion.count; r.graveT = 0.05; for (let i = 0; i < 4; i++) r.update(1 / 30);
+      const rose = r.legion.count - n0, far = r.corpses.find((k) => k.x === P.x + 9).claim;
+      r.graveT = 8; for (let i = 0; i < 30; i++) r.update(1 / 30);
+      out.graves = { rose, far, early: r.legion.count - n0 - rose }; }
+
+    // Ossuary Tithe: a fallen minion bursts on the foes around it; without the page it does not
+    const tithe = (id) => {
+      const r = start(id), P = r.player, e = r.enemies.spawn('husk', P.x + 4, P.z, { hpMul: 50 }); e.speed = 0; e.spawnT = 2;
+      r.legion.raise(P.x + 4.5, P.z, { fx: false }); r.update(1 / 30);
+      const m = r.legion.list[0]; m.x = P.x + 4.5; m.z = P.z; m.hp = 0; const h0 = e.hp;
+      r.legion.update(1 / 30); return +(h0 - e.hp).toFixed(1);
+    };
+    out.tithe = { page: tithe('tithe'), plain: tithe('') };
+
+    // Carrion Feast: kills heal from a bank of 5 HP a second (0.4 a kill)
+    r = start('carrion'); { const P = r.player; for (let i = 0; i < 30; i++) r.update(1 / 30);
+      P.hp = P.maxHp * 0.5; const h0 = P.hp;
+      for (let i = 0; i < 20; i++) { const e = r.enemies.spawn('husk', P.x + 6, P.z + i * 0.3, { hpMul: 1 }); r.enemies.kill(e, 'bolt'); }
+      out.feast = +(P.hp - h0).toFixed(2); }
+
+    // the result carries the page
+    r = start('glass'); { let res = null; const onEnd = r.onEnd; r.onEnd = (x) => { res = x; onEnd(x); }; r.time = 100; r.end(false); await wait(50); out.result = res && res.page; }
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove()); app.exitRun(); app.engine.manual = false;
+
+    // the home chip and the picker: a locked page refuses, an open one is inscribed, the dot clears once seen
+    p.stats.runs = 3; p.stats.raised = 0; p.stats.bestStreak = 0; p.stats.bestLegion = 0; p.stats.kills = 0; p.chapter.unlocked = 2; p.grimoire = { selected: '', seen: [] };
+    eco.commit(p); app.meta.show('battle'); await wait(200);
+    const ui = { chip: q('[data-act="grimoire"]')?.textContent.replace(/\s+/g, ' ').trim(), dot: !!q('[data-act="grimoire"] .badge-dot') };
+    q('[data-act="grimoire"]').click(); await wait(200);
+    ui.pages = document.querySelectorAll('.gr-page').length; ui.locked = document.querySelectorAll('.gr-page.is-locked').length; ui.fresh = document.querySelectorAll('.gr-tag.new').length;
+    q('.gr-page[data-id="glass"]').click(); await wait(80); ui.lockedPick = p.grimoire.selected;
+    q('.gr-page[data-id="furnace"]').click(); await wait(80); ui.pick = p.grimoire.selected; ui.on = q('.gr-page.on')?.dataset.id;
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove()); await wait(100);
+    ui.chip2 = q('[data-act="grimoire"]')?.textContent.replace(/\s+/g, ' ').trim(); ui.dot2 = !!q('[data-act="grimoire"] .badge-dot');
+    out.ui = ui;
+    return out;
+  });
+  const G = s.goals;
+  check('grimoire: a new account has no page; each goal opens its own (3 runs, Ch1 and Ch2 clears, 2,000 raised, …), all 8 in the end',
+    s.fresh.open === 0 && G.banner && G.furnace && G.glass && G.restless0 && G.restless && G.all === 8 && G.progress === '{"have":500,"need":2000}' && G.lockedInscribe === false && G.lockedActive === null, JSON.stringify({ f: s.fresh, G }));
+  check('grimoire: unseen pages light the chip\'s dot until the Grimoire is opened; old saves gain the block, junk ids dropped',
+    s.dot.before === 2 && s.dot.marked === 2 && s.dot.after === 0 && s.migrate.old.selected === '' && s.migrate.old.seen.length === 0 && s.migrate.junk.selected === '' && s.migrate.junk.seen.join() === 'banner', JSON.stringify({ d: s.dot, m: s.migrate }));
+  check('grimoire: campaign and Endless runs carry the inscribed page (the intro card names it); the Daily Trial does not',
+    s.carry.campaign === 'banner' && s.carry.intro && s.carry.endless === 'banner' && s.carry.trial === null && s.result === 'glass', JSON.stringify({ c: s.carry, r: s.result }));
+  const F = s.fx;
+  check('grimoire pages: Banner +20 cap / ×0.8 minion HP; Furnace ×1.3 shards / ×1.15 foes; Glass ×1.35 damage dealt and taken; Midnight ×1.6 Nova / ×0.85 minions; Tithe −10 cap; Carrion ×0.8 HP; Restless −5 pp; Gate every 25 s',
+    F.banner.join() === '20,0.8' && F.furnace.join() === '2.6,1.15' && F.glass.join() === '1.35,27' && F.midnight.join() === '1.6,0.85' && F.tithe.join() === '-10'
+    && F.carrion.join() === '0.8' && F.restless.join() === '0.05' && F.gate.join() === '25,40', JSON.stringify(F));
+  check('Gravecaller\'s Gate: +N gates give 25% more (15 → 20), −N gates take 25% more (20 → 25); a plain run is unchanged',
+    s.gates.plain === 'add15,add5' && s.gates.page === 'add20,add5' && /sub20/.test(s.gates.cullPlain) && /sub25/.test(s.gates.cullPage), JSON.stringify(s.gates));
+  check('Restless Graves: 3 corpses within 7 m rise every 8 s (one 9 m off stays down; none before the next toll)',
+    s.graves.rose === 3 && s.graves.far === 0 && s.graves.early === 0, JSON.stringify(s.graves));
+  check('Ossuary Tithe: a fallen minion bursts on the foes around it (not without the page); Carrion Feast heals 5 HP a second from kills',
+    s.tithe.page > 0 && s.tithe.plain === 0 && s.feast > 4.5 && s.feast <= 5.01, JSON.stringify({ t: s.tithe, f: s.feast }));
+  const U = s.ui;
+  check('grimoire UI: the chip shows the page (with a dot for new pages); 8 pages, locked ones refuse; inscribing updates the chip',
+    /Grimoire/.test(U.chip) && U.dot && U.pages === 8 && U.locked === 6 && U.fresh === 2 && U.lockedPick === '' && U.pick === 'furnace' && U.on === 'furnace' && /Soul Furnace/.test(U.chip2) && !U.dot2, JSON.stringify(U));
+});
+check('update 7: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -1,0 +1,40 @@
+/* The Grimoire (ui/meta/grimoire.js): the chip above the Battle button and the page picker */
+.grim-chip { --pc: var(--soul-2); position: relative; align-self: center; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 4px 14px 4px 4px; border: 0; cursor: pointer;
+  color: var(--ink); background: linear-gradient(90deg, color-mix(in srgb, var(--pc) 18%, rgba(6,9,20,.86)), rgba(6,9,20,.86)); clip-path: var(--bevel-sm);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 45%, transparent); }
+.grim-chip.lk { --pc: #5a6274; color: var(--ink-dim); }
+.grim-chip .grim-ic { width: 34px; height: 34px; display: grid; place-items: center; flex: none; color: var(--pc); }
+.grim-chip .grim-ic svg { width: 20px; height: 20px; }
+.grim-chip .page-art { width: 46px; height: 46px; }
+.grim-chip .grim-t { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; text-align: left; }
+.grim-chip small { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-dim); }
+.grim-chip b { font-size: 13px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62vw; display: flex; align-items: center; gap: 4px; }
+.grim-chip b svg { width: 12px; height: 12px; }
+.grim-chip.on b { color: color-mix(in srgb, var(--pc) 55%, #fff); }
+.grim-chip .badge-dot { position: absolute; top: 2px; right: 4px; }
+
+.mm-grim { max-width: 440px; }
+.gr { display: flex; flex-direction: column; gap: 12px; }
+.gr-intro { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ink-dim); text-align: center; }
+.gr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.gr-page { --pc: var(--soul-2); position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 8px 12px; border: 0; cursor: pointer; text-align: center; color: var(--ink);
+  background: radial-gradient(120% 70% at 50% 18%, color-mix(in srgb, var(--pc) 16%, transparent), rgba(8,11,24,.92) 70%); clip-path: var(--bevel-sm);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc) 30%, transparent); transition: transform .1s ease; }
+.gr-page:active { transform: scale(.97); }
+.gr-page.on { box-shadow: inset 0 0 0 2px var(--pc), 0 0 22px color-mix(in srgb, var(--pc) 40%, transparent); }
+.gr-page .gr-ic { width: 84px; height: 84px; display: grid; place-items: center; margin-bottom: -4px; }
+.gr-page .page-art { width: 92px; height: 92px; }
+.gr-page b { font-size: 14px; font-weight: 800; line-height: 1.15; }
+.gr-page small { font-size: 11.5px; line-height: 1.3; }
+.gr-boon { color: #9dffb8; }
+.gr-cost { color: #ff9aa6; }
+.gr-goal { color: var(--ink-dim); display: inline-flex; align-items: center; gap: 4px; }
+.gr-goal svg { width: 11px; height: 11px; }
+.gr-page.is-locked .page-art { filter: grayscale(1) brightness(.35) contrast(1.1); }
+.gr-page.is-locked b { color: var(--ink-dim); }
+.gr-bar { width: 80%; height: 4px; margin-top: 3px; background: rgba(255,255,255,.1); }
+.gr-bar i { display: block; height: 100%; background: var(--pc); box-shadow: 0 0 6px var(--pc); }
+.gr-n { font-size: 10.5px !important; }
+.gr-tag { position: absolute; top: 6px; right: 8px; padding: 1px 6px; font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #06080f; background: var(--pc); clip-path: var(--bevel-sm); }
+.gr-tag.new { background: var(--gold); }
+.gr-blank.on { opacity: .6; pointer-events: none; }

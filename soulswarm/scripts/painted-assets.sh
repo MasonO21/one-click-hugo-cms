@@ -22,6 +22,9 @@ done
 for f in "$A"/skill-*.jpg; do # ability icons (level-up cards, results, hero detail)
   convert "$f" -resize 256x256 -quality 82 -define webp:method=6 "$W/$(basename "$f" .jpg).webp"
 done
+for f in "$A"/page-*.jpg; do # Grimoire pages (the page picker, the chip on the home screen, the run intro tag)
+  convert "$f" -resize 256x256 -quality 82 -define webp:method=6 "$W/$(basename "$f" .jpg).webp"
+done
 for i in 1 2 3 4 5 6; do # gem packs, smallest to largest (shop)
   convert "$A/gems-$i.jpg" -resize 288x288 -quality 82 -define webp:method=6 "$W/gems-$i.webp"
 done

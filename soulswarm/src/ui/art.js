@@ -55,6 +55,13 @@ export const SKILL_ART = {};
 for (const [path, url] of Object.entries(import.meta.glob('../assets/art/skill-*.webp', { eager: true, import: 'default' }))) {
   SKILL_ART[path.slice(path.lastIndexOf('/skill-') + 7, -5)] = url;
 }
+/** Painted Grimoire pages by page id (src/assets/art/page-<id>.webp; GRIMOIRE in data.js). */
+export const PAGE_ART = {};
+for (const [path, url] of Object.entries(import.meta.glob('../assets/art/page-*.webp', { eager: true, import: 'default' }))) {
+  PAGE_ART[path.slice(path.lastIndexOf('/page-') + 6, -5)] = url;
+}
+export const pageArt = (id) => (PAGE_ART[id] ? `<img class="page-art" src="${PAGE_ART[id]}" alt="" draggable="false">` : icon('book'));
+
 /** A skill's painted icon, or the line icon `fallback` (heal / gold bonuses, blessings). */
 export const skillArt = (id, fallback) => (SKILL_ART[id] ? `<img class="skill-art" src="${SKILL_ART[id]}" alt="" draggable="false">` : icon(fallback));
 

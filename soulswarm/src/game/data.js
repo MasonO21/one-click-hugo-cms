@@ -807,20 +807,52 @@ export const MUTATORS = {
   brittle:     { kind: 'bane', name: 'Brittle Legion',  icon: 'shard',  desc: 'Minions have half HP',              stats: { minionHp: 0.5 } },
   restless:    { kind: 'bane', name: 'Restless Dead',   icon: 'wing',   desc: 'Enemies move 30% faster',           speed: 1.3 },
 };
-/** Folds a list of mutator ids into one modifier set for a run. */
-export function mergeMutators(ids = []) {
-  const m = { ids, stats: {}, spawn: 1, hp: 1, speed: 1, weights: null, eliteEvery: 0, gateEvery: 0, noBadGates: false, startLv: 0 };
-  for (const id of ids) {
-    const d = MUTATORS[id];
-    if (!d) continue;
+/** Folds a list of mutator ids (and a Grimoire page, if one is inscribed) into one modifier set for a run. */
+export function mergeMutators(ids = [], page = null) {
+  const m = { ids, page: null, stats: {}, spawn: 1, hp: 1, speed: 1, weights: null, eliteEvery: 0, gateEvery: 0, noBadGates: false, startLv: 0, xp: 1, gateAdd: 0, gateCull: 1 };
+  const fold = (d) => {
     for (const [k, v] of Object.entries(d.stats || {})) m.stats[k] = k === 'raise' || k === 'cap' ? (m.stats[k] || 0) + v : (m.stats[k] || 1) * v;
-    for (const k of ['spawn', 'hp', 'speed']) if (d[k]) m[k] *= d[k];
+    for (const k of ['spawn', 'hp', 'speed', 'xp', 'gateCull']) if (d[k]) m[k] *= d[k];
+    if (d.gateAdd) m.gateAdd += d.gateAdd;
     if (d.weights) { m.weights = m.weights || {}; for (const [t, w] of Object.entries(d.weights)) m.weights[t] = (m.weights[t] || 1) * w; }
     for (const k of ['eliteEvery', 'gateEvery', 'startLv']) if (d[k]) m[k] = d[k];
     if (d.noBadGates) m.noBadGates = true;
-  }
+  };
+  for (const id of ids) if (MUTATORS[id]) fold(MUTATORS[id]);
+  if (page && GRIMOIRE.pages[page]) { fold(GRIMOIRE.pages[page]); m.page = page; }
   return m;
 }
+
+// ---------------------------------------------------------------- the Grimoire (meta/grimoire.js, ui/meta/grimoire.js)
+// One page may be inscribed before a run (campaign chapters on any difficulty, and the Endless Abyss; never the tutorial,
+// the Daily Trial or Boss Rush): a rule-bending boon with a price. Pages unlock from account goals: `unlock.stat`
+// (profile.stats, at least n) or `unlock.clear` (that chapter's boss slain). A page folds into the run's modifiers like
+// a Daily Trial mutator (mergeMutators: stats raise/cap add, the rest multiply; spawn; gateEvery), plus xp (soul shard
+// value), gateAdd (+N gates give more), gateCull (−N gates take more) and its own hooks in run.js / legion.js:
+//   graves: every `every` s up to n un-risen corpses within r m of the Shepherd rise as Shades (under the cap)
+//   tithe: a minion that falls bursts for dmg × minion damage within r m
+//   feast: every kill heals `heal` HP, at most `cap` HP a second
+export const GRIMOIRE = {
+  order: ['banner', 'furnace', 'glass', 'restless', 'midnight', 'tithe', 'carrion', 'gate'],
+  pages: {
+    banner: { name: 'Banner of the Damned', color: '#7fe8ff', boon: '+20 legion cap', cost: 'Minions have 20% less HP',
+      stats: { cap: 20, minionHp: 0.8 }, unlock: { stat: 'runs', n: 3, text: 'Finish 3 runs' } },
+    furnace: { name: 'Soul Furnace', color: '#4ef2ff', boon: 'Soul shards are worth 30% more', cost: '15% more foes',
+      xp: 1.3, spawn: 1.15, unlock: { clear: 1, text: 'Clear Chapter 1' } },
+    glass: { name: 'Glass Shepherd', color: '#ffe08a', boon: 'Your weapons deal 35% more damage', cost: 'You take 35% more damage',
+      stats: { dmgMul: 1.35, ward: 1.35 }, unlock: { clear: 2, text: 'Clear Chapter 2' } },
+    restless: { name: 'Restless Graves', color: '#9dffb8', boon: 'Every 8 s, up to 3 fallen foes near you rise to serve you', cost: '−5% Raise Chance',
+      stats: { raise: -0.05 }, graves: { every: 8, n: 3, r: 7 }, unlock: { stat: 'raised', n: 2000, text: 'Raise 2,000 minions' } },
+    midnight: { name: 'Midnight Mass', color: '#c8b6ff', boon: 'Soul Nova charges 60% faster', cost: 'Minions deal 15% less damage',
+      stats: { nova: 1.6, minionDmg: 0.85 }, unlock: { stat: 'bestStreak', n: 300, text: 'Reach a 300 kill streak' } },
+    tithe: { name: 'Ossuary Tithe', color: '#ff8a3d', boon: 'A fallen minion bursts for 3× minion damage around it', cost: '−10 legion cap',
+      stats: { cap: -10 }, tithe: { dmg: 3, r: 2.2 }, unlock: { stat: 'bestLegion', n: 150, text: 'Command a legion of 150' } },
+    carrion: { name: 'Carrion Feast', color: '#ff3d6e', boon: 'Every kill heals 0.4 HP (up to 5 a second)', cost: '20% less max HP',
+      stats: { maxHp: 0.8 }, feast: { heal: 0.4, cap: 5 }, unlock: { stat: 'kills', n: 25000, text: 'Slay 25,000 foes' } },
+    gate: { name: "Gravecaller's Gate", color: '#ffd04a', boon: 'Soul Gates every 25 s, and +N gates give 25% more', cost: 'Culling gates take 25% more',
+      gateEvery: 25, gateAdd: 0.25, gateCull: 1.25, unlock: { clear: 4, text: 'Clear Chapter 4' } },
+  },
+};
 
 export const SKINS = {
   eclipse_vael: { hero: 'vael', name: 'Eclipse Vael', color: 0xffd04a, body: 0x1a1020, legion: 0xffe9a0 },
