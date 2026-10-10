@@ -202,6 +202,12 @@
 .nv-root .grid.col-list {
   grid-template-columns: repeat(auto-fill, minmax(17em, 1fr));
 }
+/* 50+ colonist rows: the ones below the fold skip style, layout and paint until scrolled near (a much faster first
+   open on a phone); 6.1em is a row's height, remembered exactly once it has been drawn */
+.nv-root .col-list > .crow {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 6.1em;
+}
 .crow {
   appearance: none;
   display: flex;
