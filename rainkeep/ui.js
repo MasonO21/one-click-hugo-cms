@@ -711,17 +711,17 @@
       body: `${head}
         ${away ? `<p class="notice">${KH.journeys && KH.journeys.away(id) ? 'Away on a far journey.' : 'Out leading a march on the Dunes.'}</p>` : ''}
         <div class="stats"><div class="stat"><span>Attack</span><b>${fmt(s.atk)}</b></div><div class="stat"><span>Defense</span><b>${fmt(s.def)}</b></div><div class="stat"><span>Health</span><b>${fmt(s.hp)}</b></div></div>
+        <div class="card stack"><div class="row"><div class="grow"><b>Level ${h.lvl} / ${cap}</b><div class="muted small">Next level costs ${cost} Field Journals · you have ${fmt(S.journals)}</div></div></div>
+          <div class="row"><button class="btn grow ${h.lvl >= cap || S.journals < cost ? 'off' : ''}" data-act="lvl" data-arg="${id}:1" data-primary>Level up</button><button class="btn alt ${h.lvl >= cap || S.journals < cost ? 'off' : ''}" data-act="lvl" data-arg="${id}:max">Max</button></div></div>
+        <div class="card stack"><div class="row"><div class="grow"><b>${starsHTML(h.stars)}</b><div class="muted small">${h.stars >= DATA.heroMaxStars ? 'Fully starred.' : `${h.shards}/${needShards} shards. Each star adds 15% stats, 10 levels, a stronger skill and a stronger steward bonus.`}</div></div>
+          ${h.stars < DATA.heroMaxStars ? `<button class="btn small ${h.shards < needShards ? 'off' : 'gold'}" data-act="star" data-arg="${id}">Add star</button>` : ''}</div>
+          ${h.stars < DATA.heroMaxStars ? `<div class="bar xp"><i style="width:${Math.min(100, (h.shards / needShards) * 100)}%"></i></div>` : ''}</div>
         ${skill}
         ${KH.heroKin ? KH.heroKin(id) : ''}
         ${KH.heroCharm ? KH.heroCharm(id) : ''}
         ${KH.heroSpar ? KH.heroSpar(id) : ''}
         ${KH.heroHeirloom ? KH.heroHeirloom(id) : ''}
         ${KH.heroTale ? KH.heroTale(id) : ''}
-        <div class="card stack"><div class="row"><div class="grow"><b>Level ${h.lvl} / ${cap}</b><div class="muted small">Next level costs ${cost} Field Journals · you have ${fmt(S.journals)}</div></div></div>
-          <div class="row"><button class="btn grow ${h.lvl >= cap || S.journals < cost ? 'off' : ''}" data-act="lvl" data-arg="${id}:1" data-primary>Level up</button><button class="btn alt ${h.lvl >= cap || S.journals < cost ? 'off' : ''}" data-act="lvl" data-arg="${id}:max">Max</button></div></div>
-        <div class="card stack"><div class="row"><div class="grow"><b>${starsHTML(h.stars)}</b><div class="muted small">${h.stars >= DATA.heroMaxStars ? 'Fully starred.' : `${h.shards}/${needShards} shards. Each star adds 15% stats, 10 levels, a stronger skill and a stronger steward bonus.`}</div></div>
-          ${h.stars < DATA.heroMaxStars ? `<button class="btn small ${h.shards < needShards ? 'off' : 'gold'}" data-act="star" data-arg="${id}">Add star</button>` : ''}</div>
-          ${h.stars < DATA.heroMaxStars ? `<div class="bar xp"><i style="width:${Math.min(100, (h.shards / needShards) * 100)}%"></i></div>` : ''}</div>
         ${KH.heroAwaken ? KH.heroAwaken(id) : ''}
         ${KH.heroTalents ? KH.heroTalents(id) : ''}
         <div class="card stack"><div class="row"><div class="grow"><b>Steward of the ${plotName(post.plot)}</b><div class="muted small">${post.label(Math.round(KH.stewardOf(id) * 10) / 10)} while stationed${other ? `. Replaces ${esc(other)}.` : '.'} Stewards still fight.</div></div>
@@ -1358,7 +1358,12 @@
         else if (/Train/.test(q.text)) mark('#sheet [data-act="train"]');
         else if (/research/i.test(q.text)) mark('#sheet [data-act="research"]:not(.off)');
         else mark('#sheet [data-act="build"]');
-      } else if (UI.sheet.kind === 'hero') mark('#sheet [data-primary]:not(.off)') || mark('#sheet [data-act="station"]');
+      } else if (UI.sheet.kind === 'hero') {
+        const e = /Steward/.test(q.text) ? mark('#sheet [data-act="station"]') : mark('#sheet [data-primary]:not(.off)') || mark('#sheet [data-act="station"]');
+        // the control the quest wants, brought into view once per sheet (a player scrolling stays where they are)
+        const h = e && $('#sheet .hint');
+        if (h && UI.sheet.hintShown !== q.text) { UI.sheet.hintShown = q.text; h.scrollIntoView({ block: 'nearest' }); }
+      }
       else if (KH.sheetHint) KH.sheetHint(q, kind, arg, mark);
       return;
     }
