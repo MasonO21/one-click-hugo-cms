@@ -1,6 +1,6 @@
 /**
  * Wardrobe, the pure parts: which cosmetics each tab shows, how they sort and filter, where a locked one comes from
- * ("💎 450", "Season pass · level 15", "Chest exclusive: Ancient Relic or better", "Starter Pack"), what each
+ * ("💎 450", "Season pass · level 15", "Cache exclusive: Ancient Relic or better", "Starter Pack"), what each
  * kind changes, rarity colours, and when a Nova purchase asks for confirmation. No DOM: panels/WardrobePanel.ts and
  * panels/wardrobe/cards.ts draw it.
  */
@@ -129,7 +129,7 @@ export function packLabel(name: string): string {
 
 /**
  * Every way to get a cosmetic, most direct first: its Nova price, the season pass, a pack or bundle, a mission,
- * Nova chests. A chest-only cosmetic reads "Chest exclusive: Ancient Relic or better" (the cheapest chest
+ * Nova chests. A chest-only cosmetic reads "Cache exclusive: Ancient Relic or better" (the cheapest chest
  * whose tier reaches the cosmetic's rarity; the top chest drops nothing "better").
  */
 export function cosmeticSources(data: DataRegistry, def: CosmeticDef): CosmeticSource[] {
@@ -149,7 +149,7 @@ export function cosmeticSources(data: DataRegistry, def: CosmeticDef): CosmeticS
       const top = chest === data.chests[data.chests.length - 1];
       const name = chest.name;
       const where = top ? name : `${name} or better`;
-      out.push({ kind: 'chest', label: out.length === 0 ? `Chest exclusive: ${where}` : `Nova chests: ${where}`, chest: chest.id });
+      out.push({ kind: 'chest', label: out.length === 0 ? `Cache exclusive: ${where}` : `Nova caches: ${where}`, chest: chest.id });
     }
   }
   return out;

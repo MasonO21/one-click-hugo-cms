@@ -148,7 +148,7 @@ export class WardrobePanel extends Panel {
 
     const list = sortCosmetics(filterCosmetics(all, this.tab, own, this.filter), own, this.tab);
     if (!list.length) {
-      wrap.appendChild(emptyState('🧳', 'Nothing here yet', 'Switch to All to see what you can collect from Nova, chests and the season pass.'));
+      wrap.appendChild(emptyState('🧳', 'Nothing here yet', 'Switch to All to see what you can collect from Nova, caches and the season pass.'));
     } else {
       const grid = h('div', { class: 'wd-grid' });
       for (const c of list) grid.appendChild(cosmeticCard(this.ctx, c, this.handlers));
@@ -245,7 +245,7 @@ export class WardrobePanel extends Panel {
       case 'chest':
         row.append(h('span', { class: 'wd-srow-ic', text: '🎁' }), h('span', { class: 'grow', text: s.label }));
         go = () => this.ctx.open('shop', { tab: 'chests' });
-        goLabel = 'Chests';
+        goLabel = 'Caches';
         break;
       case 'pack':
         row.append(h('span', { class: 'wd-srow-ic', text: '🛍️' }), h('span', { class: 'grow', text: s.label }));

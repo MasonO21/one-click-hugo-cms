@@ -68,14 +68,14 @@ describe('wardrobe — where a cosmetic comes from', () => {
     expect(s[0]).toMatchObject({ kind: 'nova', nova: 150 });
     expect(primarySource(s)?.kind).toBe('nova');
     // also in chests, as a second way
-    expect(s.find((x) => x.kind === 'chest')?.label).toBe('Nova chests: Supply Cache or better');
+    expect(s.find((x) => x.kind === 'chest')?.label).toBe('Nova caches: Supply Cache or better');
   });
 
   it('chest-only cosmetics name the cheapest chest that drops them', () => {
-    expect(primarySource(cosmeticSources(data, cos('hat_commander')))?.label).toBe('Chest exclusive: Ancient Relic or better');
-    expect(primarySource(cosmeticSources(data, cos('outfit_nomad')))?.label).toBe("Chest exclusive: Prospector's Vault or better");
+    expect(primarySource(cosmeticSources(data, cos('hat_commander')))?.label).toBe('Cache exclusive: Ancient Relic or better');
+    expect(primarySource(cosmeticSources(data, cos('outfit_nomad')))?.label).toBe("Cache exclusive: Prospector's Vault or better");
     // the top chest has nothing "better"
-    expect(primarySource(cosmeticSources(data, cos('pet_sky_whale')))?.label).toBe('Chest exclusive: Nova Core');
+    expect(primarySource(cosmeticSources(data, cos('pet_sky_whale')))?.label).toBe('Cache exclusive: Nova Core');
     expect(primarySource(cosmeticSources(data, cos('hat_commander')))?.chest).toBe('chest_relic');
   });
 
@@ -88,7 +88,7 @@ describe('wardrobe — where a cosmetic comes from', () => {
     // a chest drop the season also hands out: the season is the sure way, the chest a second one
     const fox = cosmeticSources(data, cos('pet_ember_fox'));
     expect(fox[0]).toMatchObject({ kind: 'season', level: 45 });
-    expect(fox[1].label).toBe('Nova chests: Ancient Relic or better');
+    expect(fox[1].label).toBe('Nova caches: Ancient Relic or better');
   });
 
   it('every cosmetic has at least one source (nothing in the wardrobe is unobtainable)', () => {

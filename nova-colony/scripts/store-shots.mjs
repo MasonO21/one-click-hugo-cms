@@ -301,7 +301,8 @@ const SCENES = [
     },
   },
   {
-    slug: 'research', caption: '90 technologies to research', devices: ['iphone-6.9', 'play-phone'],
+    // Google Play takes eight phone screenshots: the tech tree is App Store only
+    slug: 'research', caption: '90 technologies to research', devices: ['iphone-6.9'],
     async capture(page, dev, h) {
       await h.resetView(page);
       await page.evaluate(() => {
@@ -325,6 +326,21 @@ const SCENES = [
         g.bus.emit('ui:open', { panel: 'colonists' });
       });
       await h.settle(page, 2600);
+      const raw = await page.screenshot({ type: 'png' });
+      await h.closePanels(page);
+      return [raw];
+    },
+  },
+  {
+    slug: 'style', caption: 'Outfits, pets and decor to make it yours', devices: ['iphone-6.9', 'play-phone'],
+    async capture(page, dev, h) {
+      await h.resetView(page);
+      await page.evaluate(() => {
+        const g = window.game;
+        g.state.time.dayTime = 0.46;
+        g.bus.emit('ui:open', { panel: 'wardrobe', arg: { tab: 'pets' } });
+      });
+      await h.settle(page, 3000);
       const raw = await page.screenshot({ type: 'png' });
       await h.closePanels(page);
       return [raw];
@@ -418,6 +434,13 @@ function naturalize() {
   Object.assign(s.combat, { wave: 23, waveAtTier: 4, kills: 1870 });
   Object.assign(s.player.equip, { tool: 'titan_beamtool', weapon: 'titanium_rifle', armor: 'titanium_exosuit', backpack: 'titan_haulpack' });
   for (const it of Object.values(s.player.equip)) s.player.items[it] = Math.max(1, s.player.items[it] ?? 0);
+
+  // a few Wardrobe pieces, worn: the hero shot shows a dressed settler with a pet, the Wardrobe shot a mix of owned
+  // and for-sale looks (granted straight into the save: no Nova is spent)
+  const cos = s.liveops.cosmetics;
+  const owned = ['outfit_frontier_knit', 'outfit_observatory', 'hat_ranger', 'hat_aviator', 'pet_ships_cat', 'pet_robo_hound', 'pet_ember_fox', 'deco_campfire_lounge'];
+  for (const id of owned) if (d.cosmetic(id) && !cos.owned.includes(id)) cos.owned.push(id);
+  for (const id of ['outfit_frontier_knit', 'hat_ranger', 'pet_ships_cat']) g.sys.liveops.equipCosmetic(id);
 
   // a crew worth the beds (quietly: no "joined" toasts)
   const core = B.center(B.core());

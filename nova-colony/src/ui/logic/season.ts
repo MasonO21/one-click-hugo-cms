@@ -56,11 +56,11 @@ export function friendlyAmount(n: number): string {
   return down.toLocaleString('en-US') + (down < v ? '+' : '');
 }
 
-/** The headline chips: "10 cosmetics", "8 chests", "3,000 Nova", "5 colonists". */
+/** The headline chips: "10 cosmetics", "8 caches", "3,000 Nova", "5 colonists". */
 export function highlightChips(h: SeasonHighlights): string[] {
   const out: string[] = [];
   if (h.cosmetics.length) out.push(`${h.cosmetics.length} cosmetic${h.cosmetics.length === 1 ? '' : 's'}`);
-  if (h.chests.length) out.push(`${h.chests.length} chest${h.chests.length === 1 ? '' : 's'}`);
+  if (h.chests.length) out.push(`${h.chests.length} cache${h.chests.length === 1 ? '' : 's'}`);
   if (h.nova > 0) out.push(`${friendlyAmount(h.nova)} Nova`);
   if (h.colonists > 0) out.push(`${h.colonists} colonist${h.colonists === 1 ? '' : 's'}`);
   return out;

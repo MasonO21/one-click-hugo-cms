@@ -87,7 +87,7 @@ describe('season premium highlights (computed, never typed in)', () => {
     expect(h.nova).toBe(nova);
     expect(h.exclusive).toBe(3); // bubble helmet, lunar hare, brass frame: only from the season
     expect(h.bonus).toEqual({ xp: 400, chest: 'chest_explorer' });
-    expect(highlightChips(h)).toEqual([`10 cosmetics`, `8 chests`, `${friendlyAmount(nova)} Nova`, `${h.colonists} colonists`]);
+    expect(highlightChips(h)).toEqual([`10 cosmetics`, `8 caches`, `${friendlyAmount(nova)} Nova`, `${h.colonists} colonists`]);
   });
 
   it('follows the data when it changes', () => {

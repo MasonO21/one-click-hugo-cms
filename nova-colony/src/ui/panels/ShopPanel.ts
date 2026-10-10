@@ -270,6 +270,6 @@ export class ShopPanel extends Panel {
     const forSale = sortCosmetics(this.data.cosmetics.filter((c) => c.nova > 0 && !lo.cosmetics.owned.includes(c.id)), lo.cosmetics);
     const grid = h('div', { class: 'wd-grid' });
     for (const c of forSale) grid.appendChild(cosmeticCard(this.ctx, c, this.cosHandlers));
-    return h('div', { class: 'stack-v' }, wardrobeCta(this.ctx), forSale.length ? grid : emptyState('🧥', 'You own every cosmetic Nova can buy', 'Chests and the season pass have the rest.'));
+    return h('div', { class: 'stack-v' }, wardrobeCta(this.ctx), forSale.length ? grid : emptyState('🧥', 'You own every cosmetic Nova can buy', 'Caches and the season pass have the rest.'));
   }
 }

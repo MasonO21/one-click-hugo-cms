@@ -160,7 +160,7 @@ export function novaOffer(game: Game, id: string, opts: { expedition?: number } 
       const season = g.data.season;
       const lvl = lo.seasonLevel();
       if (lvl < season.levels.length) detail = `Level ${lvl} → ${lvl + 1}`;
-      else if (s.premium && season.bonus) detail = 'Next bonus chest';
+      else if (s.premium && season.bonus) detail = 'Next bonus cache';
       else reason = 'Season track complete';
       break;
     }
