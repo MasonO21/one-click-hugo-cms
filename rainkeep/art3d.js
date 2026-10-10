@@ -132,6 +132,19 @@
     }
     return VCM[key];
   }
+  // a painted model's geometry (models3d.js) holds quantized attributes: plain floats before it is moved and merged
+  const plain = (a) => !a.isInterleavedBufferAttribute && !a.normalized && a.array instanceof Float32Array;
+  function floats(src) {
+    if (Object.values(src.attributes).every(plain)) return src.index ? src.toNonIndexed() : src.clone();
+    const out = new THREE.BufferGeometry(), get = ['getX', 'getY', 'getZ', 'getW'];
+    for (const k of Object.keys(src.attributes)) {
+      const a = src.attributes[k], s = a.itemSize, arr = new Float32Array(a.count * s);
+      for (let i = 0; i < a.count; i++) for (let j = 0; j < s; j++) arr[i * s + j] = a[get[j]](i);
+      out.setAttribute(k, new THREE.BufferAttribute(arr, s));
+    }
+    if (src.index) out.setIndex(src.index.clone());
+    return src.index ? out.toNonIndexed() : out;
+  }
   function bake(group) {
     group.updateMatrixWorld(true);
     const inv = new THREE.Matrix4().copy(group.matrixWorld).invert();
@@ -139,7 +152,7 @@
     group.traverse((o) => {
       if (!o.isMesh || o.userData.keep) return;
       for (let p = o; p && p !== group; p = p.parent) if (p.userData.dyn) return;
-      const g = (o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
+      const g = floats(o.geometry).applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld));
       const m = o.material, own = !!(m.vertexColors && g.attributes.color); // already vertex-coloured (villagers)
       for (const k of Object.keys(g.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv' && !(own && k === 'color')) g.deleteAttribute(k);
       // materials from mat() that differ only in colour go into one vertex-coloured mesh
@@ -2123,7 +2136,8 @@
       scene.add(pool);
       const rimG = new THREE.Mesh(new THREE.TorusGeometry(3.25, 0.22, 6, 40).rotateX(Math.PI / 2), mat(P.stone, { flat: true }));
       scene.add(rimG);
-      const w = new Wyrm();
+      const w = new (A.WyrmGlb || Wyrm)();
+      w.tone = 0.72;
       scene.add(w.group);
       const aura = new THREE.Mesh(new THREE.TorusGeometry(3.0, 0.09, 6, 48).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#5fd0ff', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }));
       aura.position.y = 0.12;
@@ -2186,7 +2200,7 @@
       const sun = new THREE.DirectionalLight('#fff0d0', 2.3); sun.position.set(-0.4, 1, 0.5); scene.add(sun);
       const rim = new THREE.DirectionalLight('#7fe0ff', 1.1); rim.position.set(0.5, 0.6, -1); scene.add(rim);
       const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, -5000, 5000);
-      const w = new Wyrm();
+      const w = new Wyrm(); // Cloud Run bends the drawn wyrm's spine along its flight, which a painted model can't
       scene.add(w.group);
       FL = { canvas, r, scene, cam, w, size: '', ray: new THREE.Raycaster(), plane: new THREE.Plane(new V3(0, 1, 0), 0), ndc: new THREE.Vector2(), path: [] };
     } catch (e) { FL = false; return null; }

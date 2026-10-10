@@ -215,7 +215,8 @@
     buildChannel();
     buildPool();
     KH.on('rain', () => { roarT = performance.now(); }); // the wyrm rears up and roars as it calls the rain
-    wyrm = new A.Wyrm();
+    // the painted Rainwyrm (models3d.js), the drawn one standing in until it loads
+    wyrm = new (A.WyrmGlb || A.Wyrm)();
     wyrm.group.position.set(SPRING.x, SPRING.y - 0.1, SPRING.z);
     scene.add(wyrm.group);
     mist = A.particles(150, { color: '#dff8ff', opacity: 0.55 });
@@ -1294,7 +1295,7 @@
     for (const k of free) {
       const at = KIN_AT[k.id];
       if (!at || kin[k.id]) continue;
-      const w = new A.Wyrm();
+      const w = new (A.WyrmGlb || A.Wyrm)();
       w.set({ level: k.level, skin: k.skin, element: null });
       const fly = at[2] != null, y = fly ? at[2] : landH(at[0], at[1]);
       w.group.position.set(at[0], y, at[1]);

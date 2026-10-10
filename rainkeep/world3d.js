@@ -122,6 +122,14 @@
     g.rotation.y = 0.6;
     return g;
   }
+  // the painted map models (Tripo meshes from Higgsfield paintings): the keep, ruins, Saltborn camps, the stone, copper,
+  // Sunsteel and food sites and the wind-carved rocks, each in place of its drawn stand-in once it has loaded
+  const MAP_GLB = { keep: 's-keep', ruin: 's-ruin', camp: 's-camp', rock: 's-rock', stone: 's-quarry', copper: 's-copper', sunsteel: 's-sunsteel', food: 's-farm' };
+  const mapGlb = (k) => !!(MAP_GLB[k] && A.models && A.models.want([MAP_GLB[k]]));
+  // a copy `across` wide, turned by yaw
+  const still = (k, across, yaw) => { const o = A.models.instance(MAP_GLB[k], across); o.rotation.y = yaw || 0; return o; };
+  // which painted model a tile would show, if any
+  const tileGlb = (b) => (b.kind === 'ruin' ? 'ruin' : b.kind === 'camp' && !b.salt ? 'camp' : b.kind === 'node' && b.res !== 'water' ? b.res : null);
   // a rival keep (rivals.js): the painted fort once it has loaded, a drawn one until then; its banner in the
   // rival's colour, and a turquoise dome while it holds a Peace Shield
   function rivalModel(b, t) {
@@ -202,6 +210,7 @@
   function campModel() {
     const g = new THREE.Group();
     g.add(blob(1.6));
+    if (mapGlb('camp')) { g.add(still('camp', 3.6, 0.4)); return g; }
     const cloth = A.mat('#7a2a1a', { flat: true, map: A.tex.stripes('#7a2a1a', '#2a1608', 6) });
     for (const [x, z, s] of [[-0.7, -0.4, 1], [0.8, -0.3, 0.85], [0, 0.6, 0.75]]) g.add(A.cone(0.75 * s, 1.1 * s, cloth, x, 0, z, 6));
     g.add(A.cyl(0.3, 0.35, 0.12, A.mat('#3a2a1a', { flat: true }), 0.9, 0, 0.75, 7));
@@ -219,13 +228,16 @@
     const g = new THREE.Group(), r = seeded((t.x * 31 + t.y * 17) >>> 0);
     const st = A.mat('#c9a070', { flat: true }), stD = A.mat('#a8804e', { flat: true });
     g.add(blob(1.4));
-    g.add(A.box(0.45, 2.0, 0.45, st, -0.75, 0, 0), A.box(0.45, 1.4, 0.45, stD, 0.75, 0, 0));
-    g.add(A.box(1.0, 0.35, 0.5, st, -0.35, 2.0, 0));
-    const fallen = A.cyl(0.22, 0.22, 1.3, stD, 0.6, 0.22, 0.9, 8);
-    fallen.rotation.z = Math.PI / 2; fallen.rotation.y = r() * 2;
-    g.add(fallen);
-    g.add(A.rock(0.35, 2, '#b89060'));
-    g.children[g.children.length - 1].position.set(-0.2, 0.1, 0.9);
+    if (mapGlb('ruin')) g.add(still('ruin', 3.3, r() * 1.2 - 0.6));
+    else {
+      g.add(A.box(0.45, 2.0, 0.45, st, -0.75, 0, 0), A.box(0.45, 1.4, 0.45, stD, 0.75, 0, 0));
+      g.add(A.box(1.0, 0.35, 0.5, st, -0.35, 2.0, 0));
+      const fallen = A.cyl(0.22, 0.22, 1.3, stD, 0.6, 0.22, 0.9, 8);
+      fallen.rotation.z = Math.PI / 2; fallen.rotation.y = r() * 2;
+      g.add(fallen);
+      g.add(A.rock(0.35, 2, '#b89060'));
+      g.children[g.children.length - 1].position.set(-0.2, 0.1, 0.9);
+    }
     const beam = new THREE.Mesh(A.geo('beam', () => new THREE.CylinderGeometry(0.5, 0.9, 7, 12, 1, true)), new THREE.MeshBasicMaterial({ color: '#8fe4ff', transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
     beam.position.y = 3.5;
     beam.userData.dyn = true;
@@ -233,9 +245,17 @@
     g.userData.beam = beam;
     return g;
   }
+  const NODE_SIZE = { stone: 3.2, copper: 3.0, sunsteel: 2.6, food: 3.4 };
   function nodeModel(t) {
     const g = new THREE.Group(), seed = t.x * 7 + t.y * 13;
     g.add(blob(1.3));
+    if (t.res !== 'water' && mapGlb(t.res)) {
+      const o = still(t.res, NODE_SIZE[t.res] || 3, ((seed * 37) % 7) * 0.2 - 0.6);
+      g.add(o);
+      // a Sunsteel vein still glows
+      if (t.res === 'sunsteel') o.traverse((m) => { if (m.isMesh && !g.userData.glow) { m.material = m.material.clone(); m.material.emissive = new Col('#e8a83a'); m.material.emissiveMap = m.material.map; g.userData.glow = m.material; } });
+      return g;
+    }
     if (t.res === 'stone') {
       const m = A.mat('#d4a56c', { flat: true }), m2 = A.mat('#b8844e', { flat: true });
       g.add(A.box(1.6, 0.9, 1.1, m, -0.2, 0, -0.3), A.box(1.0, 0.6, 0.8, m2, 0.1, 0.9, -0.3));
@@ -275,6 +295,7 @@
   function keepModel() {
     const g = new THREE.Group();
     g.add(blob(3.2));
+    if (mapGlb('keep')) { g.add(still('keep', 6.8, 0)); return g; }
     const wall = A.mat(A.P.adobeD, { flat: true }), top = A.mat(A.P.adobe, { flat: true });
     for (let i = 0; i < 16; i++) {
       const a = (i / 16) * Math.PI * 2;
@@ -301,6 +322,7 @@
       for (let i = 0; i < n; i++) { const p = A.palm(1.8 + t.v * 1.1, t.x * 3 + t.y + i, { dates: false }); p.position.set(i ? 0.7 : -0.3, 0, i ? 0.5 : -0.2); g.add(p); }
       if (t.v < 0.3) { g.add(A.rock(0.3, t.x, '#b98a5a')); g.children[g.children.length - 1].position.set(0.9, 0.08, -0.6); }
     }
+    else if (t.decor === 'rock' && mapGlb('rock')) g.add(still('rock', 1.5 + t.v * 1.1, t.x * 1.7 + t.y));
     else if (t.decor === 'rock') { g.add(A.rock(0.6 + t.v * 0.5, t.x + t.y, '#b98a5a')); g.children[0].position.y = 0.2; }
     return g;
   }
@@ -327,9 +349,7 @@
     scene.add(terrain);
     buildDecor();
     // the keep at the centre
-    const keep = keepModel();
-    keep.position.set(0, hAt(0, 0), 0);
-    scene.add(A.bake(keep));
+    buildKeep();
     keepGlow = new THREE.Mesh(new THREE.CircleGeometry(4.5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#5fd0ff', transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false }));
     keepGlow.position.y = 0.2;
     scene.add(keepGlow);
@@ -357,10 +377,20 @@
     makeIcons();
     return true;
   }
-  // decor on empty tiles (it depends on the map seed) is baked into a few meshes
-  let decorG = null;
+  // the keep at the centre, built again when its painted model arrives
+  let keepG = null, keepGlb = false;
+  function buildKeep() {
+    if (keepG) scene.remove(keepG);
+    keepGlb = mapGlb('keep');
+    keepG = A.bake(keepModel());
+    keepG.position.set(0, hAt(0, 0), 0);
+    scene.add(keepG);
+  }
+  // decor on empty tiles (it depends on the map seed) is baked into a few meshes, again when the painted rock arrives
+  let decorG = null, decorGlb = false;
   function buildDecor() {
     if (decorG) scene.remove(decorG);
+    decorGlb = mapGlb('rock');
     const decor = new THREE.Group();
     for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
       const t = KH.world.base(x, y);
@@ -402,7 +432,7 @@
       const b = KH.world.base(x, y);
       if (b.kind === 'empty' || b.kind === 'keep') { if (tiles[b.k]) { scene.remove(tiles[b.k].g); delete tiles[b.k]; } continue; }
       const t = KH.world.tile(x, y);
-      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}${t.shield ? 'S' : ''}${b.kind === 'intel' ? `${t.report.kind}${t.report.id}` : ''}${b.kind === 'rival' && A.models && A.models.want(['s-fort']) ? 'F' : ''}`;
+      const key = `${b.kind}:${b.res || ''}:${b.salt ? 's' : ''}${b.flooded ? 'f' : ''}:${t.gone ? 'g' : 'a'}${glbReady(b) ? 'm' : ''}${t.shield ? 'S' : ''}${b.kind === 'intel' ? `${t.report.kind}${t.report.id}` : ''}${b.kind === 'rival' && A.models && A.models.want(['s-fort']) ? 'F' : ''}${tileGlb(b) && mapGlb(tileGlb(b)) ? 'P' : ''}`;
       let e = tiles[b.k];
       if (e && e.key === key) continue;
       if (e) scene.remove(e.g);
@@ -707,7 +737,12 @@
     if (KH.covered && KH.covered()) return; // nothing to draw under a full-screen overlay
     const t = now / 1000, dt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
-    if (now >= nextSync) { nextSync = now + 400; syncTiles(); syncGroves(); syncOutposts(); }
+    if (now >= nextSync) {
+      nextSync = now + 400;
+      syncTiles(); syncGroves(); syncOutposts();
+      if (!keepGlb && mapGlb('keep')) buildKeep();
+      if (!decorGlb && mapGlb('rock')) buildDecor();
+    }
     // lighting follows the keep's day and night
     const T3 = KH.town3d;
     const p = T3 && T3.palAt ? T3.palAt(T3.phase()) : null;

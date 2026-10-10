@@ -365,6 +365,15 @@ window.RK_ART = {
     'a-camel': 'models/animals/camel.glb',
     'r-raider': 'models/foes/raider.glb',
     's-fort': 'models/foes/fort.glb',
+    'w-rill': 'models/wyrm/rill.glb',
+    's-keep': 'models/map/keep.glb',
+    's-ruin': 'models/map/ruin.glb',
+    's-camp': 'models/map/camp.glb',
+    's-rock': 'models/map/rock.glb',
+    's-quarry': 'models/map/quarry.glb',
+    's-copper': 'models/map/copper.glb',
+    's-sunsteel': 'models/map/sunsteel.glb',
+    's-farm': 'models/map/farm.glb',
   },
   // the Camel Derby's race (derby.js): the running camel and the salt-pan course behind it
   derby: {

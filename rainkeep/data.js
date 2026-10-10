@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.42.0',
+  version: '4.43.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1896,6 +1896,11 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.43', items: [
+      { icon: 'i-wyrm', name: 'A new Rainwyrm', text: 'Your Rainwyrm has a new painted body: a coiled river dragon with horns, whiskers and fins, rising out of the spring. It grows with every form, wears every skin, and the elder kin of Act III share it.', act: 'tab:keep' },
+      { icon: 'i-world', name: 'The Dunes, repainted', text: 'The keep, the ruins, the Saltborn camps, the quarries, the copper and Sunsteel veins, the date farms and the wind-carved rocks on the Dunes are all new painted models.', act: 'tab:world' },
+      { icon: 'i-compass', name: 'Smoother zoom', text: 'Pinching to zoom on a phone no longer throws the camera across the keep or the Dunes, and lifting one finger carries on as a pan from where it is.' },
+    ] },
     { v: '4.42', items: [
       { icon: 'i-scroll', name: 'Field Orders', text: 'From stage 20, Captain Hadi posts three orders a day: fight a stage you have cleared under a condition, with the Mist Veil, a Lancer lead, no breath, only two heroes, or a swift win. Each pays Starglass and journals, and all three a Beacon Token.', act: 'orders', open: (S) => S.stage > 20, needs: 'Stage 20' },
     ] },

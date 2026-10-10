@@ -42,9 +42,11 @@
       .then((gltf) => {
         // companions (p-), Dunes beasts (b-) and the camel (a-) are animals; heroes, villagers and raiders people
         // still models (s-, a rival's fort) keep their mesh as it is
-        MOD[id] = /^s-/.test(id) ? prepStill(gltf) : /^[pba]-/.test(id) ? rigAnimal(gltf, BIRDS.has(id), id) : prepPerson(gltf);
+        MOD[id] = /^w-/.test(id) ? prepWyrm(gltf) : /^s-/.test(id) ? prepStill(gltf) : /^[pba]-/.test(id) ? rigAnimal(gltf, BIRDS.has(id), id) : prepPerson(gltf);
         MOD[id].ok = true;
         epoch++;
+        // the wyrm's portraits on open sheets were painted with the drawn wyrm: paint them again
+        if (/^w-/.test(id) && KH.paintWyrms) setTimeout(() => KH.paintWyrms(document.body), 0);
       })
       .catch((e) => { MOD[id] = { failed: true, err: String(e) }; });
   }
@@ -240,6 +242,157 @@
 
   const animPerson0 = A.animPerson;
   A.animPerson = (o, t, mode, speed) => (o.userData.mixer ? A.animModel(o, t, mode, speed) : animPerson0(o, t, mode, speed));
+
+  // ---- the Rainwyrm: one painted mesh (Tripo, from a painting of the wyrm coiled with its head raised) ----
+  // flattened into one geometry, coil centred on the origin, resting on y 0 and one unit tall; the head is the
+  // middle of its highest points
+  function prepWyrm(gltf) {
+    gltf.scene.updateMatrixWorld(true);
+    const parts = [];
+    gltf.scene.traverse((o) => { if (o.isMesh) parts.push(o); });
+    let n = 0;
+    for (const m of parts) n += m.geometry.attributes.position.count;
+    const P = new Float32Array(n * 3), N = new Float32Array(n * 3), UV = new Float32Array(n * 2), idx = [];
+    const v = new V3();
+    let at = 0;
+    for (const m of parts) {
+      const g = m.geometry, c = g.attributes.position.count, nm = new THREE.Matrix3().getNormalMatrix(m.matrixWorld);
+      for (let i = 0; i < c; i++) {
+        v.fromBufferAttribute(g.attributes.position, i).applyMatrix4(m.matrixWorld); P.set([v.x, v.y, v.z], (at + i) * 3);
+        if (g.attributes.normal) { v.fromBufferAttribute(g.attributes.normal, i).applyMatrix3(nm).normalize(); N.set([v.x, v.y, v.z], (at + i) * 3); }
+        if (g.attributes.uv) UV.set([g.attributes.uv.getX(i), g.attributes.uv.getY(i)], (at + i) * 2);
+      }
+      if (g.index) for (let i = 0; i < g.index.count; i++) idx.push(g.index.getX(i) + at); else for (let i = 0; i < c; i++) idx.push(i + at);
+      at += c;
+    }
+    const bb = new THREE.Box3();
+    for (let i = 0; i < n; i++) bb.expandByPoint(v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]));
+    const ox = (bb.min.x + bb.max.x) / 2, oz = (bb.min.z + bb.max.z) / 2, s = 1 / (bb.max.y - bb.min.y);
+    for (let i = 0; i < n; i++) { P[i * 3] = (P[i * 3] - ox) * s; P[i * 3 + 1] = (P[i * 3 + 1] - bb.min.y) * s; P[i * 3 + 2] = (P[i * 3 + 2] - oz) * s; }
+    const head = new V3();
+    let k = 0;
+    for (let i = 0; i < n; i++) if (P[i * 3 + 1] > 0.9) { head.x += P[i * 3]; head.y += P[i * 3 + 1]; head.z += P[i * 3 + 2]; k++; }
+    head.multiplyScalar(1 / Math.max(1, k));
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.BufferAttribute(P, 3));
+    geom.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    geom.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
+    geom.setIndex(idx);
+    geom.computeBoundingSphere();
+    return { kind: 'wyrm', geom, map: parts[0] && parts[0].material.map, head, w: (bb.max.x - bb.min.x) * s, d: (bb.max.z - bb.min.z) * s };
+  }
+  // the wyrm's skin: wet, a little iridescent; a skin other than the river's own repaints the painted teal: the warm
+  // cream of the belly, horns and frills (red over blue) takes the skin's belly colour, the scales its two body
+  // colours by their brightness; the neck and head move in the vertex shader
+  const WYRM_NECK = 0.42; // the height (of one) above which the body sways as neck and head
+  function wyrmMaterial(m) {
+    const u = {
+      uT: { value: 0 }, uPet: { value: 0 }, uRoar: { value: 0 }, uDorm: { value: 0 }, uDim: { value: 1 },
+      uRe: { value: 0 }, uC0: { value: new THREE.Color() }, uC1: { value: new THREE.Color() }, uC2: { value: new THREE.Color() },
+    };
+    const mat = new THREE.MeshPhysicalMaterial({ map: m.map || null, roughness: 0.42, metalness: 0.04, clearcoat: 0.55, clearcoatRoughness: 0.28, sheen: 0.2, sheenRoughness: 0.5, sheenColor: new THREE.Color('#7ff0e0') });
+    if (mat.map) mat.map.anisotropy = 4;
+    mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, u);
+      sh.vertexShader = 'uniform float uT, uPet, uRoar, uDorm;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        float wN = smoothstep(${WYRM_NECK.toFixed(2)}, 1.0, position.y), wC = 1.0 - wN;
+        transformed.x += (sin(uT * 0.85) * 0.045 + sin(uT * 1.9 + 1.3) * 0.012 + sin(uT * 9.0) * 0.012 * uPet) * wN;
+        transformed.z += (sin(uT * 0.6 + 0.7) * 0.025 - uRoar * 0.06 + uPet * 0.02) * wN;
+        transformed.y += (uRoar * 0.07 - uDorm * 0.24 - uPet * 0.025 + sin(uT * 1.6) * 0.006) * wN;
+        transformed.xz *= 1.0 + sin(uT * 1.6) * 0.008 * wC;`);
+      sh.fragmentShader = 'uniform float uRe, uDim; uniform vec3 uC0, uC1, uC2;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+        if (uRe > 0.5) { vec3 t = diffuseColor.rgb; float l = dot(t, vec3(0.299, 0.587, 0.114)); diffuseColor.rgb = mix(mix(uC0, uC1, smoothstep(0.08, 0.55, l)), uC2 * (0.75 + 0.4 * l), smoothstep(0.02, 0.15, t.r - t.b)); }
+        diffuseColor.rgb *= uDim;`);
+    };
+    mat.customProgramCacheKey = () => 'rk-wyrm';
+    mat.userData.u = u;
+    return mat;
+  }
+  // where the shader has moved the head (wN = 1 there), for the bubbles and the camera
+  const headShift = (u, out) => out.set(
+    Math.sin(u.uT.value * 0.85) * 0.045 + Math.sin(u.uT.value * 1.9 + 1.3) * 0.012 + Math.sin(u.uT.value * 9) * 0.012 * u.uPet.value,
+    u.uRoar.value * 0.07 - u.uDorm.value * 0.24 - u.uPet.value * 0.025,
+    Math.sin(u.uT.value * 0.6 + 0.7) * 0.025 - u.uRoar.value * 0.06 + u.uPet.value * 0.02);
+  // The Rainwyrm as the keep, the kin on the rim and the portraits show it: the painted model once it has loaded,
+  // the drawn wyrm (art3d.js) until then or where it can't load. It answers like the drawn one: set() a level,
+  // skin and element, pose() each frame, and headWorld is where the head is. The drawn wyrm, kept hidden, still
+  // decides the form, the element and how tall the head stands at each form, so the model grows the same way.
+  const WID = 'w-rill', YAW = -0.5; // the model's head looks along +x; turned, it looks out over the pool's front
+  class WyrmGlb {
+    constructor() {
+      this.group = new THREE.Group();
+      this.fb = new A.Wyrm();
+      this.group.add(this.fb.group);
+      this.headWorld = new V3(); this.mouthWorld = new V3();
+      this.model = null; this.o = null; this.h = 1;
+      this.tone = 1; // the portraits' lights are brighter than the keep's
+      this.tmp = new V3();
+      load(WID);
+    }
+    get stage() { return this.fb.stage; }
+    get elem() { return this.fb.elem; }
+    get size() { return this.fb.size; }
+    set(o) {
+      const key = `${o.level}|${o.skin}|${o.element}`;
+      this.fb.set(o);
+      if (key === this.key) return;
+      this.key = key; this.o = o;
+      if (this.model) this.look();
+    }
+    attach() {
+      const m = MOD[WID];
+      this.m = m;
+      const mat = wyrmMaterial(m);
+      this.u = mat.userData.u;
+      this.mat = mat;
+      this.mesh = new THREE.Mesh(m.geom, mat);
+      this.mesh.castShadow = true; this.mesh.receiveShadow = true; this.mesh.frustumCulled = false;
+      this.model = new THREE.Group();
+      this.model.rotation.y = YAW;
+      this.model.add(this.mesh);
+      this.group.add(this.model);
+      this.fb.group.visible = false;
+      if (this.o) this.look();
+    }
+    // the skin's colours and the size of this form: the head as high as the drawn wyrm's
+    look() {
+      const o = this.o, sk = DATA.skins[o.skin] || DATA.skins.river, u = this.u;
+      u.uRe.value = o.skin && o.skin !== 'river' && DATA.skins[o.skin] ? 1 : 0;
+      u.uC0.value.set(sk.body[0]); u.uC1.value.set(sk.body[1]); u.uC2.value.set(sk.belly);
+      this.mat.sheenColor.set(sk.fin || sk.mist[0]);
+      const elem = this.fb.elem;
+      this.mat.emissive.set(elem ? elem.color : '#000000');
+      this.mat.emissiveIntensity = elem ? 0.08 : 0;
+      this.group.updateMatrixWorld(true);
+      this.fb.pose({ t: 0 });
+      const gp = this.group.getWorldPosition(new V3()), gs = this.group.getWorldScale(new V3()).y || 1;
+      const hy = (this.fb.headWorld.y - gp.y) / gs;
+      this.h = Math.max(0.5, (hy / Math.max(0.5, this.m.head.y)) * 1.08);
+      this.model.scale.setScalar(this.h);
+    }
+    pose(st) {
+      if (!this.model && ready(WID)) this.attach();
+      if (!this.model) {
+        this.fb.pose(st);
+        this.headWorld.copy(this.fb.headWorld); this.mouthWorld.copy(this.fb.mouthWorld);
+        return;
+      }
+      const u = this.u, dorm = st.dormant ? 1 : 0;
+      u.uT.value = st.t * (dorm ? 0.35 : 1);
+      u.uPet.value = st.pet || 0;
+      u.uRoar.value = dorm ? 0 : st.roar || 0;
+      u.uDorm.value += (dorm - u.uDorm.value) * 0.06;
+      u.uDim.value = (1 - 0.3 * u.uDorm.value) * this.tone;
+      // the coil sits a little down in the water, lower still while the wyrm sleeps
+      this.model.position.y = -this.h * (0.03 + 0.1 * u.uDorm.value);
+      this.group.updateMatrixWorld(true);
+      headShift(u, this.tmp).add(this.m.head);
+      this.headWorld.copy(this.tmp).applyMatrix4(this.mesh.matrixWorld);
+      this.tmp.z += 0.08;
+      this.mouthWorld.copy(this.tmp).applyMatrix4(this.mesh.matrixWorld);
+    }
+  }
+  A.WyrmGlb = WyrmGlb;
 
   A.models = {
     has: (id) => !!SRC[id], ready, load, instance, swapCamel, epoch: () => epoch, list: () => Object.keys(SRC),
