@@ -1866,10 +1866,10 @@ check('clock: no runtime errors', !errs.length, errs[0] || '');
   const src = ['src/game/run.js', 'src/game/streak.js', 'src/game/events.js', 'src/game/rites.js', 'src/ui/meta/heroes.js', 'src/ui/meta/panels.js']
     .map((f) => readFileSync(root + f, 'utf8')).join('\n') + readFileSync(root + 'src/game/data.js', 'utf8');
   const asked = new Set([...src.matchAll(/voice\('([a-z_]+)'\)/g), ...src.matchAll(/'(a_[a-z_]+)'/g)].map((m) => m[1]));
-  const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric'];
+  const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'isolde'];
   for (const h of heroes) asked.add(h + '_rite').add(h + '_greet');
   const missing = [...asked].filter((n) => !files.includes(n) && !/^a_(normal)$/.test(n));
-  check('voice: 48 lines, and every line the code asks for has a file', files.length === 48 && !missing.length, `files=${files.length} missing=${missing}`);
+  check('voice: 50 lines, and every line the code asks for has a file', files.length === 50 && !missing.length, `files=${files.length} missing=${missing}`);
 }
 errs = await session(async (page) => {
   await page.mouse.click(5, 420); // the audio context needs a gesture
@@ -1877,7 +1877,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const A = window.__soulswarm.audio, { VOICE } = await import('/src/game/data.js'), out = {};
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 48;
+    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 50;
     out.rules = Object.keys(VOICE.lines).length > 20;
     const r = [];
     r.push(A.voice('a_carnage')); await sleep(120); out.duck = A.voiceState().duck;
@@ -1892,7 +1892,7 @@ errs = await session(async (page) => {
     out.unknown = A.voice('a_nope');
     return out;
   });
-  check('voice: all 48 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
+  check('voice: all 50 lines decode after the first tap', s.decoded && s.rules, JSON.stringify(s));
   check('voice: one line at a time; a bigger streak or a more important line cuts in, an important line queues, the rest drop',
     s.r === 'play,play,cooldown,play,queued,busy,play' && s.mid.p === 'a_boss' && s.mid.q === 'a_thief', JSON.stringify({ r: s.r, mid: s.mid }));
   check('voice: music and sfx duck under a line and swell back', s.duck < 0.6 && s.after.duck > 0.99 && !s.after.p, JSON.stringify({ d: s.duck, a: s.after }));
@@ -2138,7 +2138,7 @@ check('NaN guard: no runtime errors', !errs.length, errs[0] || '');
 errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const app = window.__soulswarm, H = app.heroModels, out = { models: {} }; // the game's own instance (see section 25)
-    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'eclipse_vael']) {
+    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'isolde', 'eclipse_vael']) {
       const m = await H.loadHeroModel(id);
       if (!m) { out.models[id] = null; continue; }
       const g = m.geometry, b = g.boundingBox, tris = (g.index ? g.index.count : g.attributes.position.count) / 3;
@@ -2165,7 +2165,7 @@ errs = await session(async (page) => {
     return out;
   });
   const bad = Object.entries(s.models).filter(([, m]) => !m || m.tris < 4000 || m.tris > 30000 || m.h < 1.8 || m.h > 2.9 || Math.abs(m.floor) > 0.01 || !m.uv || !m.normal || m.tex !== 1024 || !m.same);
-  check('3D heroes: all seven heroes and the Eclipse Vael skin load a textured model (4k-30k triangles, on the ground, 1024 px paint)', !bad.length, JSON.stringify(bad.length ? bad : s.models));
+  check('3D heroes: all eight heroes and the Eclipse Vael skin load a textured model (4k-30k triangles, on the ground, 1024 px paint)', !bad.length, JSON.stringify(bad.length ? bad : s.models));
   check('3D heroes: a run swaps the painted model onto the Shepherd; the home showcase shows it (and the skin\'s); a missing model resolves to null',
     s.run.painted && s.run.shared && s.run.textured && s.show.mordrake && s.show.eclipse && s.none === null, JSON.stringify({ run: s.run, show: s.show, none: s.none }));
 });
@@ -2179,7 +2179,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const app = window.__soulswarm, H = app.heroModels, E = app.engine, out = { rigs: {} };
     const V = (o) => o.getWorldPosition(new (o.position.constructor)());
-    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'eclipse_vael']) {
+    for (const id of ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'isolde', 'eclipse_vael']) {
       const m = await H.loadHeroModel(id), r = m && m.rig;
       if (!r) { out.rigs[id] = null; continue; }
       let mesh = null; r.scene.traverse((o) => { if (o.isSkinnedMesh) mesh = o; });
@@ -2675,7 +2675,7 @@ errs = await session(async (page) => {
     const dist = (a, b) => +Math.hypot(a.x - b.x, a.z - b.z).toFixed(2);
     const out = {};
 
-    // roster: seven heroes in order, the new Altar shard drops, painted splashes and ability icons
+    // roster: the heroes in order (Isolde joined after them, section 46), the new Altar shard drops, painted splashes and ability icons
     out.roster = { order: D.HERO_ORDER.join(), epic: D.ALTAR.shardDrops.epic.grimsby, legendary: D.ALTAR.shardDrops.legendary.osric,
       art: !!(A.HERO_ART.grimsby && A.HERO_ART.osric), icons: !!(A.SKILL_ART.witchfire && A.SKILL_ART.hallowPyre),
       evo: D.EVOLUTIONS.hallowPyre.from === 'witchfire' && D.EVOLUTIONS.hallowPyre.needs === 'raiseDead', rites: !!(D.RITES.grimsby && D.RITES.osric) };
@@ -2748,8 +2748,8 @@ errs = await session(async (page) => {
     app.exitRun(); app.engine.manual = false;
     return out;
   });
-  check('new heroes: seven heroes (Grimsby Epic, Osric Legendary) with Altar shards, painted splashes, Witchfire icons, Hallow Pyre and both Rites',
-    s.roster.order === 'vael,nyx,seraphine,liora,grimsby,mordrake,osric' && s.roster.epic > 0 && s.roster.legendary > 0 && s.roster.art && s.roster.icons && s.roster.evo && s.roster.rites
+  check('new heroes: Grimsby (Epic) and Osric (Legendary) in the roster with Altar shards, painted splashes, Witchfire icons, Hallow Pyre and both Rites',
+    s.roster.order === 'vael,nyx,seraphine,liora,grimsby,mordrake,osric,isolde' && s.roster.epic > 0 && s.roster.legendary > 0 && s.roster.art && s.roster.icons && s.roster.evo && s.roster.rites
     && s.start.weapon === 'witchfire' && s.osric.weapon === 'skullHalo', JSON.stringify({ r: s.roster, w: s.start.weapon, o: s.osric.weapon }));
   check('witchfire: walking lays a patch every 1.1 m, standing still one at his feet; a foe burns from the hottest patch only, once a tick',
     s.trail.walked >= 3 && s.trail.walked <= 7 && s.trail.idle >= 1 && s.trail.idle <= 3 && s.ticks.da > 0 && Math.abs(s.ticks.overlap - 1) < 0.15 && Math.abs(s.ticks.hotter - 2) < 0.2, JSON.stringify({ t: s.trail, k: s.ticks }));

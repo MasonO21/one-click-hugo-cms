@@ -864,6 +864,16 @@ Every results screen except the tutorial's has a **Share** button beside Double 
 - **Osric's fixes:** his legion does his killing at up to 9 m, so the same thing happened to him (6 levels behind Vael at death on Chapter 2, 237 s survival). The first fix, a 40% ward during Bone Mass, a 22 → 18 s cooldown and 125 → 135 HP, did not move it (226 s), because his deaths were XP-starved, not damage-starved. The tithe (his legion's kills send him their souls) replaced a "Skull Halo kills rise ×2" passive and took him to 287 s and 355 s.
 - **Power-creep rule:** neither beats Mordrake (both are below him), and Osric sits within the noise of Vael. The Witchfire Lantern measured 3,330 effective DPS at Lv5 in the weapon bench's dense horde (`scripts/weapon-bench.mjs`), the strongest Lv5 weapon there before its Lv4–5 burn was trimmed (30 → 28, 40 → 37); Hallow Pyre measured 4,050, beside Harvest Moon. It is weakest against a single target, which is where Grimsby's boss fights are slow.
 
+**Balance check for Isolde (2026-10-10).** The balance bot (`scripts/balance.mjs`; casting Crimson Sabbath at 8+ foes within 6 m, 3+ within 3 m, the boss within 8 m, or 3+ within 6 m below half HP) played her and Mordrake on the same build at the roster's progression, Rites on, 8 runs per chapter at Mastery rank 1:
+
+| Hero | Ch2 survival | Ch4 survival | Mean | Clears (of 16) | Ch5 (4 runs) |
+|---|---|---|---|---|---|
+| Mordrake | 384 s | 399 s | 391 s | 11 | 401 s (4/4) |
+| Isolde | 379 s | 397 s | 388 s | 7 | 386 s (3/4) |
+
+- **Power-creep rule:** she sits 0.9% below Mordrake at rank 1 and level with him at rank 10 (391 s each, §11.2), so she passes. She is the strongest hero after him, as a new Legendary should be, without pushing him out.
+- **How she plays:** she takes the most damage of any hero (1,100–1,400 a run on Chapter 4, against Mordrake's 760–990) and lives on what her two beams and the Sabbath give back, with a legion of about 140–200 built from the foes she drains and marks.
+
 **Stars.** Unlocking takes 10 shards (1★). Star costs: 10 / 20 / 40 / 80 shards for 2★ / 3★ / 4★ / 5★ (160 shards from first shard to 5★). Each star above 1★ adds +12% damage and +8% HP, so 5★ = +48% damage, +32% HP.
 
 **Shard sources:** an Epic Soul Altar roll gives 4 Seraphine, 6 Nyx, 5 Liora or 5 Grimsby shards (equal chance). A Legendary roll gives 5 Mordrake, 6 Seraphine, 5 Osric or 5 Isolde shards (equal chance). The Soul Pass S1 premium track gives 25 Seraphine shards (10 at tier 10, 5 each at tiers 5, 15 and 25). Duplicate hero grants (for example, owning Nyx and then buying the Starter Pack) convert to 20 shards of that hero. *(Planned: in Endless Abyss, the top 10 of each Abyssal-league group earn 2 Mordrake shards per week.)*
@@ -969,6 +979,7 @@ Balance bot, 2026-10-10 (`MASTERY=10 HERO=… node scripts/balance.mjs URL 4 2,4
 | Osric | 328 s (1/4) | 391 s (4/4) | 360 s | 336 s | +7% | −8.1% |
 | Liora | 338 s (1/4) | 377 s (2/4) | 358 s | 323 s | +11% | −8.6% |
 | Grimsby | 288 s (0/4) | 394 s (2/4) | 341 s | 326 s | +5% | −12.8% |
+| Isolde | 386 s (3/4) | 395 s (1/4) | 391 s | 388 s | +1% | 0.0% |
 | Mordrake | 384 s (3/4) | 398 s (3/4) | 391 s | 376 s | +4% | — |
 
 Every hero passes the rule at rank 10. A fully mastered hero survives about 4–11% longer than a fresh one: noticeable, never a wall for a player who has not ground it out.
@@ -1052,7 +1063,7 @@ Six talents with different max levels (125 levels in total). *(Planned: talent l
 
 *Status: the build has menu, battle and boss music tracks plus a faster, harsher last-phase track for every boss's phase III, all procedural. Every gameplay-update mechanic has its own synthesized SFX: Ghoul lunge hiss, Brute growl and slam, Witch lob and fiery landing, Soul Bomb implosion-boom, Champion chime, the arena-seal drone, wall zap, phase-change choir stab and ward ping. The Nova has its wind-up inhale, and each kill-streak tier has a brass-and-bell stinger that rises in pitch by tier (§4.7). Elite affixes and run events add a glass ward shatter, the Splitter's pop, the Commander's rout horn, the Soul Thief's jingle-and-cackle and its escape whoosh, the shrine's bell chime and the coffin's wood-splitting boom. Rendered offline, they peak between −19 and −7 dBFS before the master limiter, the same range as the existing SFX, so none of them clips. Each Hero Rite has its own signature sound (a funeral bell and rising souls for Grave Call, a tearing whoosh and ringing blade for Shadow Step, a hymn and a cascade of chain strikes for Ashfall, a great bell for Death Knell, heaving earth and splintering bone for Ossuary Wall, a roaring whoosh of witchfire and a cackle for Hallowfire, an organ chord, a monks' choir and rattling bones for Bone Mass) plus a soft rising chime when a Rite is ready again (§11.1); rendered offline, all are clearly audible and none clips. The stem system below is Planned.*
 
-*The build is also **voiced**: an announcer and the seven Shepherds, 48 recorded lines (cast and scripts in `ART_AND_ADS.md` §3). They are the only recorded audio; each is mastered to −16 LUFS, mono, and decoded once after the first tap. Tunables are in `VOICE` (`data.js`).*
+*The build is also **voiced**: an announcer and the eight Shepherds, 50 recorded lines (cast and scripts in `ART_AND_ADS.md` §3). They are the only recorded audio; each is mastered to −16 LUFS, mono, and decoded once after the first tap. Tunables are in `VOICE` (`data.js`).*
 
 | Moment | Line |
 |---|---|
