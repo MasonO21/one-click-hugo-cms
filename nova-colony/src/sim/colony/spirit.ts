@@ -207,7 +207,7 @@ export class SpiritSystem extends System {
     g.bus.emit('sfx', { id: 'celebrate', x: spot.x, z: spot.z });
     g.bus.emit('ui:float', { text: 'Festival!', x: spot.x, z: spot.z, color: '#ffc66e', big: true });
     const pct = Math.round((r.production - 1) * 100);
-    g.toast(`Festival! The colony celebrates: +${pct}% production for ${Math.round(r.seconds / 60)} min, and a festival chest in your Inventory`, 'reward', '🏮', 'inventory');
+    g.toast(`Festival! +${pct}% production for ${Math.round(r.seconds / 60)} min, and a chest in your Inventory`, 'reward', '🏮', 'inventory');
   }
 
   private endFestival(): void {

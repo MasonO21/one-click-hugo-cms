@@ -29,6 +29,8 @@ export class ResearchPanel extends Panel {
   private static lastCat = '';
   /** Mastery line icons, kept across re-renders so a level bought never makes the pictures blink. */
   private readonly mIcons = new Map<string, HTMLElement>();
+  /** The line a level was just bought for (its level chip pops once). */
+  private bumped = '';
 
   title(): PanelTitle {
     return { icon: '🔬', art: hudArt('tech'), text: 'Research' };
@@ -152,6 +154,7 @@ export class ResearchPanel extends Panel {
     const rs = this.game.sys.research;
     const list = h('div', { class: 'mastery-list' });
     for (const m of rs.masteryInfo()) list.appendChild(this.masteryCard(m));
+    this.bumped = '';
     return h(
       'div',
       { class: 'mastery' },
@@ -174,7 +177,7 @@ export class ResearchPanel extends Panel {
       'div',
       { class: 'mc-head' },
       this.masteryIcon(line.id, line.art, line.icon),
-      h('div', { class: 'grow' }, h('div', { class: 'mc-name' }, line.name, h('span', { class: 'mc-lv', text: m.level > 0 ? `Lv ${m.level}` : 'New' })), h('div', { class: 'mc-now', text: m.level > 0 ? `${pct(m.bonus)} ${line.label}` : line.blurb })),
+      h('div', { class: 'grow' }, h('div', { class: 'mc-name' }, line.name, h('span', { class: 'mc-lv' + (this.bumped === line.id ? ' pop' : ''), text: m.level > 0 ? `Lv ${m.level}` : 'New' })), h('div', { class: 'mc-now', text: m.level > 0 ? `${pct(m.bonus)} ${line.label}` : line.blurb })),
     );
     const card = h('div', { class: 'card mc' + (m.open ? '' : ' locked') + (m.ready ? ' ready' : ''), data: { mastery: line.id } }, head);
     if (!m.open) {
@@ -192,9 +195,10 @@ export class ResearchPanel extends Panel {
         disabled: m.ready ? false : `Need ${fmt(need)} more research points`,
         data: { action: 'master', line: line.id },
         onClick: () => {
+          // no toast: a few quick taps in a row would stack them; the level chip pops instead
           if (rs.master(line.id)) {
             this.ctx.haptic('success');
-            this.ctx.toast(`${line.name} Mastery ${rs.masteryLevel(line.id)}: ${pct(m.next)} ${line.label}`, 'success', researchArt(line.art) ?? line.icon);
+            this.bumped = line.id;
           }
           this.rerender();
         },
