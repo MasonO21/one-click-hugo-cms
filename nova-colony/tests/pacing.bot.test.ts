@@ -1,0 +1,43 @@
+/**
+ * Pacing bot (tests/pacing/*): an engaged-player bot plays a fresh colony through the real systems.
+ *
+ * - The smoke test (always on, a few seconds) keeps the bot in step with the sim API: it plays the guided start to
+ *   the Reinforced Wood tier without a single decision error.
+ * - The full playthrough to Titanium with mobile sessions (a few minutes of CPU) only runs on demand:
+ *     PACING_BOT=1 npx vitest run tests/pacing.bot.test.ts
+ *   Options: PACING_MODE=sessions|online, PACING_SESSION_MIN=20, PACING_PER_DAY=5, PACING_NOVA=save|spend,
+ *   PACING_PACE=human|fast, PACING_SEED=20261012, PACING_HOURS=40. Or use `node scripts/pacing-bot.mjs --help`.
+ */
+import { describe, expect, it } from 'vitest';
+import { runPlaythrough, type RunOptions } from './pacing/run';
+import { fullReport } from './pacing/report';
+
+describe('pacing bot: smoke', () => {
+  it('plays the guided start to Reinforced Wood with no decision errors', () => {
+    const r = runPlaythrough({ mode: 'online', maxOnlineHours: 0.2, seed: 20261012 });
+    expect(r.final.tier).toBeGreaterThanOrEqual(1);
+    expect(r.botLog.filter((l) => l.includes('decide error'))).toEqual([]);
+    expect(r.raids.length).toBeGreaterThanOrEqual(1);
+    // the guided chain is followed in order and nothing stalls for long
+    const gaps = r.events.filter((e) => e.kind === 'mission').map((e) => e.t);
+    for (let i = 1; i < gaps.length; i++) expect(gaps[i] - gaps[i - 1]).toBeLessThan(5 * 60);
+  }, 60_000);
+});
+
+describe.skipIf(!process.env.PACING_BOT)('pacing bot: full playthrough (PACING_BOT=1)', () => {
+  it('reaches Titanium and prints the pacing report', () => {
+    const env = process.env;
+    const opts: Partial<RunOptions> = {
+      mode: (env.PACING_MODE as RunOptions['mode']) ?? 'sessions',
+      sessionMin: Number(env.PACING_SESSION_MIN ?? 20),
+      sessionsPerDay: Number(env.PACING_PER_DAY ?? 5),
+      nova: (env.PACING_NOVA as RunOptions['nova']) ?? 'save',
+      pace: (env.PACING_PACE as RunOptions['pace']) ?? 'human',
+      seed: Number(env.PACING_SEED ?? 20261012),
+      maxOnlineHours: Number(env.PACING_HOURS ?? 40),
+    };
+    const r = runPlaythrough(opts);
+    console.log(fullReport(r, 'Pacing playthrough'));
+    expect(r.final.tier).toBe(6);
+  }, 60 * 60_000);
+});
