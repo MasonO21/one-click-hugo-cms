@@ -1,12 +1,15 @@
 /**
  * Mobile performance guarantees of the render core (no WebGL needed: three.js objects only):
  *  - Batch uploads only what was written or changed (update ranges), nothing for an empty batch, and never makes
- *    three.js switch a shared material between program variants (every batch carries instance colours).
+ *    three.js switch a shared material between program variants (every batch carries instance colours);
+ *  - the alien far LOD keeps each model's silhouette data (height) at a fraction of the triangles.
  */
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { Batch, queueRange } from '../src/render/core/Batch';
+import { alienGeometry, KNOWN_ALIEN_MODELS } from '../src/render/models/aliens';
 
+const tris = (g: THREE.BufferGeometry) => (g.index ? g.index.count : g.attributes.position.count) / 3;
 const ranges = (a: THREE.BufferAttribute) => a.updateRanges.map((r) => [r.start, r.count]);
 /** What three.js does after uploading an attribute. */
 const uploaded = (a: THREE.BufferAttribute) => a.clearUpdateRanges();
@@ -111,5 +114,28 @@ describe('Batch uploads', () => {
     expect(b.count).toBe(5);
     expect(b.mesh.instanceMatrix.array[4 * 16 + 12]).toBe(4);
     expect(b.mesh.instanceColor!.array[3 * 3]).toBeCloseTo(0.3, 5);
+  });
+});
+
+describe('alien far LOD', () => {
+  it('every model keeps its height and loses about half its triangles at the far LOD', () => {
+    for (const model of KNOWN_ALIEN_MODELS) {
+      for (const boss of [false, true]) {
+        const near = alienGeometry(model, boss, 0);
+        const far = alienGeometry(model, boss, 1);
+        expect(far.height, model).toBe(near.height);
+        const n = tris(near.body) + tris(near.detail);
+        const f = tris(far.body) + tris(far.detail);
+        expect(f, `${model}${boss ? ' boss' : ''}`).toBeLessThan(n * 0.62);
+        expect(f).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('the near models are cached and unchanged by building a far one', () => {
+    const a = alienGeometry('crawler');
+    alienGeometry('crawler', false, 1);
+    expect(alienGeometry('crawler')).toBe(a);
+    expect(alienGeometry('crawler', false, 0)).toBe(a);
   });
 });

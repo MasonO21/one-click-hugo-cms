@@ -4,12 +4,16 @@
  * Procedural animation from the alien state: a bouncy, waddling walk, lunging attacks, burrowers
  * emerging from the ground with dirt and swaying in their mound, flyers gliding with a lazy bank,
  * hit flashes, squash-pop deaths with goo.
+ *
+ * Cost: aliens outside the camera frustum are skipped, and aliens the camera sees from afar (FAR_LOD_D, scaled by the
+ * alien's size, with hysteresis) are drawn from the far geometry (models/aliens.ts lod 1: the same shapes at about
+ * half the triangles), so a 100-alien raid seen from the raid camera costs a fraction of the full models.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { inView } from '../core/context';
 import { Batch, composeEuler } from '../core/Batch';
-import { alienGeometry, type AlienGeo } from '../models/aliens';
+import { alienGeometry, type AlienGeo, type AlienLod } from '../models/aliens';
 import type { Alien } from '../../core/state';
 import { raySphere } from './Nature';
 import { clamp } from '../../core/math';
@@ -21,13 +25,25 @@ interface AlienBatch {
 }
 
 const _m = new THREE.Matrix4();
+const _pv = new THREE.Matrix4();
+const _frustum = new THREE.Frustum();
+const _sphere = new THREE.Sphere();
 const _c = new THREE.Color();
+/** Camera distance (world units, per unit of alien scale) beyond which an alien uses its far geometry. */
+export const FAR_LOD_D = 26;
+/** Hysteresis band around FAR_LOD_D, so an alien walking along the boundary does not flip every frame. */
+const LOD_HYST = 2;
 const WHITE = new THREE.Color(1, 1, 1);
 const FLASH = new THREE.Color(3, 3, 3);
 
 export class Aliens {
   private group = new THREE.Group();
   private batches = new Map<string, AlienBatch>();
+  /** Per model (and boss variant): batch keys per LOD [near, far] and the model height, resolved once. */
+  private kinds = new Map<string, { keys: [string, string]; height: number }>();
+  private bossKinds = new Map<string, { keys: [string, string]; height: number }>();
+  /** Alien id → LOD it was last drawn at (hysteresis). */
+  private lods = new Map<number, AlienLod>();
   private flashUntil = new Map<number, number>();
   private colorCache = new Map<string, THREE.Color>();
   private seen = new Set<number>();
@@ -70,11 +86,22 @@ export class Aliens {
     return this.ctx.game.state.combat.aliens.find((a) => a.id === id);
   }
 
-  private batch(model: string, boss: boolean): AlienBatch {
-    const key = boss ? `${model}:boss` : model;
+  private kind(model: string, boss: boolean): { keys: [string, string]; height: number } {
+    const map = boss ? this.bossKinds : this.kinds;
+    let k = map.get(model);
+    if (!k) {
+      const mk = boss ? model + ':boss' : model;
+      k = { keys: [mk, mk + ':far'], height: alienGeometry(model, boss).height };
+      map.set(model, k);
+    }
+    return k;
+  }
+
+  private batch(model: string, boss: boolean, lod: AlienLod): AlienBatch {
+    const key = this.kind(model, boss).keys[lod];
     let b = this.batches.get(key);
     if (!b) {
-      const geo = alienGeometry(model, boss);
+      const geo = alienGeometry(model, boss, lod);
       b = {
         geo,
         body: new Batch(this.group, geo.body, this.ctx.mats.set, 16, { color: true, castShadow: true }),
@@ -103,14 +130,32 @@ export class Aliens {
       b.body.begin();
       b.detail.begin();
     }
+    if (aliens.length) {
+      const cam = ctx.camera;
+      cam.updateMatrixWorld();
+      _pv.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+      _frustum.setFromProjectionMatrix(_pv);
+    }
     for (let i = 0; i < aliens.length; i++) {
       const a = aliens[i];
       const def = ctx.game.data.alien(a.def);
       const model = def?.model ?? a.def;
       if (!inView(env, a.x, a.z, 15)) continue;
-      const b = this.batch(model, !!def?.boss);
       const scale = def?.scale ?? 1;
       const ground = ctx.heightAt(a.x, a.z);
+      // off screen: nothing to draw (a generous sphere: lunges, bounces and squash stay inside it)
+      const h = this.kind(model, !!def?.boss).height * scale;
+      _sphere.center.set(a.x, ground + (a.y || 0) + h * 0.5, a.z);
+      _sphere.radius = Math.max(h * 0.75, 1.2 * scale) + 0.8;
+      if (!_frustum.intersectsSphere(_sphere)) continue;
+      const cdx = a.x - env.camX;
+      const cdy = ground - env.camY;
+      const cdz = a.z - env.camZ;
+      const d = Math.sqrt(cdx * cdx + cdy * cdy + cdz * cdz) / scale;
+      const prev = this.lods.get(a.id);
+      const lod: AlienLod = prev === undefined ? (d > FAR_LOD_D ? 1 : 0) : prev === 1 ? (d < FAR_LOD_D - LOD_HYST ? 0 : 1) : d > FAR_LOD_D + LOD_HYST ? 1 : 0;
+      if (lod !== prev) this.lods.set(a.id, lod);
+      const b = this.batch(model, !!def?.boss, lod);
       const phase = a.id * 0.77;
       let sx = 1;
       let sy = 1;
@@ -183,6 +228,7 @@ export class Aliens {
     // cleanup
     if (this.flashUntil.size > 64) for (const [id, until] of this.flashUntil) if (until < t) this.flashUntil.delete(id);
     if (this.seen.size > 512) this.seen.clear();
+    if (this.lods.size > 512) this.lods.clear();
   }
 
   alienInfo(id: number): { x: number; y: number; z: number; radius: number; height: number } | null {

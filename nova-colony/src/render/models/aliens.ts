@@ -17,13 +17,29 @@ import type { PrimOpts } from '../core/GeoBuilder';
 
 /**
  * Raids field dozens of aliens at once: the soft-shape kit is used at about three quarters of its
- * usual segment counts here (smooth normals keep the silhouettes round at game zoom).
+ * usual segment counts here (smooth normals keep the silhouettes round at game zoom). The far LOD
+ * (`alienGeometry(…, lod 1)`, drawn for aliens a raid camera sees from afar, a few dozen pixels tall)
+ * builds the same shapes at fewer segments: the same silhouette and colours at about half the triangles.
  */
-function ellipsoid(b: GeoBuilder, rx: number, ry: number, rz: number, x: number, y: number, z: number, color: string, seg = 10, opts: PrimOpts = {}): GeoBuilder {
-  return ellipsoidHi(b, rx, ry, rz, x, y, z, color, Math.max(6, Math.round(seg * 0.72)), opts);
+const SEG = [
+  { ellipsoid: 0.72, minE: 6, sweep: 0.75, minS: 4, shell: 1, sphere: 1, torus: 1 },
+  { ellipsoid: 0.46, minE: 5, sweep: 0.5, minS: 3, shell: 0.67, sphere: 0.7, torus: 0.6 },
+];
+/** Segment factors of the LOD being built (set by alienGeometry around a build). */
+let kit = SEG[0];
+function ellipsoid(b: GeoBuilder, rx: number, ry: number, rz: number, x: number, y: number, z: number, color: string, segs = 10, opts: PrimOpts = {}): GeoBuilder {
+  return ellipsoidHi(b, rx, ry, rz, x, y, z, color, Math.max(kit.minE, Math.round(segs * kit.ellipsoid)), opts);
 }
 function sweep(b: GeoBuilder, pts: readonly number[], radial: number, color: string, opts?: PrimOpts): GeoBuilder {
-  return sweepHi(b, pts, Math.max(4, Math.round(radial * 0.75)), color, opts, 1);
+  return sweepHi(b, pts, Math.max(kit.minS, Math.round(radial * kit.sweep)), color, opts, 1);
+}
+/** Ring segments (body bands, collars) at the LOD's segment counts. */
+function torus(r: number, tube: number, radial: number, tubular: number): THREE.TorusGeometry {
+  return new THREE.TorusGeometry(r, tube, Math.max(3, Math.round(radial * kit.torus)), Math.max(8, Math.round(tubular * kit.torus)));
+}
+/** Small spheres (eye glints, glowing spots) at the LOD's segment count. */
+function dot(d: GeoBuilder, r: number, x: number, y: number, z: number, color: string, segs: number, opts?: PrimOpts): void {
+  d.sphere(r, x, y, z, color, Math.max(4, Math.round(segs * kit.sphere)), opts);
 }
 
 const W = '#ffffff';
@@ -53,11 +69,11 @@ function slyEye(b: GeoBuilder, d: GeoBuilder, x: number, y: number, z: number, r
     ellipsoid(d, r, r * 1.05, r * 0.8, x, y, z, iris, 12);
     ellipsoid(d, r * 0.32, r * 0.75, r * 0.3, x, y, z + r * 0.62, EYE_DARK, 8);
   } else ellipsoid(d, r, r * 1.08, r * 0.82, x, y, z, EYE_DARK, 12);
-  d.sphere(r * 0.24, x - side * r * 0.3, y + r * 0.38, z + r * 0.62, '#ffffff', 6);
-  d.sphere(r * 0.1, x + side * r * 0.25, y - r * 0.3, z + r * 0.7, '#ffffff', 4);
+  dot(d, r * 0.24, x - side * r * 0.3, y + r * 0.38, z + r * 0.62, '#ffffff', 6);
+  dot(d, r * 0.1, x + side * r * 0.25, y - r * 0.3, z + r * 0.7, '#ffffff', 4);
   // upper lid: a shell over the top of the eye, tipped toward the middle
   const lid = opts.lid ?? 1.15;
-  shell(b, r * 1.12, x, y, z, MID, 9, 0, Math.PI * 2, 0, lid, { rz: side * 0.3, rx: -0.15 + (opts.look ?? 0) });
+  shell(b, r * 1.12, x, y, z, MID, Math.max(6, Math.round(9 * kit.shell)), 0, Math.PI * 2, 0, lid, { rz: side * 0.3, rx: -0.15 + (opts.look ?? 0) });
 }
 
 /** Tapered spike (a smooth horn) from (x,y,z) along (dx,dy,dz) with base radius r. */
@@ -110,13 +126,13 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
         ellipsoid(b, 0.13, 0.06, 0.16, s * 0.43, 0.05, 0.42, MID, 10);
         ellipsoid(b, 0.24, 0.3, 0.32, s * 0.42, 0.45, -0.42, MID, 12);
         ellipsoid(b, 0.15, 0.07, 0.2, s * 0.5, 0.06, -0.22, MID, 10);
-        for (let k = -1; k <= 1; k++) d.sphere(0.03, s * 0.43 + k * 0.06, 0.04, 0.57, CLAW, 4);
+        for (let k = -1; k <= 1; k++) dot(d, 0.03, s * 0.43 + k * 0.06, 0.04, 0.57, CLAW, 4);
         slyEye(b, d, s * 0.21, 1.2, 0.36, 0.13, s, { iris: '#f2cf4a' });
       });
       // drool from the lip
       sweep(d, [0.1, 0.78, 0.71, 0.03, 0.12, 0.62, 0.72, 0.022, 0.13, 0.48, 0.7, 0.012], 6, '#a8f04a', { slot: SLOT_GLOW });
-      d.sphere(0.04, 0.13, 0.45, 0.7, '#a8f04a', 6, { slot: SLOT_GLOW });
-      d.sphere(0.025, -0.14, 0.72, 0.7, '#a8f04a', 5, { slot: SLOT_GLOW });
+      dot(d, 0.04, 0.13, 0.45, 0.7, '#a8f04a', 6, { slot: SLOT_GLOW });
+      dot(d, 0.025, -0.14, 0.72, 0.7, '#a8f04a', 5, { slot: SLOT_GLOW });
     },
   },
 
@@ -155,7 +171,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
           const x = Math.sin(a) * 0.42;
           const z = 0.3 + Math.cos(a) * 0.22;
           d.cyl(0.055, 0.055, 0.05, x, 1.46 - Math.cos(a) * 0.08, z, '#8a929c', 6, { rx: Math.PI / 2 - 0.3, ry: a });
-          d.sphere(0.022, x, 1.46 - Math.cos(a) * 0.08, z + 0.03, '#c9a24e', 4);
+          dot(d, 0.022, x, 1.46 - Math.cos(a) * 0.08, z + 0.03, '#c9a24e', 4);
         }
         sweep(d, [-0.4, 1.56, 0.2, 0.02, 0, 1.4, 0.48, 0.022, 0.4, 1.56, 0.2, 0.02], 5, '#4a3a2e');
         for (let i = 0; i < 6; i++) ellipsoid(d, 0.09, 0.05, 0.08, (i - 2.5) * 0.14, 2.0 - Math.abs(i - 2.5) * 0.04, -0.1, '#6a8a4a', 6);
@@ -185,7 +201,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
       for (let i = 0; i < 3; i++) {
         const [, y0, z0, r0] = seg[i];
         const [, y1, z1] = seg[i + 1];
-        b.add(new THREE.TorusGeometry(r0 * 0.86, 0.035, 6, 16), DARK, 0, (y0 + y1) / 2, (z0 + z1) / 2, { rx: Math.PI / 2 - 0.15 * (i + 0.5) });
+        b.add(torus(r0 * 0.86, 0.035, 6, 16), DARK, 0, (y0 + y1) / 2, (z0 + z1) / 2, { rx: Math.PI / 2 - 0.15 * (i + 0.5) });
       }
       // ribbed drill nose
       const n0 = [0, 1.3, 0.38];
@@ -193,7 +209,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
       sweep(b, [n0[0], n0[1], n0[2], 0.27, n0[0] + dir[0] * 0.25, n0[1] + dir[1] * 0.25, n0[2] + dir[2] * 0.25, 0.2, n0[0] + dir[0] * 0.5, n0[1] + dir[1] * 0.5, n0[2] + dir[2] * 0.5, 0.1, n0[0] + dir[0] * 0.66, n0[1] + dir[1] * 0.66, n0[2] + dir[2] * 0.66, 0], 12, LIGHT);
       for (let k = 1; k <= 3; k++) {
         const u = k * 0.14;
-        b.add(new THREE.TorusGeometry(0.27 - u * 0.55, 0.022, 5, 14), MID, 0, n0[1] + dir[1] * u, n0[2] + dir[2] * u, { rx: Math.PI / 2 - 0.22 });
+        b.add(torus(0.27 - u * 0.55, 0.022, 5, 14), MID, 0, n0[1] + dir[1] * u, n0[2] + dir[2] * u, { rx: Math.PI / 2 - 0.22 });
       }
       mirror((s) => {
         slyEye(b, d, s * 0.19, 1.34, 0.42, 0.085, s, { lid: 1.0 });
@@ -216,8 +232,8 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
         ellipsoid(b, 0.3, 0.04, 0.2, s * 1.42, 1.38, -0.2, MID, 12, { rz: s * 0.5, ry: s * 0.4 }); // curled tips
         for (let k = 0; k < 4; k++) {
           const u = 0.3 + k * 0.28;
-          d.sphere(0.04 - k * 0.004, s * u, 1.28 + u * 0.11, 0.05 - u * 0.1, '#bff6ff', 5, { slot: SLOT_GLOW });
-          d.sphere(0.03, s * (u + 0.1), 1.27 + u * 0.11, -0.18 - u * 0.05, '#bff6ff', 4, { slot: SLOT_GLOW });
+          dot(d, 0.04 - k * 0.004, s * u, 1.28 + u * 0.11, 0.05 - u * 0.1, '#bff6ff', 5, { slot: SLOT_GLOW });
+          dot(d, 0.03, s * (u + 0.1), 1.27 + u * 0.11, -0.18 - u * 0.05, '#bff6ff', 4, { slot: SLOT_GLOW });
         }
         slyEye(b, d, s * 0.14, 1.31, 0.52, 0.085, s);
       });
@@ -234,7 +250,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
     height: 3.1,
     build: (b, d, boss) => {
       ellipsoid(b, 0.82, 0.7, 0.98, 0, 1.18, -1.05, LIGHT, 18); // egg sac
-      for (let i = 0; i < 4; i++) b.add(new THREE.TorusGeometry(0.74 - Math.abs(i - 1.5) * 0.12, 0.04, 6, 20), MID, 0, 1.18, -0.55 - i * 0.32, { sy: 0.92 });
+      for (let i = 0; i < 4; i++) b.add(torus(0.74 - Math.abs(i - 1.5) * 0.12, 0.04, 6, 20), MID, 0, 1.18, -0.55 - i * 0.32, { sy: 0.92 });
       ellipsoid(b, 0.4, 0.42, 0.48, 0, 1.4, 0.02, W, 16); // thorax
       ellipsoid(b, 0.28, 0.52, 0.27, 0, 2.02, 0.34, W, 16, { rx: 0.25 }); // upright body
       // ruff of petal plates
@@ -262,7 +278,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
         const a = (i - (tips - 1) / 2) * (boss ? 0.32 : 0.38);
         const h = (boss ? 0.62 : 0.5) - Math.abs(a) * 0.35;
         spike(b, Math.sin(a) * 0.14, 2.88, 0.5 - Math.abs(a) * 0.05, Math.sin(a) * 0.22, h, -0.08, 0.05, W, 6);
-        if (boss) d.sphere(0.04, Math.sin(a) * 0.36, 2.88 + h, 0.42, '#ffd0f0', 6, { slot: SLOT_GLOW });
+        if (boss) dot(d, 0.04, Math.sin(a) * 0.36, 2.88 + h, 0.42, '#ffd0f0', 6, { slot: SLOT_GLOW });
       }
       d.add(new THREE.OctahedronGeometry(boss ? 0.11 : 0.08, 0), '#ff6ad8', 0, 3.0, 0.72, { slot: SLOT_GLOW, sy: 1.4 });
       // glowing eggs in the sac
@@ -270,7 +286,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
         const a = i * 2.39996;
         const y = 1.18 + Math.sin(i * 1.3) * 0.45;
         const ring = Math.sqrt(Math.max(0.05, 1 - ((y - 1.18) / 0.7) ** 2));
-        d.sphere(0.09 + (i % 3) * 0.02, Math.cos(a) * 0.8 * ring, y, -1.05 + Math.sin(a) * 0.96 * ring, '#ffd6ec', 8, { slot: SLOT_GLOW });
+        dot(d, 0.09 + (i % 3) * 0.02, Math.cos(a) * 0.8 * ring, y, -1.05 + Math.sin(a) * 0.96 * ring, '#ffd6ec', 8, { slot: SLOT_GLOW });
       }
     },
   },
@@ -294,7 +310,7 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
         ellipsoid(b, 0.32, 0.28, 0.22, s * 0.58, 0.95, 0.16, W, 10); // knee plate
         // ember eyes under the brow
         ellipsoid(d, 0.1, 0.06, 0.05, s * 0.2, 3.98, 0.78, '#ffcf5a', 10, { rz: s * 0.25, slot: SLOT_GLOW });
-        d.sphere(0.035, s * 0.2, 3.98, 0.82, '#fff2c0', 6, { slot: SLOT_GLOW });
+        dot(d, 0.035, s * 0.2, 3.98, 0.82, '#fff2c0', 6, { slot: SLOT_GLOW });
         // lava cracks running over the chest plate and shoulders
         // (asymmetric, so the chest never reads as a face)
         const o = s > 0 ? 0 : -0.28;
@@ -321,21 +337,32 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
 
 const cache = new Map<string, AlienGeo>();
 
-/** Geometry of an alien model; `boss` adds that model's boss regalia (necklace / grand crown / crystals). */
-export function alienGeometry(model: string, boss = false): AlienGeo {
-  const key = boss ? `${model}:boss` : model;
+/** Levels of detail: 0 = full, 1 = far (see SEG). */
+export type AlienLod = 0 | 1;
+
+/**
+ * Geometry of an alien model; `boss` adds that model's boss regalia (necklace / grand crown / crystals); `lod` 1 is
+ * the far version (same shapes and colours, fewer segments).
+ */
+export function alienGeometry(model: string, boss = false, lod: AlienLod = 0): AlienGeo {
+  const key = `${model}${boss ? ':boss' : ''}${lod ? ':far' : ''}`;
   let g = cache.get(key);
   if (g) return g;
   const spec = MODELS[model];
   const b = new GeoBuilder(model.length * 41 + 7);
   const d = new GeoBuilder(model.length * 43 + 9);
-  if (spec) spec.build(b, d, boss);
-  else {
-    ellipsoid(b, 0.6, 0.54, 0.6, 0, 0.6, 0, W, 14);
-    mirror((s) => {
-      sweep(b, [s * 0.4, 0.4, 0, 0.1, s * 0.55, 0.12, 0, 0.08], 6, MID);
-      slyEye(b, d, s * 0.18, 0.78, 0.48, 0.11, s);
-    });
+  kit = SEG[lod];
+  try {
+    if (spec) spec.build(b, d, boss);
+    else {
+      ellipsoid(b, 0.6, 0.54, 0.6, 0, 0.6, 0, W, 14);
+      mirror((s) => {
+        sweep(b, [s * 0.4, 0.4, 0, 0.1, s * 0.55, 0.12, 0, 0.08], 6, MID);
+        slyEye(b, d, s * 0.18, 0.78, 0.48, 0.11, s);
+      });
+    }
+  } finally {
+    kit = SEG[0];
   }
   const height = spec?.height ?? 1.2;
   // soft painted shading: a touch darker toward the feet
