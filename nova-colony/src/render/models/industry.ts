@@ -944,7 +944,8 @@ registerModel('teleporter', (c) => {
   c.setLight(0, 1.5, 0, s.accent.getStyle(), 1.3, 9);
 });
 
-const SPIN_COLORS = ['#b5793f', '#9aa3ad', '#b48cff', '#4fb3f6', '#ffd84a', '#5ef2ff', '#8fa8ff', '#ff6f91'];
+// earthy frontier segments like the Lucky Wheel panel (not candy brights)
+const SPIN_COLORS = ['#b5793f', '#7d8b96', '#7d5a8c', '#3f7f7a', '#c99a45', '#7f8f4a', '#5f7486', '#b5603a'];
 registerModel('spin_wheel', (c) => {
   const { b, s } = c;
   b.box(0.8, 0.2, 0.8, 0, 0.1, 0, frameColor(s));
