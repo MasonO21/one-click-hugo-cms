@@ -1,6 +1,6 @@
 /** Frame pacing: the game never runs above its cap, whatever the screen's refresh rate. */
 import { describe, expect, it } from 'vitest';
-import { FramePacer, fpsCap } from '../src/core/framePacer';
+import { FramePacer, fpsCap, frameStep } from '../src/core/framePacer';
 
 /** Run `seconds` of display frames at `hz` (with ±0.3 ms rAF jitter) and count the frames the pacer lets through. */
 function run(hz: number, cap: number, seconds = 2): number {
@@ -41,5 +41,18 @@ describe('frame pacer', () => {
   it('the cap is 30 in Battery saver, else 60', () => {
     expect(fpsCap(true)).toBe(30);
     expect(fpsCap(false)).toBe(60);
+  });
+});
+
+describe('frameStep', () => {
+  it('steps the time since the last frame, capped', () => {
+    expect(frameStep(1016, 1000)).toBeCloseTo(0.016, 6);
+    expect(frameStep(4000, 1000)).toBe(0.1);
+    expect(frameStep(4000, 1000, 0.25)).toBe(0.25);
+  });
+
+  it('never steps backwards: a frame stamped before the last one (after a long blocking task) is a zero step', () => {
+    expect(frameStep(1000, 6800)).toBe(0);
+    expect(frameStep(1000, 1000)).toBe(0);
   });
 });

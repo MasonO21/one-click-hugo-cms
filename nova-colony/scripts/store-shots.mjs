@@ -18,7 +18,7 @@
  *   --out <dir>           output root (default art/store/screenshots)
  *   --raw <dir>           where the uncaptioned captures and the contact sheet go (default <tmpdir>/nova-colony-store-shots)
  *   --devices a,b         subset of iphone-6.9, ipad-13, play-phone (default all)
- *   --only slug,slug      subset of scenes (hero tiers night raid build research crew map)
+ *   --only slug,slug      subset of scenes (hero tiers night festival raid build research crew style map)
  *   --no-sheet            skip the contact sheet of the phone set
  *
  * Outputs (RGB PNG, no alpha)
@@ -202,6 +202,30 @@ const SCENES = [
     },
   },
   {
+    // the colony gathers round the campfire under string lights; the sim runs ahead so everyone has arrived
+    slug: 'festival', caption: 'Celebrate together under the lanterns', devices: ['iphone-6.9', 'play-phone'],
+    async capture(page, dev, h) {
+      await h.resetView(page);
+      const info = await page.evaluate(({ t }) => {
+        const g = window.game;
+        g.state.spirit.festivalUntil = 0; // a festival that is about to end would block a fresh one
+        const started = g.sys.spirit.startNow();
+        for (let i = 0; i < 240; i++) g.update(0.1);
+        const p = { x: 0, z: 0 };
+        const has = g.sys.spirit.slotFor(0, p);
+        const c = has ? p : g.sys.buildings.center(g.sys.buildings.core());
+        Object.assign(g.state.player, { x: c.x + 4, z: c.z + 6, rot: -2.4 });
+        Object.assign(g.view.camera, { mode: 'follow', yaw: 0.62, zoom: 0.5 });
+        window.renderer.setPitchBias(-0.2);
+        g.state.time.dayTime = t;
+        return { started, has, active: g.sys.spirit.active() };
+      }, { t: 0.86 });
+      log(`    festival: ${JSON.stringify(info)}`);
+      await h.settle(page, 3600);
+      return [await page.screenshot({ type: 'png' })];
+    },
+  },
+  {
     slug: 'raid', caption: 'Defend your colony from alien raids',
     async capture(page, dev, h) {
       await h.resetView(page);
@@ -317,7 +341,8 @@ const SCENES = [
     },
   },
   {
-    slug: 'crew', caption: 'Recruit colonists with personality', devices: ['iphone-6.9', 'play-phone'],
+    // Google Play takes eight phone shots: the crew list is App Store only (the festival shows the people instead)
+    slug: 'crew', caption: 'Recruit colonists with personality', devices: ['iphone-6.9'],
     async capture(page, dev, h) {
       await h.resetView(page);
       await page.evaluate(() => {
@@ -378,10 +403,30 @@ function seedSave(save) {
 }
 
 /**
+ * The HUD's stock, day and progress numbers for the shots. Runs from naturalize and again after the boot cards close
+ * (a Welcome Back claimed late would otherwise top the stock up to millions). Self-contained: it is serialised into
+ * the page by Playwright.
+ */
+function pinNumbers() {
+  const s = window.game.state;
+  Object.assign(s.resources.amounts, {
+    wood: 4820, stone: 3160, fiber: 1940, food: 2730, water: 2410, iron: 1385, copper: 962, coal: 1204,
+    steel: 846, electronics: 512, biomass: 377, crystal: 288, alloy: 431, energy_cell: 265, nano: 174, titanium: 219,
+  });
+  s.research.points = 2450;
+  s.time.day = 42;
+  s.liveops.nova = 340;
+  Object.assign(s.stats, { wavesWon: 23, kills: 1870, gathered: 48210, crafted: 96 });
+  Object.assign(s.combat, { wave: 23, waveAtTier: 4, kills: 1870 });
+  for (const c of s.colonists.list) c.happiness = Math.max(c.happiness, 82);
+}
+
+/**
  * Make a QA colony look like a real late-game save: late story mission, believable stock, a crew, lanterns for the
  * night shot, every biome on the map. Runs once after boot (Welcome Back already collected).
  */
 function naturalize() {
+  const pinNumbers = window.__pinNumbers; // installed by bootGame (page functions cannot share helpers)
   const g = window.game;
   const s = g.state;
   const d = g.data;
@@ -423,15 +468,8 @@ function naturalize() {
   const firstDaily = m.active.find(keep);
   if (firstDaily) m.progress[firstDaily] = Math.max(1, Math.floor(d.mission(firstDaily).count * 0.5));
 
-  // believable stock and progress numbers
-  Object.assign(s.resources.amounts, {
-    wood: 4820, stone: 3160, fiber: 1940, food: 2730, water: 2410, iron: 1385, copper: 962, coal: 1204,
-    steel: 846, electronics: 512, biomass: 377, crystal: 288, alloy: 431, energy_cell: 265, nano: 174, titanium: 219,
-  });
-  s.research.points = 2450;
-  s.time.day = 42;
-  Object.assign(s.stats, { wavesWon: 23, kills: 1870, gathered: 48210, crafted: 96 });
-  Object.assign(s.combat, { wave: 23, waveAtTier: 4, kills: 1870 });
+  // believable stock and progress numbers (pinNumbers runs again once the boot cards are closed)
+  pinNumbers();
   Object.assign(s.player.equip, { tool: 'titan_beamtool', weapon: 'titanium_rifle', armor: 'titanium_exosuit', backpack: 'titan_haulpack' });
   for (const it of Object.values(s.player.equip)) s.player.items[it] = Math.max(1, s.player.items[it] ?? 0);
 
@@ -539,10 +577,14 @@ async function bootGame(page) {
     await collect.first().click();
     await page.waitForTimeout(900);
   }
+  // marketing shots: no tutorial hint bubble over the HUD
+  await page.addStyleTag({ content: '.hint-bubble{display:none!important}' });
+  await page.evaluate(`window.__pinNumbers = ${pinNumbers.toString()}`);
   const info = await page.evaluate(naturalize);
   log(`    colony: ${JSON.stringify(info)}`);
   await page.waitForTimeout(4500); // offline floaters and toasts fade
   await helpers.closePanels(page);
+  await page.evaluate(pinNumbers);
 }
 
 // ------------------------------------------------------------------------------------------------ composition

@@ -9,7 +9,7 @@ import { createPlatformServices } from './platform';
 import { SaveManager } from './platform/save';
 import { AutoQuality } from './platform/autoQuality';
 import { guarded } from './core/guard';
-import { FramePacer } from './core/framePacer';
+import { FramePacer, frameStep } from './core/framePacer';
 import { LoopPolicy } from './core/loopPolicy';
 import { onBackButton } from './platform/lifecycle';
 import { ReviewPrompt } from './platform/review';
@@ -79,8 +79,8 @@ async function boot() {
     if (document.visibilityState === 'hidden') return;
     // at most 60 fps on 90/120 Hz screens; 30 in the cases above (core/loopPolicy.ts)
     if (!pacer.due(t, policy.fps(t))) return;
-    const dt = Math.min(0.1, (t - last) / 1000);
-    last = t;
+    const dt = frameStep(t, last);
+    last = Math.max(last, t);
     guarded('game', () => game.update(dt));
     // a full-screen scene (the chest opening) hides the world: no need to draw it underneath
     if (!ui.coversWorld()) guarded('render', () => renderer.render(dt));
