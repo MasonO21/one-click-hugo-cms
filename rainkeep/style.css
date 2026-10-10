@@ -1496,3 +1496,12 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .hc-ch { gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #ffffff10; }
 .hc-ch:last-child { border-bottom: 0; }
 .hc-btns { gap: 6px; }
+
+/* Field Orders */
+.od-hadi { gap: 10px; align-items: center; }
+.od-face { width: 56px; height: 62px; flex: none; border-radius: 12px; overflow: hidden; }
+.od-face svg { width: 100%; height: 100%; }
+.od-row { gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #ffffff10; }
+.od-row:last-child { border-bottom: 0; }
+.od-row.done { opacity: 0.6; }
+.od-ic { width: 28px; height: 28px; flex: none; }

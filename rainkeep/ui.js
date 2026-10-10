@@ -170,7 +170,7 @@
 
   // the side rail's hubs: tiles that open each member's own sheet (with a way back)
   const HUBS = {
-    rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'stars', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
+    rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'orders', 'login', 'stars', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
     play: { icon: 'i-kite', label: 'Play', ids: ['heroic', 'crossing', 'siegehall', 'clash', 'leviathan', 'derby', 'fishing', 'cookfire', 'buriedcity', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
     ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade', 'journeys'], blurb: "The keep's business out on the sand: outposts on the Dunes, trade caravans to the markets beyond, and heroes on far journeys." },
   };

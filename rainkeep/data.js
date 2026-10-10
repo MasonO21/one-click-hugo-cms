@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.41.0',
+  version: '4.42.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1348,6 +1348,24 @@ const DATA = {
   // first clear takes one or two stars and all three want about a third more strength, or a well-played live battle.
   // Any cleared stage can be fought again for the stars it is missing. A chapter's thirty stars fill three chests
   // (resources and journals scale with the keep when claimed).
+  // ---------- Field Orders ----------
+  // From stage 20, Captain Hadi posts three orders a day, each a cleared stage to fight again under a condition: a
+  // Breath Art the wyrm must use, a formation lead, no breath at all, only the two strongest heroes, or a result to
+  // reach (within four rounds, or with 70% of the squad's health). The art, lead, breath and heroes are set for the
+  // fight; the result has to be earned. Each order pays Starglass and journals, and all three a Beacon Token.
+  orders: {
+    from: 20, back: [4, 30], count: 3,
+    kinds: {
+      art: { text: (a) => `Win with the ${a}`, w: 3 },
+      lead: { text: (c) => `Win with a ${c} lead`, w: 2 },
+      nobreath: { text: () => 'Win without the breath', w: 2 },
+      duo: { text: () => 'Win with only your two strongest heroes', w: 2 },
+      swift: { text: (r) => `Win within ${r} rounds`, rounds: 4, w: 2 },
+      hale: { text: (k) => `End the fight with ${Math.round(k * 100)}% of the squad's health`, share: 0.7, w: 2 },
+    },
+    reward: { starglass: 20, journals: 2 }, all: { beacons: 1 },
+  },
+
   // ---------- Heroic Chapters ----------
   // A chapter whose thirty stars are all won opens its Heroic version: the same ten stages in order, each foe as strong
   // as a stage fifteen further on, with two traits (a boss three). Each Heroic chapter features one hero (Epics early,
@@ -1878,6 +1896,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.42', items: [
+      { icon: 'i-scroll', name: 'Field Orders', text: 'From stage 20, Captain Hadi posts three orders a day: fight a stage you have cleared under a condition, with the Mist Veil, a Lancer lead, no breath, only two heroes, or a swift win. Each pays Starglass and journals, and all three a Beacon Token.', act: 'orders', open: (S) => S.stage > 20, needs: 'Stage 20' },
+    ] },
     { v: '4.41', items: [
       { icon: 'i-star', name: 'Heroic Chapters', text: "Win all thirty stars in a chapter and its Heroic version opens: the same stages, far harder, each foe with two traits. Every Heroic chapter features one hero whose shards it pays, and won stages can be raided three times a day for more.", act: 'heroic', open: (S) => !!(S.heroic && Object.keys(S.heroic.won).length) || (S.stats.stageStars || 0) >= 30, needs: 'All 30 stars in a chapter' },
     ] },
@@ -2246,6 +2267,7 @@ const DATA = {
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
     { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 40 } },
     { id: 'arts3', text: 'Learn all three Breath Arts', stat: 'artsOpen', n: 3, reward: { starglass: 60 } },
+    { id: 'orders30', text: 'Carry out 30 Field Orders', stat: 'ordersDone', n: 30, reward: { starglass: 100 } },
     { id: 'heroic10', text: 'Win 10 Heroic stages', stat: 'heroicWins', n: 10, reward: { starglass: 100 } },
     { id: 'heroic150', text: 'Win every Heroic stage', stat: 'heroicWins', n: 150, reward: { starglass: 500, beacons: 3 } },
     { id: 'stars30', text: 'Win 30 stage stars', stat: 'stageStars', n: 30, reward: { journals: 40 } },
