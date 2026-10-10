@@ -3,7 +3,7 @@
 // usage: SINGLE=1 npm run build && node scripts/build-artifact.mjs           (one self-contained file)
 //        ARTIFACT=1 npm run build && node scripts/build-artifact.mjs --multi (the page plus its assets/ files, listed in
 //          dist-artifact/files.json as { "assets/x": "dist-artifact/assets/x" } for the host's upload)
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, renameSync } from 'node:fs';
 
 const multi = process.argv.includes('--multi');
 const dir = new URL(multi ? '../dist-artifact/' : '../dist-single/', import.meta.url);
@@ -44,6 +44,19 @@ const out = [
 
 writeFileSync(new URL('soulswarm.html', dir), out);
 if (multi) {
+  // The host serves only standard web types, and .glb is not one: each model ships as name.glb.wasm (a served binary
+  // type) and the bundle's references follow. The game fetches models as raw bytes and reads the glTF header, so
+  // nothing else changes.
+  const A = new URL('assets/', dir), names = readdirSync(A);
+  const glbs = names.filter((f) => f.endsWith('.glb'));
+  if (glbs.length) {
+    for (const f of names.filter((n) => /\.(js|css)$/.test(n))) {
+      let t = readFileSync(new URL(f, A), 'utf8'); const t0 = t;
+      for (const g of glbs) t = t.split(`"${g}"`).join(`"${g}.wasm"`).split(`/${g}"`).join(`/${g}.wasm"`);
+      if (t !== t0) writeFileSync(new URL(f, A), t);
+    }
+    for (const g of glbs) renameSync(new URL(g, A), new URL(g + '.wasm', A));
+  }
   const files = {}; let bytes = 0, big = 0;
   for (const f of readdirSync(new URL('assets/', dir))) { const n = statSync(new URL('assets/' + f, dir)).size; files['assets/' + f] = 'dist-artifact/assets/' + f; bytes += n; big = Math.max(big, n); }
   writeFileSync(new URL('files.json', dir), JSON.stringify(files, null, 1));
