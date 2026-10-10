@@ -577,6 +577,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const eco = await import('/src/meta/economy.js');
     const app = window.__soulswarm, p = app.profile;
+    delete p.flags.bloodMoon; // the calendar decides here (session() pins it off for every other test)
     const fri = eco.bloodMoon(p, Date.UTC(2026, 9, 9, 12)), tue = eco.bloodMoon(p, Date.UTC(2026, 9, 6, 12));
     const T = eco.bloodMoonTimes(Date.UTC(2026, 9, 10, 12)); // a Saturday
     p.flags.bloodMoon = 'on'; app.startRun(1); const r = app.run;
