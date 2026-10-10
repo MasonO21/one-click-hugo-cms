@@ -25,6 +25,7 @@ import type { BuildingDef, MissionDef, RecipeDef, ResourceBag } from '../../src/
 import type { BuildingInstance, Colonist } from '../../src/core/state';
 import { CELL, cellOf, rotatedSize } from '../../src/core/constants';
 import { buyNovaItem } from '../../src/sim/novaShop';
+import { betterItem } from '../../src/sim/meta/missionRules';
 import { Mover, Nav, type Pt } from './nav';
 
 export type NovaPolicy = 'save' | 'spend';
@@ -705,6 +706,19 @@ export class PacingBot {
       if (this.tryCraft(m.target, 1.0)) return true;
     }
     if (this.guided()) return false;
+    // side chain steps a player follows from the Missions panel (the Crafting Table chain: craft a Stone Axe, equip it)
+    for (const sm of g.sys.missions.activeByChain('side')) {
+      if (g.sys.missions.progress(sm.id).done) continue;
+      if (sm.type === 'craft' && !st.crafting.queue.some((j) => j.recipe === sm.target) && this.tryCraft(sm.target, 0.35)) return true;
+      if (sm.type === 'equip' && (st.player.items[sm.target] ?? 0) > 0) {
+        const slot = g.data.item(sm.target)?.slot as (typeof SLOTS)[number] | undefined;
+        const cur = slot ? st.player.equip[slot] : undefined;
+        if (slot && cur !== sm.target && !betterItem(g.data, cur, sm.target) && P.equip(sm.target)) {
+          this.acted(`equip ${sm.target} (side)`, PacingBot.MENU.claim * 2);
+          return true;
+        }
+      }
+    }
     // mission equip target (side) and gear upgrades
     const want: RecipeDef[] = [];
     for (const r of C.recipes()) {

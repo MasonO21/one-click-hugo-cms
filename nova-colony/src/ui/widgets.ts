@@ -125,6 +125,8 @@ export interface TabItem {
   art?: string | null;
   label: string;
   badge?: number;
+  /** Not available yet (a crafting station not built): muted, with a lock. */
+  locked?: boolean;
 }
 
 export function tabs(items: TabItem[], active: string, onSelect: (id: string) => void): HTMLElement {
@@ -132,10 +134,11 @@ export function tabs(items: TabItem[], active: string, onSelect: (id: string) =>
   for (const t of items) {
     const b = h<HTMLButtonElement>(
       'button',
-      { class: 'tab' + (t.id === active ? ' on' : ''), type: 'button', data: { tab: t.id, sfx: 'ui_tab' } },
+      { class: 'tab' + (t.id === active ? ' on' : '') + (t.locked ? ' locked' : ''), type: 'button', data: { tab: t.id, sfx: 'ui_tab' } },
       t.art ? iconEl(t.art, t.icon ?? '', 'ico', 'span') : t.icon ? h('span', { class: 'ico', text: t.icon }) : null,
       t.label,
       t.badge ? h('span', { class: 'dot', text: String(t.badge) }) : null,
+      t.locked ? h('span', { class: 'lock', 'aria-label': 'not built yet', text: '🔒' }) : null,
     );
     b.addEventListener('click', () => onSelect(t.id));
     wrap.appendChild(b);

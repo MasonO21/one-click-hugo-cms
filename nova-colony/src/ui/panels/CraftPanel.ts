@@ -2,6 +2,10 @@
  * CraftPanel — crafting stations as tabs, recipes grouped by category with live affordability, and
  * the queue with progress bars. Jobs can be finished instantly with a rewarded ad (context = job id)
  * or Nova Crystals (CraftingSystem.finishCost).
+ *
+ * Stations the colony has not built yet are locked tabs: their page offers "Build a Crafting Table" (or the research
+ * it needs) over the recipes it will make. A recipe that consumes crafted parts the backpack lacks names the chain
+ * ("Needs Robotic Core → made at Fabricator Bench").
  */
 import { Panel, type PanelTitle } from './Panel';
 import type { CraftJob } from '../../core/state';
@@ -10,9 +14,10 @@ import { bagCovers } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { fmtHMS } from '../logic/time';
 import { CRAFT_CATEGORIES, metaOf } from '../logic/categories';
-import { adButton, btn, emptyState, recipeChips, section, tabs } from '../widgets';
+import { adButton, btn, costChips, emptyState, recipeChips, section, tabs } from '../widgets';
 import { fill, h } from '../dom';
-import { buildingArt, hudArt, iconEl, itemArt, resIcon, resourceArt, vehicleArt } from '../art';
+import { buildingArt, buildingIcon, hudArt, iconEl, itemArt, resIcon, resourceArt, vehicleArt } from '../art';
+import { LOCKED_PREFIX, lockedStations, partChainText, type LockedStation } from '../logic/craftChain';
 
 export class CraftPanel extends Panel {
   readonly name = 'craft';
@@ -27,15 +32,21 @@ export class CraftPanel extends Panel {
   override onOpen(arg: unknown): void {
     const want = this.pick<string>(arg, 'station');
     const stations = this.game.sys.crafting.stations();
-    this.station = want && stations.includes(want) ? want : stations.includes('workbench') ? 'workbench' : stations[0] ?? 'hand';
+    if (want && !stations.includes(want) && this.locked().some((l) => l.station === want)) this.station = LOCKED_PREFIX + want;
+    else this.station = want && stations.includes(want) ? want : stations.includes('workbench') ? 'workbench' : stations[0] ?? 'hand';
   }
 
   override onArg(arg: unknown): void {
     const want = this.pick<string>(arg, 'station');
     if (want) {
-      this.station = want;
+      this.station = this.game.sys.crafting.stations().includes(want) ? want : LOCKED_PREFIX + want;
       this.rev++;
     }
+  }
+
+  /** Stations the colony could build at its tier but has not (locked tabs). */
+  private locked(): LockedStation[] {
+    return lockedStations(this.game, this.game.sys.crafting.stations());
   }
 
   /** A station tab: the building that provides it (its thumbnail, emoji fallback). */
@@ -48,10 +59,14 @@ export class CraftPanel extends Panel {
   override signature(): string {
     const g = this.game;
     const cr = g.sys.crafting;
-    const recipes = cr.recipes(this.station);
+    const recipes = cr.recipes(this.station.startsWith(LOCKED_PREFIX) ? this.station.slice(LOCKED_PREFIX.length) : this.station);
     const mask = recipes.map((r) => (g.sys.crafting.canCraft(r.id).ok ? 1 : bagCovers(g.state.resources.amounts, r.inputs) ? 2 : 0)).join('');
     const q = g.state.crafting.queue.map((j) => j.id).join('.');
-    return `${this.station}|${this.cat}|${recipes.length}|${mask}|${q}|${cr.stations().join(',')}|${g.state.liveops.nova >= 1 ? 1 : 0}`;
+    const locked = this.locked()
+      .map((l) => `${l.station}${l.buildable ? 1 : 0}${l.recipes}`)
+      .join(',');
+    const items = Object.values(g.state.player.items).join('.');
+    return `${this.station}|${this.cat}|${recipes.length}|${mask}|${q}|${cr.stations().join(',')}|${g.state.liveops.nova >= 1 ? 1 : 0}|${locked}|${items}`;
   }
 
   override live(dt: number): void {
@@ -82,12 +97,21 @@ export class CraftPanel extends Panel {
     }
 
     wrap.appendChild(section('Recipes'));
+    const locked = this.locked();
+    // a station that was built meanwhile (or one that is gone): back to a real tab
+    if (this.station.startsWith(LOCKED_PREFIX) && !locked.some((l) => LOCKED_PREFIX + l.station === this.station)) {
+      const st = this.station.slice(LOCKED_PREFIX.length);
+      this.station = stations.includes(st) ? st : stations[0] ?? 'hand';
+    }
     wrap.appendChild(
       tabs(
-        stations.map((id) => {
-          const i = this.stationInfo(id);
-          return { id, icon: i.icon, art: i.art, label: i.label };
-        }),
+        [
+          ...stations.map((id) => {
+            const i = this.stationInfo(id);
+            return { id, icon: i.icon, art: i.art, label: i.label };
+          }),
+          ...locked.map((l) => ({ id: LOCKED_PREFIX + l.station, icon: l.def.icon, art: buildingArt(l.def.id), label: l.def.name, locked: true })),
+        ],
         this.station,
         (id) => {
           this.station = id;
@@ -97,7 +121,9 @@ export class CraftPanel extends Panel {
       ),
     );
 
-    const recipes = cr.recipes(this.station);
+    const lock = locked.find((l) => LOCKED_PREFIX + l.station === this.station);
+    if (lock) wrap.appendChild(this.lockedCard(lock));
+    const recipes = cr.recipes(lock ? lock.station : this.station);
     const cats = [...new Set(recipes.map((r) => r.category))];
     if (cats.length > 1) {
       wrap.appendChild(
@@ -117,6 +143,49 @@ export class CraftPanel extends Panel {
     for (const r of shown) grid.appendChild(this.recipeRow(r));
     wrap.appendChild(grid);
     fill(this.body, wrap);
+  }
+
+  /** A station not built yet: what it is, how many recipes it brings, and one tap to build it (or its research). */
+  private lockedCard(l: LockedStation): HTMLElement {
+    const g = this.game;
+    const n = l.recipes;
+    const sub = `${n} recipe${n === 1 ? '' : 's'} to craft here`;
+    const rname = l.research ? this.data.researchDef(l.research)?.name ?? l.research : null;
+    const action = l.buildable
+      ? btn({
+          label: 'Build',
+          cls: 'good small',
+          id: 'btn-craft-build-station',
+          onClick: () => {
+            this.ctx.close(this.name);
+            this.ctx.open('build', { def: l.def.id });
+          },
+        })
+      : rname
+        ? btn({
+            label: 'Research',
+            cls: 'info small',
+            id: 'btn-craft-build-station',
+            onClick: () => this.ctx.open('research', { id: l.research }),
+          })
+        : null;
+    return h(
+      'div',
+      { class: 'card craft-locked', data: { station: l.station } },
+      h(
+        'div',
+        { class: 'row' },
+        buildingIcon(l.def.id, l.def.icon, 'bi', 'span'),
+        h(
+          'div',
+          { class: 'grow' },
+          h('div', { class: 'h3', text: l.buildable ? `Build a ${l.def.name}` : `${l.def.name}: research ${rname ?? 'needed'}` }),
+          h('div', { class: 'mute small', text: sub }),
+          l.buildable ? costChips(this.data, g.sys.buildings.cost(l.def.id), g.state.resources.amounts) : null,
+        ),
+        action,
+      ),
+    );
   }
 
   private outputInfo(r: RecipeDef): { icon: string; text: string; art?: string | null } {
@@ -139,11 +208,19 @@ export class CraftPanel extends Panel {
     const chk = g.sys.crafting.canCraft(r.id);
     const out = this.outputInfo(r);
     const owned = r.outputs.items ? Object.keys(r.outputs.items).map((id) => g.state.player.items[id] ?? 0)[0] : 0;
+    const chain = r.itemInputs ? partChainText(g, r, g.sys.crafting.stations()) : null;
     return h(
       'div',
       { class: 'row recipe', data: { recipe: r.id } },
       out.art ? iconEl(out.art, out.icon, 'bi', 'span') : h('span', { class: 'bi', text: out.icon }),
-      h('div', { class: 'grow' }, h('div', { class: 'h3', text: r.name }), h('div', { class: 'mute small', text: `${out.text}${owned ? ` · you have ${owned}` : ''} · ⏱ ${fmtHMS(r.time)}` }), recipeChips(this.data, r.inputs, r.itemInputs, g.state.resources.amounts, g.state.player.items)),
+      h(
+        'div',
+        { class: 'grow' },
+        h('div', { class: 'h3', text: r.name }),
+        h('div', { class: 'mute small', text: `${out.text}${owned ? ` · you have ${owned}` : ''} · ⏱ ${fmtHMS(r.time)}` }),
+        recipeChips(this.data, r.inputs, r.itemInputs, g.state.resources.amounts, g.state.player.items),
+        chain ? h('div', { class: 'small part-chain', text: `🧩 ${chain}` }) : null,
+      ),
       btn({
         label: 'Craft',
         cls: 'good small',

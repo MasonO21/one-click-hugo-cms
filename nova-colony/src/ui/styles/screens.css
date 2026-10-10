@@ -513,6 +513,20 @@ button.req-line.no {
 .recipe .chips {
   margin-top: 0.25em;
 }
+.recipe .part-chain {
+  margin-top: 0.3em;
+  color: #6a4f9a;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.craft-locked {
+  padding: 0.6em 0.7em;
+  border: 0.12em dashed rgba(42, 33, 64, 0.28);
+  background: #fffaf0;
+}
+.craft-locked .chips {
+  margin-top: 0.3em;
+}
 .qrow .bar .lbl {
   display: none;
 }

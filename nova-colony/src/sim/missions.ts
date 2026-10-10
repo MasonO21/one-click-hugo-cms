@@ -18,7 +18,7 @@ import { System } from './System';
 import type { MissionDef, MissionType } from '../data/schema';
 import type { GainSource } from '../core/events';
 import { dateKey } from '../core/format';
-import { DAILY_COUNT, goalTier, isLiveType, lesserBosses, liveValue, pickDailies, retroValue } from './meta/missionRules';
+import { DAILY_COUNT, goalTier, isLiveType, lesserBosses, lesserItems, liveValue, pickDailies, retroValue } from './meta/missionRules';
 
 /** Seconds between a main mission completing and it being claimed automatically. */
 export const AUTO_CLAIM_DELAY = 1.2;
@@ -86,7 +86,8 @@ export class MissionSystem extends System {
     bus.on('craft:completed', (e) => this.bump('craft', [e.recipe], 1));
     bus.on('research:completed', (e) => this.bump('research', [e.id], 1));
     bus.on('world:poiLooted', (e) => this.bump('loot', [e.poi], 1));
-    bus.on('player:equipped', (e) => this.bump('equip', [e.item], 1));
+    // "equip X" also counts a better item for the same slot (mission progress only; the counters stay exact)
+    bus.on('player:equipped', (e) => this.bump('equip', [e.item], 1, lesserItems(this.game.data, e.item)));
     bus.on('spin:result', () => this.bump('spin', [], 1));
     bus.on('colony:tierUp', () => {
       const opened = this.offerSide();
@@ -363,6 +364,7 @@ export class MissionSystem extends System {
    */
   private sideFeasible(def: MissionDef): boolean {
     if (this.tierLocked(def)) return false;
+    if (def.maxTier != null && this.game.state.colony.tier > def.maxTier) return false; // an early how-to chain, outgrown
     if (def.type === 'wish') return !!this.game.sys.wishes?.started() || this.counter('wish') > 0;
     if (def.type === 'festival') return !!this.game.sys.spirit?.open() || this.counter('festival') > 0;
     if (def.type === 'mastery') return !!this.game.sys.research?.masteryOpen() || this.counter('mastery') > 0;

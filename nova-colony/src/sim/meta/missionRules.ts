@@ -12,6 +12,16 @@ import { hashString } from './util';
 
 export const DAILY_COUNT = 3;
 
+declare module '../../data/schema' {
+  interface MissionDef {
+    /**
+     * Side chain head only: not offered once the colony is past this tier (an early how-to chain, e.g. the Crafting
+     * Table one, is not handed to a Steel colony). A step already on the board stays.
+     */
+    maxTier?: number;
+  }
+}
+
 /** Mission types computed from current state instead of event counting. */
 const LIVE: ReadonlySet<MissionType> = new Set<MissionType>(['have_building', 'colonists', 'assign', 'tier', 'power']);
 
@@ -78,7 +88,7 @@ export function retroValue(game: Game, def: MissionDef): number {
     case 'discover':
       return s.world.regionsDiscovered.includes(def.target) ? 1 : 0;
     case 'equip':
-      return Object.values(s.player.equip).includes(def.target) ? 1 : 0;
+      return Object.values(s.player.equip).some((id) => id === def.target || betterItem(game.data, id, def.target)) ? 1 : 0;
     case 'craft':
       return s.crafting.crafted[def.target] ?? 0;
     case 'upgrade': {
@@ -92,6 +102,24 @@ export function retroValue(game: Game, def: MissionDef): number {
     default:
       return 0;
   }
+}
+
+/**
+ * "Equip X" missions also count anything better for the same slot (a higher item tier): a player who went straight
+ * to an Iron Pickaxe is not asked to put a Stone Axe back on.
+ */
+export function betterItem(data: DataRegistry, item: string | undefined, than: string): boolean {
+  if (!item) return false;
+  const a = data.item(item);
+  const b = data.item(than);
+  return !!a && !!b && !!a.slot && a.slot === b.slot && a.tier > b.tier;
+}
+
+/** Items an equip of `item` also counts for ("or better"): the same slot, a lower tier. Empty for anything else. */
+export function lesserItems(data: DataRegistry, item: string): string[] {
+  const d = data.item(item);
+  if (!d?.slot) return [];
+  return data.items.filter((x) => x.slot === d.slot && x.tier < d.tier).map((x) => x.id);
 }
 
 /**

@@ -32,7 +32,12 @@ export class BuildMenuPanel extends Panel {
     return this.data.building(v)?.category ?? v;
   }
 
+  /** A building asked for by whoever opened the drawer (the Craft panel's "Build a Crafting Table"): pinned first. */
+  private askedDef: string | undefined;
+
   override onOpen(arg: unknown): void {
+    const asked = this.pick<string>(arg, 'def');
+    this.askedDef = asked && this.data.building(asked) ? asked : undefined;
     const cats = this.categories();
     this.tab = this.tabFromArg(arg) ?? this.guideTab() ?? (BuildMenuPanel.lastTab && (cats.includes(BuildMenuPanel.lastTab) || BuildMenuPanel.lastTab === 'blueprints') ? BuildMenuPanel.lastTab : cats[0] ?? 'structure');
   }
@@ -58,6 +63,8 @@ export class BuildMenuPanel extends Panel {
   }
 
   override onArg(arg: unknown): void {
+    const asked = this.pick<string>(arg, 'def');
+    if (asked && this.data.building(asked)) this.askedDef = asked;
     const t = this.tabFromArg(arg);
     if (t) {
       this.tab = t;
@@ -71,7 +78,7 @@ export class BuildMenuPanel extends Panel {
   }
 
   /** The tab's cards: the guided one, then buildable (newest tier first), then locked; tier 0 keeps the old order. See buildCardOrder. */
-  private defsOf(cat: string, pinned = this.guidedBuild()): BuildingDef[] {
+  private defsOf(cat: string, pinned = this.guidedBuild() ?? this.askedDef): BuildingDef[] {
     const bs = this.game.sys.buildings;
     const list = this.data.buildings.filter((b) => b.category === cat && !b.core);
     const ordered = buildCardOrder(list, this.game.state.colony.tier, (d) => bs.isUnlocked(d.id), pinned);
@@ -85,7 +92,7 @@ export class BuildMenuPanel extends Panel {
     const { game } = this;
     const bs = game.sys.buildings;
     let mask = '';
-    const pinned = this.guidedBuild();
+    const pinned = this.guidedBuild() ?? this.askedDef;
     if (this.tab !== 'blueprints') {
       for (const d of this.defsOf(this.tab, pinned)) {
         mask += bagCovers(game.state.resources.amounts, this.costOf(d)) ? '1' : '0';
