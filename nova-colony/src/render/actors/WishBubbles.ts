@@ -6,7 +6,7 @@
  *
  * Readability on a phone: drawn over the scene (no depth test, like a marker), it grows a little with camera
  * distance so it never shrinks to a speck, and fades out far away (and softens right next to the player, so it
- * never hides the player in the middle of the screen). Hidden in build mode and on the map. Low quality
+ * never hides the player in the middle of the screen). Hidden in build mode, on the map and in Photo Mode. Low quality
  * uses smaller textures and skips the bobbing. Tapping a bubble selects its colonist (Renderer.pick).
  */
 import * as THREE from 'three';
@@ -61,6 +61,8 @@ export class WishBubbles {
   private readonly textures = new Map<string, THREE.CanvasTexture>();
   private bubble: HTMLImageElement | null = null;
   private bubbleReady = false;
+  /** Photo Mode: no bubbles in the picture (they are markers, like the HUD the mode hides). */
+  hidden = false;
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
@@ -96,7 +98,7 @@ export class WishBubbles {
     const view = g.view;
     const open = g.state.wishes?.open;
     let used = 0;
-    if (open?.length && view.mode !== 'build' && view.mode !== 'map') {
+    if (open?.length && !this.hidden && view.mode !== 'build' && view.mode !== 'map') {
       const cam = ctx.camera.position;
       const list = g.state.colonists.list;
       const bob = env.quality !== 'low';

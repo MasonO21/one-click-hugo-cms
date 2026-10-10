@@ -78,11 +78,13 @@ export class Renderer implements RendererApi {
     begin: () => {
       const c = this.rig.snapshot();
       this.rig.setPhoto(c);
+      if (this.wishBubbles) this.wishBubbles.hidden = true;
       return c;
     },
     end: () => {
       this.rig?.setPhoto(null);
       this.photoDayTime = null;
+      if (this.wishBubbles) this.wishBubbles.hidden = false;
     },
     setCamera: (c: PhotoCamera) => this.rig?.setPhoto(c),
     setLighting: (t: number | null) => {
