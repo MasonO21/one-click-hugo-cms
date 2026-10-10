@@ -214,6 +214,7 @@ export class Buildings {
   /** Cells with a floor or platform under them (walls on a floor's edge snap to it). */
   private floorCells = new Set<number>();
   private readonly shift = [0, 0];
+  private readonly shiftN = [0, 0];
   private readonly unsub: (() => void)[] = [];
   /** Per-frame construction dust accumulator. */
   private dustAcc = 0;
@@ -572,6 +573,18 @@ export class Buildings {
     return wallEdgeShift(this.floorCells.has(cellIndex(cx, cz)), (dx, dz) => this.builtUp(cx + dx, cz + dz), this.shift);
   }
 
+  /**
+   * How far the wall-like piece on (cx, cz) is drawn off its cell's centre line across a line running along X (`alongX`)
+   * or Z. Pillars and gates in fences stay centred.
+   */
+  private acrossShift(cx: number, cz: number, alongX: boolean): number {
+    const k = this.neighbourKind(cx, cz);
+    if (!k || !WALL_LIKE.has(k) || k === 'pillar') return 0;
+    if (k === 'gate' && !snapsToEdge('gate', (dx, dz) => this.neighbourKind(cx + dx, cz + dz))) return 0;
+    const s = wallEdgeShift(this.floorCells.has(cellIndex(cx, cz)), (dx, dz) => this.builtUp(cx + dx, cz + dz), this.shiftN);
+    return alongX ? s[1] : s[0];
+  }
+
   private buildPiece(entry: Entry, piece: string, style: TierStyle, color: THREE.Color): void {
     const b = entry.b;
     const x = cellCenter(b.x);
@@ -613,6 +626,14 @@ export class Buildings {
           const px = x + ox - dx * along + dx * t;
           const pz = z + oz - dz * along + dz * t;
           this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_arm' : 'wall_arm', style), px, y, pz, ang, color, stretch);
+          // where the line steps (this wall moved to a floor's edge, the next one not, or the other way round) the two
+          // arms meet side by side with a slit between them: a post on the shared edge joins them (each side adds its own)
+          if (!isFence) {
+            const mine = dx !== 0 ? oz : ox;
+            if (Math.abs(mine - this.acrossShift(b.x + dx, b.z + dz, dx !== 0)) > 0.01) {
+              this.pushSlot(entry, this.pieceBatch('wall_core', style), x + (dx !== 0 ? dx : ox), y, z + (dz !== 0 ? dz : oz), 0, color);
+            }
+          }
         }
       }
       entry.height = isFence ? 1.4 : WALL_H;

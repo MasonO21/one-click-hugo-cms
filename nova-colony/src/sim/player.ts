@@ -78,6 +78,8 @@ export class PlayerSystem extends System {
   private packToastAt = -99;
   private fullToastAt = -99;
   private scratch = new Int32Array(256);
+  /** Reused solid box [minx, minz, maxx, maxz] (blockBox). */
+  private readonly box = [0, 0, 0, 0];
 
   // ================================================================== lifecycle
 
@@ -218,7 +220,7 @@ export class PlayerSystem extends System {
     if (this.lockedIdx >= 0 && mag > 0.1) this.notifyLocked(this.lockedIdx);
 
     // wedged inside geometry we cannot push out of (e.g. fully walled in): pop to the nearest free spot
-    if (this.cellCode(cellOf(p.x), cellOf(p.z), hover) !== 0) {
+    if (this.pointBlocked(p.x, p.z, hover)) {
       this.stuckT += dt;
       if (this.stuckT > 1.2) {
         const spot = this.findFreeSpot(p.x, p.z);
@@ -245,9 +247,29 @@ export class PlayerSystem extends System {
   /** Terrain + building test for a world point (no radius). */
   private cellFreeAt(x: number, z: number): boolean {
     const li = this.lockedIdx;
-    const r = this.cellCode(cellOf(x), cellOf(z), false) === 0;
+    const r = !this.pointBlocked(x, z, false);
     this.lockedIdx = li;
     return r;
+  }
+
+  /** The solid box of a blocked cell: the whole cell, or only a wall's panel band where it stands on a floor's edge. */
+  private blockBox(cx: number, cz: number, hover: boolean): number[] {
+    const b = this.box;
+    if (this.game.sys.world.terrainCode(cx, cz, hover) === 0) return this.game.sys.buildings.playerBox(cx, cz, b);
+    b[0] = cellMin(cx);
+    b[1] = cellMin(cz);
+    b[2] = b[0] + CELL;
+    b[3] = b[1] + CELL;
+    return b;
+  }
+
+  /** A world point stands inside something solid (its cell's solid box). */
+  private pointBlocked(x: number, z: number, hover: boolean): boolean {
+    const cx = cellOf(x);
+    const cz = cellOf(z);
+    if (this.cellCode(cx, cz, hover) === 0) return false;
+    const b = this.blockBox(cx, cz, hover);
+    return x >= b[0] && x <= b[2] && z >= b[1] && z <= b[3];
   }
 
   /**
@@ -268,10 +290,11 @@ export class PlayerSystem extends System {
       for (let cz = cz0; cz <= cz1; cz++) {
         for (let cx = cx0; cx <= cx1; cx++) {
           if (this.cellCode(cx, cz, hover) === 0) continue;
-          const minx = cellMin(cx);
-          const minz = cellMin(cz);
-          const maxx = minx + CELL;
-          const maxz = minz + CELL;
+          const bx = this.blockBox(cx, cz, hover);
+          const minx = bx[0];
+          const minz = bx[1];
+          const maxx = bx[2];
+          const maxz = bx[3];
           const qx = this.px < minx ? minx : this.px > maxx ? maxx : this.px;
           const qz = this.pz < minz ? minz : this.pz > maxz ? maxz : this.pz;
           const ddx = this.px - qx;

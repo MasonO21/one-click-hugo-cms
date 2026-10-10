@@ -142,6 +142,10 @@
 }
 /* a small button keeps its compact look but takes a finger-sized tap: its hit area reaches 44 px tall (an invisible
    pseudo-element; .ad uses ::before for its play icon and is never small) */
+.nv-root .btn.small:not(.ad) {
+  /* lifts the stretched hit area over the next row's text, which otherwise takes the taps below the button */
+  z-index: 1;
+}
 .nv-root .btn.small:not(.ad)::before {
   content: '';
   position: absolute;

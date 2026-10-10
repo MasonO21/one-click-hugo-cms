@@ -16,6 +16,7 @@ import { CELL, CENTER_CELL, MAX_TIER, WORLD_CELLS, cellCenter, cellIndex, cellMi
 import { bagCovers, bagEntries, bagIsEmpty, bagSum } from '../core/bag';
 import { BLOCK_ALIEN, BLOCK_FRIENDLY, BuildGrid, FLOOR, OBJECT, isWallLike, layerOf } from './build/grid';
 import { RoomDetector, type CellRect } from './build/rooms';
+import { wallEdgeShift } from './build/wallSnap';
 import { lineCells, rotateLayout, type Layout, type Rot } from './build/geometry';
 
 declare module '../core/state' {
@@ -88,6 +89,7 @@ export class BuildingSystem extends System {
   lastReason: string | null = null;
 
   private readonly grid = new BuildGrid();
+  private readonly snapTmp = [0, 0];
   private readonly roomDetector = new RoomDetector();
   private readonly byId = new Map<Id, BuildingInstance>();
   private readonly counts = new Map<string, number>();
@@ -222,6 +224,43 @@ export class BuildingSystem extends System {
     if (!inWorld(cx, cz)) return true;
     const bits = this.grid.block[cellIndex(cx, cz)];
     return (bits & (who === 'alien' ? BLOCK_ALIEN : BLOCK_FRIENDLY)) !== 0;
+  }
+
+  /** A floor, platform or wall-like piece stands on the cell (build/wallSnap's "built up"). */
+  private builtUp(cx: number, cz: number): boolean {
+    if (this.floorAt(cx, cz)) return true;
+    const o = this.objectAt(cx, cz);
+    const p = o ? this.game.data.building(o.def)?.piece : undefined;
+    return p === 'wall' || p === 'door' || p === 'window' || p === 'gate' || p === 'pillar';
+  }
+
+  /**
+   * The box [minx, minz, maxx, maxz] (world units) the player bumps into on a blocked cell: the whole cell, except a
+   * straight wall or window on a floor's edge. That one is drawn moved out to the edge (build/wallSnap), so only its
+   * panel band blocks and the player can walk right up to it from inside the room. Corners and centred partitions
+   * keep the whole cell, and colonist and alien pathing stay cell-based.
+   */
+  playerBox(cx: number, cz: number, out: number[]): number[] {
+    const x0 = cellMin(cx);
+    const z0 = cellMin(cz);
+    out[0] = x0;
+    out[1] = z0;
+    out[2] = x0 + CELL;
+    out[3] = z0 + CELL;
+    const o = this.objectAt(cx, cz);
+    const piece = o ? this.game.data.building(o.def)?.piece : undefined;
+    if ((piece !== 'wall' && piece !== 'window') || !this.floorAt(cx, cz)) return out;
+    const sh = wallEdgeShift(true, (dx, dz) => this.builtUp(cx + dx, cz + dz), this.snapTmp);
+    if ((sh[0] !== 0) === (sh[1] !== 0)) return out;
+    const half = 0.4; // half the 0.6 panel, plus a little for the trim
+    if (sh[0] !== 0) {
+      out[0] = cellCenter(cx) + sh[0] - half;
+      out[2] = cellCenter(cx) + sh[0] + half;
+    } else {
+      out[1] = cellCenter(cz) + sh[1] - half;
+      out[3] = cellCenter(cz) + sh[1] + half;
+    }
+    return out;
   }
 
   /** Room id containing a cell (0 = not inside a room). Walls count as part of no room. */
