@@ -477,6 +477,7 @@ export class Enemies {
   damage(e, amount, o = {}) {
     if (!e.active || amount <= 0) return false;
     if (e.type === 'wraith' && (o.source === 'minion' || o.source === 'soulbomb')) return false; // it passes through the legion: only the Shepherd can harm it
+    if (e.fearT > 0 && this.run.dread) amount *= this.run.dread; // Ascended Hallowfire: terror leaves it open to every blow
     if (e.aff && e.aff.ward > 0) amount = this.run.affixes.absorb(e, amount); // a Warded elite's soul ward soaks most of it
     e.hp -= amount;
     e.flash = 1;

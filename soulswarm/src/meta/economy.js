@@ -12,6 +12,7 @@ import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './diff
 import { BESTIARY, TUTORIAL, BOSS_RUSH } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 import { newPages } from './grimoire.js';
+import { heroMastery, masteryPerks, gainMastery, resultHero } from './mastery.js';
 
 // ---------------------------------------------------------------- change notification
 const listeners = new Set();
@@ -120,11 +121,12 @@ export function computeLoadout(p, heroId = p.selectedHero) {
   const relics = p.equipped.map((uid) => p.relics.find((r) => r.uid === uid)).filter(Boolean);
   const rsum = (stat) => relics.filter((r) => RELICS[r.type].stat === stat).reduce((a, r) => a + relicValue(r), 0);
   const skinId = Object.keys(p.skins || {}).find((s) => SKINS[s]?.hero === heroId && p.equippedSkin === s);
+  const M = masteryPerks(heroMastery(p, heroId).rank); // Hero Mastery (meta/mastery.js)
 
   const L = {
     heroId, hero, stars, skin: skinId || null,
-    hpMax: Math.round((hero.hp + t.vitality * TALENTS.vitality.per + rsum('hp')) * (1 + sb.hp)),
-    dmgMul: (1 + sb.dmg) * (1 + t.might * TALENTS.might.per + rsum('dmg')),
+    hpMax: Math.round((hero.hp + t.vitality * TALENTS.vitality.per + rsum('hp')) * (1 + sb.hp) * (1 + M.hp)),
+    dmgMul: (1 + sb.dmg) * (1 + t.might * TALENTS.might.per + rsum('dmg')) * (1 + M.dmg),
     speed: hero.speed * (1 + t.swift * TALENTS.swift.per + rsum('speed')),
     raise: BASE.raise + (hero.passive.raise || 0) + t.raise * TALENTS.raise.per + rsum('raise'),
     capBonus: t.cap * TALENTS.cap.per + Math.round(rsum('cap')),
@@ -135,6 +137,7 @@ export function computeLoadout(p, heroId = p.selectedHero) {
     minionDmgMul: 1 + (hero.passive.minionDmg || 0),
     minionSpeedMul: 1 + (hero.passive.minionSpeed || 0),
     revives: hero.passive.revive || 0,
+    mastery: { rank: M.rank, asc: M.asc, aura: M.aura, riteCdMul: 1 - M.riteCd, weaponLv: M.weaponLv },
   };
   L.power = powerRating(L);
   return L;
@@ -440,6 +443,7 @@ function applyRushResult(p, result) {
   }
   R.claimed = Math.max(R.claimed, n);
   const items = grant(p, rewards);
+  const mastery = masteryResult(p, result, rewards.passXp);
   const cleared = n >= BOSS_RUSH.milestones.length;
   const newBest = cleared && (!R.best || result.time < R.best);
   if (newBest) R.best = Math.round(result.time);
@@ -453,7 +457,7 @@ function applyRushResult(p, result) {
   let levelUps = 0;
   p.xp += rewards.passXp;
   while (p.xp >= accountXpFor(p.level)) { p.xp -= accountXpFor(p.level); p.level += 1; levelUps += 1; p.gems += 20; }
-  return { rewards, items, firstClear: false, newBest, levelUps, streakRecord: false, difficulty: 'normal', rush: true, milestones, cleared };
+  return { rewards, items, firstClear: false, newBest, levelUps, streakRecord: false, difficulty: 'normal', rush: true, milestones, cleared, mastery };
 }
 
 export function applyRunResult(p, result) {
@@ -490,6 +494,7 @@ export function applyRunResult(p, result) {
   if (result.endless && result.bossKills) rewards.relic = result.bossKills >= 3 ? 'epic+' : result.bossKills >= 2 ? 'epic' : 'rare';
 
   const items = grant(p, rewards);
+  const mastery = masteryResult(p, result, passXp);
 
   // stats
   const s = p.stats;
@@ -528,7 +533,14 @@ export function applyRunResult(p, result) {
   p.xp += baseXp; // account XP ignores the difficulty bonus, so account-level gems keep their pace
   while (p.xp >= accountXpFor(p.level)) { p.xp -= accountXpFor(p.level); p.level += 1; levelUps += 1; p.gems += 20; }
 
-  return { rewards, items, firstClear, newBest, levelUps, streakRecord, difficulty: D.id };
+  return { rewards, items, firstClear, newBest, levelUps, streakRecord, difficulty: D.id, mastery };
+}
+/** Hero Mastery: the run's pass XP goes to its hero; rank-up rewards are granted here, apart from the run's own rewards
+ *  (so the ad double never doubles them). */
+function masteryResult(p, result, xp) {
+  const m = gainMastery(p, resultHero(p, result), xp);
+  if (m) m.items = Object.keys(m.rewards).length ? grant(p, m.rewards) : [];
+  return m;
 }
 /** The beginner tutorial (game/tutorial.js): finishing it pays the run's kill and time gold, a fixed bonus, Bestiary kills
  *  and lifetime stats, once per account. It is no chapter attempt: no records, unlocks, first clear, quests, pass XP or

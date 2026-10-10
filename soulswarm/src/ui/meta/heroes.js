@@ -4,8 +4,9 @@ import { icon } from '../icons.js';
 import { relicArt, skillArt, talentArt } from '../art.js';
 import {
   HEROES, HERO_ORDER, HERO_MAX_STARS, SKILLS, RARITY_COLOR, RARITY_LABEL, RARITIES, RELICS, RELIC_SLOTS,
-  relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES,
+  relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES, MASTERY,
 } from '../../game/data.js';
+import { heroMastery } from '../../meta/mastery.js';
 import { riteIcon } from '../riteui.js';
 import {
   onChange, commit, computeLoadout, heroAction, heroNextCost, selectHero, equipRelic, upgradeTalent, notifications,
@@ -16,6 +17,23 @@ import { renderBestiary, openFoe } from './bestiary.js';
 
 const RANK = { legendary: 0, epic: 1, rare: 2, common: 3 };
 const rarityPill = (r) => `<span class="pill rpill" style="--rc:${RARITY_COLOR[r]}">${RARITY_LABEL[r]}</span>`;
+
+/** Hero Mastery (meta/mastery.js): the rank, XP to the next one, and the ten-rank track of perks and rewards. */
+function masteryPanel(p, id) {
+  const m = heroMastery(p, id), hero = HEROES[id];
+  const rw = (r) => Object.entries(MASTERY.ranks[r].reward).map(([k, v]) => `<span class="ms-rw">${icon(k)}${fmt(v)}</span>`).join('');
+  const rows = [];
+  for (let r = 2; r <= MASTERY.max; r++) {
+    rows.push(`<div class="ms-r ${r <= m.rank ? 'on' : ''} ${r === 5 || r === 10 ? 'key' : ''}"><b class="tnum">${r}</b><span>${MASTERY.ranks[r].text}</span><em>${rw(r)}</em></div>`);
+  }
+  return `<div class="hd-mast" style="--hc:${hero.css}">
+    <div class="ms-head"><span class="rm-badge tnum">${m.rank}</span><div><small class="t-label">Mastery</small><b>${m.max ? 'Mastered' : `Rank ${m.rank} of ${MASTERY.max}`}</b></div>
+      <span class="ms-xp tnum">${m.max ? 'MAX' : `${fmt(m.into)} / ${fmt(m.need)} XP`}</span></div>
+    ${m.max ? '' : bar(m.into / m.need)}
+    <small class="t-dim ms-how">Every run with ${hero.name} earns mastery XP (the run's Soul Pass XP).</small>
+    <div class="ms-track">${rows.join('')}</div>
+  </div>`;
+}
 
 /** Sum of equipped relic bonuses, grouped by stat. */
 function relicTotals(p) {
@@ -67,6 +85,7 @@ export function createHeroes(ctx) {
           <span class="hcard-shine"></span>
           ${rarityPill(hero.rarity)}
           ${p.selectedHero === id ? '<span class="hcard-sel">Selected</span>' : ''}
+          ${hs.owned ? `<span class="hcard-mast tnum ${heroMastery(p, id).rank >= 5 ? 'asc' : ''}" title="Mastery">${heroMastery(p, id).rank}</span>` : ''}
           ${hs.owned ? '' : `<span class="hcard-lock">${icon('lock')}</span>`}
           <span class="hcard-info">
             <span class="hcard-name t-display">${hero.name}</span>
@@ -117,14 +136,15 @@ export function createHeroes(ctx) {
         </div>
         <div class="hd-id">
           <div class="hd-name t-display" style="--hc:${hero.css}">${hero.name}</div>
-          <div class="hd-title">${hero.title}</div>
+          <div class="hd-title">${hero.title}${hs.owned && heroMastery(p, id).max ? ' · <span class="hd-master">Master</span>' : ''}</div>
           <div class="hd-tags">${rarityPill(hero.rarity)}${hs.owned ? stars(hs.stars) : ''}</div>
         </div>
         <p class="hd-lore">${hero.lore}</p>
         <div class="hd-rows">
           <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${skillArt(hero.weapon, w.icon)}</span><div><small class="t-label">Signature weapon</small><b>${w.name}</b><span class="t-dim">${w.desc(1)}</span></div></div>
           <div class="hd-row"><span class="hd-ri" style="color:${hero.css}">${icon('raise')}</span><div><small class="t-label">Passive</small><b>${hero.passiveText}</b></div></div>
-          ${RITES[id] ? `<div class="hd-row hd-rite"><span class="hd-ri" style="color:${hero.css}">${riteIcon(id)}</span><div><small class="t-label">Rite</small><b>${RITES[id].name}</b><span class="t-dim">${RITES[id].desc} Cooldown ${RITES[id].cd} s.</span></div></div>` : ''}
+          ${RITES[id] ? `<div class="hd-row hd-rite ${L.mastery.asc ? 'is-asc' : ''}"><span class="hd-ri" style="color:${hero.css}">${riteIcon(id)}</span><div><small class="t-label">${L.mastery.asc ? 'Ascended Rite' : 'Rite'}</small><b>${RITES[id].name}</b><span class="t-dim">${RITES[id].desc} Cooldown ${+(RITES[id].cd * L.mastery.riteCdMul).toFixed(1)} s.</span>
+            ${RITES[id].ascDesc ? `<span class="hd-asc ${L.mastery.asc ? 'on' : ''}">${L.mastery.asc ? 'Ascended' : 'Ascends at Mastery 5'}: ${RITES[id].ascDesc}</span>` : ''}</div></div>` : ''}
         </div>
         <div class="hd-stats">
           <div><small class="t-label">HP</small><b class="tnum">${fmt(L.hpMax)}</b></div>
@@ -132,6 +152,7 @@ export function createHeroes(ctx) {
           <div><small class="t-label">Power</small><b class="tnum glow-gold">${fmt(L.power)}</b></div>
         </div>
         ${hs.owned && cost ? `<div class="hd-next"><span class="t-dim">Next rank: +12% damage, +8% HP</span>${bar(hs.shards / cost, hs.shards >= cost ? 'mbar-ok' : '')}</div>` : ''}
+        ${hs.owned ? masteryPanel(p, id) : ''}
         ${skin ? `<button class="btn btn-ghost btn-sm btn-block hd-skin" data-a="skin">${icon('crown')} ${p.equippedSkin === skin ? 'Unequip' : 'Equip'} ${SKINS[skin].name}</button>` : ''}
         ${source}
         <div class="hd-actions">${actions}</div>`;

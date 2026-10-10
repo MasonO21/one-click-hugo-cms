@@ -83,7 +83,8 @@ export class Run {
     this.page = this.mut.page; this.pageDef = this.page ? GRIMOIRE.pages[this.page] : null;
     this.graveT = this.pageDef && this.pageDef.graves ? this.pageDef.graves.every : 0; this.feastBank = 0; // Restless Graves, Carrion Feast
     this.trial = !!(mutators && mutators.length);
-    this.skillLv = { [loadout.hero.weapon]: Math.max(1, this.mut.startLv) };
+    // the signature weapon: Lv1, or higher from a Grimoire page or Hero Mastery rank 7 (meta/mastery.js)
+    this.skillLv = { [loadout.hero.weapon]: Math.max(1 + ((loadout.mastery && loadout.mastery.weaponLv) || 0), this.mut.startLv) };
     this.evolved = {};
     this.level = 1; this.xp = 0; this.xpNeed = xpForLevel(1);
     this.recomputeStats();
@@ -435,7 +436,7 @@ export class Run {
       if (Math.random() < chance) {
         if (this.legion.count < this.stats.cap) {
           // the minion keeps the identity of what it was (variant by type; elites rise as Champions)
-          this.legion.raise(e.x, e.z, { kind: e.type, elite: e.elite });
+          this.legion.raise(e.x, e.z, { kind: e.type, elite: e.elite || this.rites.champRise() }); // Ascended Grave Call: every third rises a Champion
           this.counters.raised++; rose = true;
           if (this.rites.graveCall) this.rites.pillar(e.x, e.z);
           if (this.counters.raised === 1) this.hint('raise', 'Slain foes rise to fight for you. This is your LEGION!');

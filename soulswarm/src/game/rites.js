@@ -6,6 +6,9 @@
 //   Mordrake  Ossuary Wall  a ring of bone spikes hurls the horde out and mends the legion inside
 //   Grimsby   Hallowfire    his jaw blazes: the horde nearby flees in terror; he runs faster, trailing a river of witchfire
 //   Osric     Bone Mass     twelve bone monks rise; the legion fights harder and the Skull Halo spins faster
+// Hero Mastery (meta/mastery.js) shortens the cooldown (loadout.mastery.riteCdMul) and, from rank 5, ascends the Rite
+// (RITES[id].asc): Vael's call raises Champions, Nyx steps twice, a second Ashfall wave, a second toll, the Wall shatters
+// outward, Hallowfire's terror leaves foes vulnerable, half of Osric's monks rise as Champions. Rank 10 adds an aura.
 // Run.update calls poll() (input), update(dt) right after the Shepherd moves, and render() inside the glow pass.
 import * as THREE from 'three';
 import { RITES, EVOLUTIONS } from './data.js';
@@ -89,6 +92,12 @@ export class Rites {
     this.hero = run.loadout.heroId;
     this.def = RITES[this.hero] || null;
     this.cd = 0; // ready from the first second of every run
+    const MS = run.loadout.mastery || {};
+    this.cdMax = this.def ? this.def.cd * (MS.riteCdMul || 1) : 0; // Hero Mastery shortens it (ranks 3 and 9)
+    this.asc = this.def && MS.asc ? this.def.asc || null : null;   // the Ascended Rite (rank 5)
+    this.aura = !!MS.aura;                                          // the Soulbound aura (rank 10)
+    this.callN = 0; this.echoT = 0; this.wave2T = 0; this.toll2T = 0;
+    run.dread = this.hero === 'grimsby' && this.asc ? 1 + this.asc.dread : 0; // Enemies.damage: terrified foes take more
     this.hinted = false;
     this.castId = 0;
     this.t = 0; // Rite clock (run time), drives the shaders
@@ -107,6 +116,7 @@ export class Rites {
     // pre-bound query callbacks: the per-frame loops create no closures
     this._cut = (e) => this.cutHit(e);
     this._wall = (e) => this.wallHit(e);
+    this._shatter = (e) => this.shatterHit(e);
     this._knell = (e) => this.knellHit(e);
     this._blaze = (e) => this.blazeHit(e);
     this._silence = (e) => { if (e.type === 'witch' && e.stunT <= 0) { this.run.enemies.stun(e, this.def.stun); this.run.particles.burst(e.x, 2.2, e.z, 4, this.hc, IMPACT); } };
@@ -182,7 +192,9 @@ export class Rites {
   trigger() {
     const run = this.run, D = this.def, P = run.player;
     if (!D || this.cd > 0 || run.ended || run.paused || run.levelPending || P.dead) return false;
-    this.cd = D.cd;
+    this.cd = this.cdMax;
+    // Ascended Shadow Step: the first step leaves a second charge for `window` s; the cooldown starts after the second
+    if (this.hero === 'nyx' && this.asc) { if (this.echoT > 0) this.echoT = 0; else { this.cd = 0; this.echoT = this.asc.window; } }
     this.castId++;
     run.counters.rites++;
     this[this.hero](D, P);
@@ -208,14 +220,19 @@ export class Rites {
   // ---------------------------------------------------------------- Vael: Grave Call
   vael(D, P) {
     const run = this.run;
-    this.graveT = D.dur; this.pullT = 0; this.beatT = 0.5;
+    this.graveT = D.dur + (this.asc ? this.asc.dur : 0); this.pullT = 0; this.beatT = 0.5; this.callN = 0;
     run.pickups.magnetNear(P.x, P.z, D.pull);
     run.fx.shockwave(P.x, P.z, D.pull, run.heroColor, 0.6, 0.05);
     run.fx.light(P.x, P.z, 8, 0.9, this.color, 0.8);
     run.fx.flash(0.15); run.fx.shake(0.25); run.fx.slowMo(0.55, 0.25);
     run.particles.ring(P.x, P.z, D.pull * 0.6, 70, this.hc, { life: 0.55, size: 0.7 });
     run.particles.burst(P.x, 1.2, P.z, 18, WHITE, { speed: 7, life: 0.4, size: 0.35, up: 2 });
-    this.showRune(P.x, P.z, D.pull, D.dur + 0.4, true);
+    this.showRune(P.x, P.z, D.pull, this.graveT + 0.4, true);
+  }
+
+  /** Ascended Grave Call: every `champEvery`-th foe the call raises rises as a Champion (run.onEnemyKilled asks). */
+  champRise() {
+    return !!(this.asc && this.hero === 'vael' && this.graveT > 0 && ++this.callN % this.asc.champEvery === 0);
   }
 
   /** A slain foe rises during Grave Call: a soul pillar at its grave. */
@@ -347,6 +364,11 @@ export class Rites {
   }
 
   seraphine(D, P) {
+    this.ashWave(D, P, D.n, true);
+    if (this.asc) this.wave2T = this.asc.delay; // Ascended: a second wave on the foes the first one missed
+  }
+
+  ashWave(D, P, want, first) {
     const run = this.run, E = run.enemies, C = this.cand, sc = this.score;
     C.length = 0;
     run.camera.updateMatrixWorld(); // the camera may not have rendered since it last moved (headless QA steps)
@@ -355,7 +377,7 @@ export class Rites {
     // order (no sort, no allocation)
     const m = Math.min(C.length, sc.length);
     for (let i = 0; i < m; i++) { const e = C[i]; sc[i] = (e.x - P.x) ** 2 + (e.z - P.z) ** 2 - (e.type === 'boss' ? 3e6 : e.elite ? 2e6 : e.type === 'witch' ? 1e6 : 0); }
-    const n = Math.min(D.n, m, MAX_STRIKES);
+    const n = Math.min(want, m, MAX_STRIKES);
     for (let k = 0; k < n; k++) {
       let b = k;
       for (let i = k + 1; i < m; i++) if (sc[i] < sc[b]) b = i;
@@ -366,8 +388,8 @@ export class Rites {
     }
     C.length = 0;
     this.strikeN = n; this.strikeT = 0; this.shown = 0;
-    if (!run.novaQueue.length) { run.nova = Math.min(1, run.nova + D.nova); run.addNovaCharge(0); } // +15% Nova (and the first-run hint)
-    run.fx.flash(0.18); run.fx.shake(0.3);
+    if (first && !run.novaQueue.length) { run.nova = Math.min(1, run.nova + D.nova); run.addNovaCharge(0); } // +15% Nova (and the first-run hint)
+    run.fx.flash(first ? 0.18 : 0.1); run.fx.shake(first ? 0.3 : 0.2);
     run.fx.light(P.x, P.z, 10, 2, this.color, 0.8);
     run.fx.shockwave(P.x, P.z, 4, 0xffb347, 0.4, 0.12);
     run.particles.burst(P.x, 2.4, P.z, 16, FLAME, { speed: 6, life: 0.5, size: 0.45, up: 2.5 });
@@ -380,6 +402,7 @@ export class Rites {
   }
 
   updateSeraphine(dt, D) {
+    if (this.wave2T > 0) { this.wave2T -= dt; if (this.wave2T <= 0 && !this.run.ended) this.ashWave(D, this.run.player, this.asc.n, false); }
     if (!this.strikeN) return;
     const run = this.run, E = run.enemies;
     this.strikeT += dt;
@@ -423,18 +446,24 @@ export class Rites {
 
   // ---------------------------------------------------------------- Liora: Death Knell
   liora(D, P) {
+    this.toll(D, P, D.r, D.stun, 1);
+    if (this.asc) this.toll2T = this.asc.delay; // Ascended: it tolls a second time, farther out
+  }
+
+  toll(D, P, r, stun, dmgMul) {
     const run = this.run;
     run.projectiles.clearEnemyShots(true); // the boss keeps its rules: its ring, spiral and fan orbs fly on, as through the wall
-    this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
-    run.enemies.query(P.x, P.z, D.r, this._knell);
+    this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg * dmgMul, false); this._kstun = stun; this._shown = 0;
+    run.enemies.query(P.x, P.z, r, this._knell);
     run.enemies.query(P.x, P.z, D.silence, this._silence); // the toll carries: Witches farther out lose their fire too
     this.bellT = 0; this.bellX = P.x; this.bellZ = P.z; this.waves = 1; this.waveT = 0;
     this.bell.visible = true;
-    run.fx.shockwave(P.x, P.z, D.r, run.heroColor, 0.45, 0.06);
-    run.fx.light(P.x, P.z, D.r + 2, 0.6, this.color, 0.8);
+    this.knellR = r;
+    run.fx.shockwave(P.x, P.z, r, run.heroColor, 0.45, 0.06);
+    run.fx.light(P.x, P.z, r + 2, 0.6, this.color, 0.8);
     run.fx.flash(0.2); run.fx.aberration(0.5); run.fx.shake(0.4); run.fx.hitStop(0.06);
-    run.particles.ring(P.x, P.z, D.r, 60, this.soft, { life: 0.5, size: 0.6 });
-    this.showRune(P.x, P.z, D.r, 1.3, false);
+    run.particles.ring(P.x, P.z, r, 60, this.soft, { life: 0.5, size: 0.6 });
+    this.showRune(P.x, P.z, r, 1.3, false);
   }
 
   knellHit(e) {
@@ -442,17 +471,21 @@ export class Rites {
     if (e.type !== 'boss') { // her toll: ×2 Raise Chance whoever lands the kill (run.onEnemyKilled)
       e.tollT = Math.max(e.tollUid === e.uid ? e.tollT : 0, run.time + D.mark); e.tollUid = e.uid;
     }
-    run.enemies.stun(e, D.stun);
+    run.enemies.stun(e, this._kstun);
     run.enemies.damage(e, this._kd, this.opts(e.x - this._kx, e.z - this._kz, 0, this._shown++ >= 8));
     if (e.active) run.particles.burst(e.x, 1.2, e.z, 3, this.hc, IMPACT);
   }
 
   updateLiora(dt, D) {
+    if (this.toll2T > 0) {
+      this.toll2T -= dt;
+      if (this.toll2T <= 0 && !this.run.ended && !this.run.player.dead) { const A = this.asc; this.toll(D, this.run.player, A.r, A.stun, A.dmg); this.run.audio.sfx('rite_liora', { volume: 0.7, pitch: 0.8 }); }
+    }
     if (this.bellT < 0) return;
     this.bellT += dt;
     if (this.waves < 3) { // the toll rings out three times
       this.waveT += dt;
-      if (this.waveT >= 0.16) { this.waveT = 0; this.waves++; this.run.fx.shockwave(this.bellX, this.bellZ, D.r * (1 + this.waves * 0.12), this.run.heroColor, 0.5, 0.05); }
+      if (this.waveT >= 0.16) { this.waveT = 0; this.waves++; this.run.fx.shockwave(this.bellX, this.bellZ, this.knellR * (1 + this.waves * 0.12), this.run.heroColor, 0.5, 0.05); }
     }
     if (this.bellT > 1.6) { this.bellT = -1; this.bell.visible = false; }
   }
@@ -485,6 +518,7 @@ export class Rites {
     const cx = this.wallX = P.x, cz = this.wallZ = P.z; // the ring marches with him
     if (this.wallT <= 0) { if (this.wallAge > D.dur + 0.4) { this.wallAge = -1; this.spikes.count = 0; } return; }
     this.wallT -= dt;
+    if (this.wallT <= 0 && this.asc) this.shatter(D, cx, cz); // Ascended: the spikes burst outward as the wall falls
     // the wall: nothing stays inside; every crossing is cut (once per hitCd per foe); the boss is only shoved
     this._dt = dt; this._shown = 0;
     run.enemies.query(cx, cz, R + 1, this._wall);
@@ -508,6 +542,27 @@ export class Rites {
       m.hp = Math.min(m.maxHp, m.hp + m.maxHp * k);
       if (Math.random() < dt * 2) run.particles.burst(m.x, m.y, m.z, 2, MARROW, HEAL);
     }
+  }
+
+  /** Ascended Ossuary Wall: as it falls, the spikes burst outward and cut every foe within asc.r m outside the ring. */
+  shatter(D, cx, cz) {
+    const run = this.run, A = this.asc, R = D.r + A.r;
+    this._sd = this.dmg(A.dmg, false); this._shown = 0; this._sx = cx; this._sz = cz;
+    run.enemies.query(cx, cz, R, this._shatter);
+    run.fx.shockwave(cx, cz, R, 0xfff0d2, 0.4, 0.12);
+    run.fx.shockwave(cx, cz, R * 0.8, 0x6dff9a, 0.35, 0.08);
+    run.fx.light(cx, cz, R + 2, 2, this.color, 0.5);
+    run.fx.shake(0.4); run.fx.hitStop(0.04);
+    run.particles.ring(cx, cz, D.r, 70, BONE_HDR, { life: 0.5, size: 0.5, speed: 9 });
+    run.particles.ring(cx, cz, D.r, 40, MARROW, { life: 0.4, size: 0.45, speed: 6 });
+    run.audio.sfx('hit', { volume: 0.8, pitch: 0.4 });
+  }
+
+  shatterHit(e) {
+    if (e.ev) return;
+    const run = this.run, dx = e.x - this._sx, dz = e.z - this._sz;
+    run.enemies.damage(e, this._sd, this.opts(dx, dz, this.asc.knock, this._shown++ >= 6));
+    if (e.active) run.particles.burst(e.x, 0.9, e.z, 4, BONE_HDR, BONE);
   }
 
   wallHit(e) {
@@ -549,7 +604,7 @@ export class Rites {
   blazeHit(e) {
     const run = this.run, D = this.def;
     run.enemies.damage(e, this._kd, this.opts(e.x - this._kx, e.z - this._kz, 3, this._shown++ >= 8));
-    if (e.active) { run.enemies.fear(e, D.fear); run.particles.burst(e.x, 1.2, e.z, 3, WITCH, IMPACT); }
+    if (e.active) { run.enemies.fear(e, this.asc ? this.asc.fear : D.fear); run.particles.burst(e.x, 1.2, e.z, 3, WITCH, IMPACT); }
   }
 
   updateGrimsby(dt, D) {
@@ -559,8 +614,20 @@ export class Rites {
 
   // ---------------------------------------------------------------- Osric: Bone Mass
   osric(D, P) {
-    const run = this.run;
-    run.legion.addMany(D.monks, P.x, P.z);
+    const run = this.run, L = run.legion;
+    if (this.asc) { // Ascended: every champEvery-th monk rises as a Champion (as addMany, one at a time)
+      L.overT = 0; let champs = 0;
+      for (let i = 0; i < D.monks; i++) {
+        const champ = (i + 1) % this.asc.champEvery === 0;
+        const m = L.raise(P.x + (Math.random() - 0.5) * 2.5, P.z + (Math.random() - 0.5), { fx: false, burstY: 1.5, elite: champ });
+        if (!m) break;
+        const a = Math.random() * TAU, s = 4 + Math.random() * 6;
+        m.vx = Math.cos(a) * s; m.vz = Math.sin(a) * s; m.vy = 3;
+        if (champ) champs++;
+      }
+      run.particles.burst(P.x, 1.5, P.z, 60, GOLD, { speed: 9, life: 0.8, size: 0.4, up: 1 });
+      if (champs) { run.fx.text(P.x, 3, P.z, `${champs} CHAMPIONS`, 'gold'); run.audio.sfx('champion'); }
+    } else L.addMany(D.monks, P.x, P.z);
     this.massT = D.dur;
     run.weapons.skullSpin = D.spin;
     for (let i = 0; i < D.monks && this.pN < MAX_PILLARS; i++) { // a pillar of gold where each monk rises
@@ -590,6 +657,7 @@ export class Rites {
     const run = this.run;
     this.t += dt; this.lightT -= dt; this.sfxT -= dt;
     if (this.cd > 0) { this.cd -= dt; if (this.cd <= 0) { this.cd = 0; this.onReady(); } }
+    if (this.echoT > 0) { this.echoT -= dt; if (this.echoT <= 0) { this.echoT = 0; if (this.cd <= 0) this.cd = this.cdMax; } } // the second step went unused
     // introduce the Rite once the opening hints have had their moment: in the first-ever run, and once for players who
     // started before Rites existed (run.hint is a no-op after the first time)
     if (!this.hinted && this.cd <= 0 && run.time >= RITES.hintAt && !(run.ui && run.ui.hintEl && run.ui.hintEl.isConnected)) {
@@ -628,6 +696,11 @@ export class Rites {
     else if (this.hero === 'grimsby') this.renderGrimsby(g, P, t);
     else if (this.hero === 'osric') this.renderOsric(g, t);
     if (this.pillars) this.renderPillars(g, c, t);
+    if (this.aura && !P.dead) { // Hero Mastery rank 10: the Soulbound aura, a slow gold ring of light at his feet
+      const G = GOLD, f = 0.85 + 0.15 * Math.sin(t * 2.4);
+      for (let i = 0; i < 10; i++) { const a = t * 0.8 + (i / 10) * TAU; g.add(P.x + Math.cos(a) * 1.15, 0.12, P.z + Math.sin(a) * 1.15, 0.55 * f, G[0] * 0.16, G[1] * 0.16, G[2] * 0.16, 0.8); }
+      if (Math.random() < 0.12) run.particles.emit(P.x + (Math.random() - 0.5) * 1.6, 0.2, P.z + (Math.random() - 0.5) * 1.6, 0, 1.4, 0, 0.9, 0.22, 0.04, G[0], G[1], G[2], 0.8, 0.5, 0);
+    }
   }
 
   renderPillars(g, c, t) {

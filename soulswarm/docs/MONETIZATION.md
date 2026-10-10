@@ -59,6 +59,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | New account | 150 (one-time) | | |
 | Weekly quest chest (25 daily quests) | 50 / week, plus 1 Sigil | | |
 | Bestiary milestones (GDD §5.2) | 50 per entry's third milestone (10,000 kills; 3,000 Corpse Priests; or 50 Soul Thieves / kills of a chapter boss), 650 in all (one-time, over months) | | |
+| Hero Mastery ranks (GDD §11.2) | 140 per hero (ranks 3, 6, 8 and 10), 980 for all seven, plus 2 Sigils per hero; one-time, over about 50 runs per hero | | |
 | Events and leaderboards (Planned) | 50–500 per event | | |
 
 ### 2.3 Energy, Altar Sigils, Hero Shards
@@ -66,7 +67,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Currency | Sources | Sinks | Design intent |
 |---|---|---|---|
 | **Energy** (30 max, +1 every 6 min) | Regen (30 in 3 h), rewarded ad (+10 each, as often as wanted), gems (50 for +30, no daily cap in the build). Refills may go above 30 (to 99); regen only runs below 30. | 5 per run, including the first Chapter 1 run, on every difficulty (Nightmare and Torment cost the same: a harder run is not a reason to spend more of the session pacer). Planned: Endless Abyss at 5; a free tutorial run and Boss Rush (3 free tries per day). | A soft session pacer, not a paywall. A full bar = 6 runs, about 45 minutes of play. |
-| **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), each Bestiary entry's second milestone (1, 13 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
+| **Altar Sigils** (1 sigil = 1 pull) | Daily quest "Pass 3 Soul Gates" (1/day), login (3 per cycle), free pass (6), premium pass (12), Starter Pack (3), each chapter's first clear (1, 5 in total), each Bestiary entry's second milestone (1, 13 in total), Hero Mastery ranks 5 and 10 (2 per hero, 14 in total), new account (1), gem shop (150 gems each). Planned: weekly chest, events. | Soul Altar only | Lets free players pull without spending gems. Keeps summon value visible. |
 | **Hero Shards** | Epic rolls (4 Seraphine, 6 Nyx, 5 Liora or 5 Grimsby, equal chance), Legendary rolls (5 Mordrake, 6 Seraphine or 5 Osric, equal chance), premium pass S1 (25 Seraphine), duplicate hero grants (20). Planned: Endless Abyss Abyssal league, top 10 per group (2 Mordrake per week). | Unlock (10) and stars (10/20/40/80) | Long-tail collection chase. Stars give +12% damage and +8% HP each. |
 
 ### 2.4 What a free player earns per 28-day season (daily active, all quests, ~3 runs a day)
@@ -133,6 +134,15 @@ Every level-up and Relic Chest screen offers **Reroll · 50 gems** beside **Rero
 - **Why ads stay unlimited:** each ad reroll is a rewarded impression the player chose, at the most engaged moment of a run. SOULSWARM never caps rewarded ads (§9).
 - **Guard rails:** the gem button dims when the wallet is short and a tap explains the price instead of opening the shop mid-run; a double tap pays once; the Soul Pact skips the ads, as everywhere.
 - **What to watch:** gems spent on rerolls per DAU, and whether heavy rerolling lowers Altar spend (a sign the price is too low). If rerolls crowd out pulls, raise the price on the third and later rerolls of a run.
+
+### 2.9 Hero Mastery (Update 9)
+
+Every hero ranks 1–10 by being played (GDD §11.2). It is a progression and retention system, not a store item:
+- **Why it sells heroes.** Each hero now carries a 50-run track and an **Ascended Rite** at rank 5 that changes how its Rite plays (Vael's Champions, Nyx's second step, Liora's second toll…). A newly pulled hero is a fresh track, which gives every Altar pull and every hero-shard goal a second payoff after the unlock. The roster's rank badges make an unplayed hero visible.
+- **Why it retains.** Rank 5 lands in about 13 runs (2–4 days for a daily player) and is the hook; ranks 6–10 pay out over weeks. Seven heroes are about 350 runs of goals, and every new hero adds 50 more.
+- **Currency.** 5,000 gold, 140 gems and 2 Sigils per hero, one-time (980 gems and 14 Sigils for the full roster over months). The gold is small next to talents; the gems are about one week of daily quests per hero.
+- **Not for sale.** Mastery XP is never sold, and no store item boosts it: the perks are small on purpose (+4% HP and damage, a 20% shorter Rite) and the Ascended Rite should feel earned. A *(Planned)* "Mastery Weekend" live event (×2 mastery XP) is the lever for engagement dips.
+- **What to watch:** runs per hero (does mastery spread play across the roster?), the share of D30 players with any hero at rank 5+, and whether players switch heroes after rank 10.
 
 ## 3. Spend-depth ladder
 

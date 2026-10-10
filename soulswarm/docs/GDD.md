@@ -13,9 +13,9 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
-| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 7 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, Grave Wraith dives and Corpse Priest raisings, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with rerolls for 50 gems or an ad and 2 banishes (§4.6), **Soul Urns** with five new offerings (§4.10), **the Grimoire**: 8 run-start pages unlocked by account goals (§4.9), 9 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
+| Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 7 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, Grave Wraith dives and Corpse Priest raisings, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with rerolls for 50 gems or an ad and 2 banishes (§4.6), **Soul Urns** with five new offerings (§4.10), **the Grimoire**: 8 run-start pages unlocked by account goals (§4.9), 9 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), each **ascending** at Hero Mastery rank 5 (§11.2), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 7 enemy types plus elites (the Grave Wraith and the Corpse Priest joined on 2026-10-09, §5), 9 weapons, 10 passives, 9 evolutions (Gravefall, Soul Leech, Grave Ward and Dread Reach joined on 2026-10-10, §7), 7 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
-| Meta and economy | **The Bestiary** (§5.2: 13 painted entries, kills per foe and boss, 39 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, daily ad caps, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Meta and economy | **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **The Bestiary** (§5.2: 13 painted entries, kills per foe and boss, 39 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3), the **share card** (§10.1) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, replay clips, a store link on the share card |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -900,6 +900,44 @@ Each hero has a signature active ability, a **Rite**, on its own RITE button (§
 - **Mordrake's gain** is held down by the clear ceiling: a cleared run stops at about 400 s, and he already cleared 4 of 12 Chapter 4 runs without his Rite (6 of 12 with it). On Chapter 2, where nobody clears, he gains +12.6%.
 - **Spread:** a single run varies by about ±35 s, so each figure is the mean of 24 runs (standard error about ±10 s). Earlier 12-run passes of the same build moved by up to 10 points.
 - **Tuning history:** the brief's cooldowns (Vael 30, Nyx 10, Seraphine 24, Liora 22, Mordrake 28 s) gave −2% to +7%, so cooldowns came down and Grave Call's pull went from 9 to 12 m (more XP was what moved Vael). Raising Ashfall's damage to 170 or its Nova charge to 25% did nothing; pinning its targets did (+12% in the trial). The Knell's 10 m Witch silence and the Wall's fire shattering were added for the same reason.
+
+### 11.2 Hero Mastery and the Ascended Rites (Update 9)
+
+Every hero ranks **1 → 10** by being played. A finished run gives the hero who fought it the run's Soul Pass XP as **mastery XP** (the difficulty bonus included; Boss Rush, Endless and the Daily Trial count; the tutorial does not; the rewarded-ad double never doubles it). Numbers live in `MASTERY` (`data.js`), the logic in `src/meta/mastery.js`; the profile keeps each hero's lifetime XP and the highest rank already paid (`p.mastery[id] = { xp, paid }`), so a rank's reward pays once, even if XP is ever rolled back.
+
+**The curve.** Rank r → r + 1 costs 250 + 150(r − 1) XP: 250, 400, 550 … 1,450, **7,650 in all**. At about 150 XP a run that is roughly **13 runs to rank 5** (the Ascended Rite) and **50 runs to rank 10**, per hero: seven heroes are about 350 runs of goals.
+
+| Rank | Perk (they stack) | Reward (once) |
+|---|---|---|
+| 2 | +2% max HP | 500 gold |
+| 3 | Rite cooldown −10% | 20 gems |
+| 4 | +2% damage | 1,000 gold |
+| **5** | **Ascended Rite** (below) | 1 Altar Sigil |
+| 6 | +2% max HP (+4%) | 30 gems |
+| 7 | The signature weapon starts each run at **Lv 2** | 1,500 gold |
+| 8 | +2% damage (+4%) | 40 gems |
+| 9 | Rite cooldown −10% more (−20%) | 2,000 gold |
+| **10** | **Soulbound aura** (a slow ring of gold light at the Shepherd's feet in every run) and the **Master** title on the hero sheet | 1 Sigil + 50 gems |
+
+HP and damage multiply the hero's whole total (after stars, talents and relics), so they also raise Power. Per hero the track pays 5,000 gold, 140 gems and 2 Sigils.
+
+**Ascended Rites** (`RITES[id].asc`). At rank 5 each hero's Rite gains a second effect; the RITE button wears a gold rim and spark, and the hero sheet shows the ascended line (before rank 5 it reads "Ascends at Mastery 5").
+
+| Hero | Rite | Ascended |
+|---|---|---|
+| Vael | Grave Call | The call lasts **5 s** (from 4), and **every third foe it raises rises as a Champion** (×3 HP, ×2 damage, gold) |
+| Nyx | Shadow Step | **A second charge**: she can step again within 3 s; the cooldown starts after the second step (or when the 3 s run out). A gold "2" on the button marks the waiting step |
+| Seraphine | Ashfall | **A second wave of 10 chains** falls 1 s later on foes the first wave did not strike (no second Nova charge) |
+| Liora | Death Knell | **The bell tolls again** 1.2 s later, out to **7 m**: another 60 (scaled), a 1 s stun, her toll mark, and enemy shots cleared again |
+| Mordrake | Ossuary Wall | **The wall shatters outward** as it falls: every foe within 3.5 m outside the ring takes 120 (scaled) and is hurled away |
+| Grimsby | Hallowfire | **Terror lasts 3 s** (from 2), and a **terrified foe takes +35% damage from every source** while it flees |
+| Osric | Bone Mass | **Every other monk rises as a Champion** (6 of the 12) |
+
+Bosses keep their rules (§11.1): the Knell's second toll only staggers a boss, the shatter goes through his damage filter, a boss is never terrified.
+
+**Where it shows.** The roster card carries a rank badge (gold from rank 5); the hero sheet has the mastery panel (rank, XP bar, the ten-rank track with perks and rewards, reached ranks lit) and the Rite's cooldown at the hero's rank; the results screen shows the hero's rank, the XP the run gave and any rank-ups with their perks and rewards (a gold row and a fanfare).
+
+**Balance (rank 10 against rank 1).** The perks are deliberately small next to stars (+12% damage and +8% HP per star): the long-term power is +4% HP, +4% damage and a Rite every 0.8 of its cooldown, and the Ascended Rite is the headline. The power-creep rule (`LIVEOPS.md`: no hero beats Mordrake by more than 5% at equal progression) is checked at equal mastery. Sim results are in the Update 9 notes below.
 
 ---
 

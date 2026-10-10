@@ -20,6 +20,13 @@
 .rite.active { box-shadow: 0 0 0 2px var(--rc), 0 0 22px var(--rc), 0 0 46px color-mix(in srgb, var(--rc) 45%, transparent); }
 .rite.fire { animation: ritefire .4s cubic-bezier(.2,1.6,.4,1); }
 .rite.pop .core { animation: ritepop .5s cubic-bezier(.2,1.8,.4,1); }
+/* Hero Mastery rank 5: the Ascended Rite wears a gold rim and a gold spark; Nyx's second step shows a 2 while it waits */
+.rite.asc { box-shadow: 0 0 0 2px #f5c35c, 0 0 12px rgba(245,195,92,.45), 0 6px 16px rgba(0,0,0,.6); }
+.rite-asc { position: absolute; top: -3px; right: -1px; width: 15px; height: 15px; background: #ffd77a; pointer-events: none;
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); filter: drop-shadow(0 0 4px #f5c35c); }
+.rite-echo { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); display: none; min-width: 18px; padding: 1px 5px; border-radius: 9px;
+  font-style: normal; font-size: 11px; font-weight: 900; color: #1a1206; background: #ffd77a; box-shadow: 0 0 8px #f5c35c; pointer-events: none; }
+.rite.echo .rite-echo { display: block; animation: ritepop .4s cubic-bezier(.2,1.8,.4,1); }
 @keyframes ritepulse { 0%,100% { transform: scale(1); box-shadow: 0 0 0 2px var(--rc), 0 0 16px var(--rc); }
   50% { transform: scale(1.06); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rc) 50%, #fff), 0 0 34px var(--rc); } }
 @keyframes ritefire { 0% { transform: scale(.82); filter: brightness(2.6); } 100% { transform: scale(1); filter: none; } }

@@ -2,7 +2,7 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL, HEROES, MASTERY, RITES } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART, CHAPTER_ART, skillArt } from './art.js';
 import { RiteButton } from './riteui.js';
@@ -13,6 +13,24 @@ import { openShare } from './sharecard.js';
 
 /** Nightmare / Torment pill with its gold multiplier (empty on Normal). */
 const diffPill = (id) => { const D = DIFFICULTY[id]; return D && id !== 'normal' ? `<span class="pill pill-diff" style="--dc:${D.css}">${D.name} · ×${D.gold} gold</span>` : ''; };
+
+/** Hero Mastery on the results screen (meta/mastery.js): the hero's rank, the XP this run gave, and any rank-ups with
+ *  their perks and rewards (granted apart from the run's own rewards, so the ad double never doubles them). */
+function masteryRow(m) {
+  if (!m || !HEROES[m.hero]) return '';
+  const hero = HEROES[m.hero], pct = m.max ? 100 : Math.round((m.into / m.need) * 100), R = RITES[m.hero];
+  const ups = m.ranks.map((r) => `<div class="rm-up"><b>Rank ${r}</b><span>${MASTERY.ranks[r].text}${r === 5 && R && R.ascDesc ? `: ${R.ascDesc}` : ''}</span></div>`).join('');
+  return `<div class="res-mast ${m.ranks.length ? 'is-up' : ''}" style="--hc:${hero.css}">
+    <span class="rm-badge tnum">${m.to}</span>
+    <div class="rm-main">
+      <div class="rm-top"><b>${hero.name} · Mastery ${m.to}${m.max ? ' (max)' : ''}</b><span class="tnum">+${fmt(m.gained)} XP</span></div>
+      <div class="mbar rm-bar"><i style="width:${pct}%"></i></div>
+      <small class="t-dim">${m.max ? 'Mastered: the Soulbound aura is yours' : `${fmt(m.into)} / ${fmt(m.need)} XP to rank ${m.to + 1}: ${MASTERY.ranks[m.to + 1].text}`}</small>
+      ${ups}
+      ${m.items && m.items.length ? `<div class="rw-grid rm-rw">${m.items.map((it, i) => rewardTile(it, i)).join('')}</div>` : ''}
+    </div>
+  </div>`;
+}
 
 export class RunUI {
   constructor(app, run) {
@@ -361,11 +379,13 @@ export class RunUI {
       ${outcome.practice ? '<div class="res-tip">Practice run: training pays its rewards only the first time.</div>'
         : outcome.ended ? '<div class="res-tip">Training ended. Replay it any time from Settings; finishing it pays 500 gold and 30 gems.</div>' : `<div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>`}
+      ${masteryRow(outcome.mastery)}
       ${rush ? (outcome.milestones && outcome.milestones.length ? `<div class="res-tip">Event reward${outcome.milestones.length > 1 ? 's' : ''} unlocked: ${outcome.milestones.map((i) => (i + 1 === nB ? 'the Court cleared' : `${i + 1} ${i ? 'bosses' : 'boss'} beaten`)).join(', ')}.</div>` : win ? '' : '<div class="res-tip">Each boss beaten in one attempt unlocks an event reward. Talents, relics and a stronger hero carry you further.</div>')
         : tut ? `<div class="res-tip">You are ready, Shepherd. Spend your gold on <b>Talents</b>, then take on Chapter 1: survive 6:00 and slay ${BOSSES[bossFor(CHAPTERS[0])].name}.</div>`
         : result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, the five in turn, stronger each time. How deep can your legion go?</div>'
         : !win ? `<div class="res-tip">Tip: Talents and Relics make every run stronger. ${BOSSES[bossFor(this.run.chapter)].name} waits at 6:00.</div>` : ''}
     </div>`);
+    if (outcome.mastery && outcome.mastery.ranks.length) setTimeout(() => app.audio.sfx('levelup'), 650); // a Hero Mastery rank-up
     const actions = [];
     if (outcome.rewards.gold > 0 && !tut && !rush) { // rewarded ads start after the tutorial (GDD §16); event rewards are not doubled
       actions.push({ label: `${icon('ad')} Double rewards`, cls: 'btn-ad btn-lg', onClick: () => {

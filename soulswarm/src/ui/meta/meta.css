@@ -1105,3 +1105,29 @@
 .br-closed { background: rgba(255,255,255,.05); color: var(--ink-dim); }
 .br-go { flex-direction: column; gap: 1px; line-height: 1.1; }
 .br-go small { font-family: var(--f-ui); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: none; opacity: .8; }
+
+/* Hero Mastery (heroes.js): the rank badge on roster cards, the mastery panel and its ten-rank track, the Ascended Rite line */
+.hcard-mast { position: absolute; top: 34px; left: 8px; z-index: 2; display: grid; place-items: center; width: 22px; height: 25px; font-size: 11px; font-weight: 900; color: #fff;
+  background: color-mix(in srgb, var(--hc) 45%, #0a0f1c); clip-path: polygon(50% 0, 100% 22%, 100% 74%, 50% 100%, 0 74%, 0 22%); text-shadow: 0 1px 2px #000; }
+.hcard-mast.asc { background: linear-gradient(#ffe7a6, #b8862e); color: #2a1a04; text-shadow: none; }
+.hd-rite.is-asc { box-shadow: inset 0 0 0 1px rgba(245,195,92,.45); background: linear-gradient(90deg, rgba(245,195,92,.12), rgba(255,255,255,.04)); }
+.hd-asc { margin-top: 3px; font-size: 11.5px; color: var(--ink-dim); }
+.hd-asc.on { color: #ffd77a; }
+.hd-mast { display: flex; flex-direction: column; gap: 6px; padding: 10px; clip-path: var(--bevel-sm); background: linear-gradient(180deg, color-mix(in srgb, var(--hc) 12%, transparent), rgba(255,255,255,.03)); }
+.ms-head { display: flex; align-items: center; gap: 10px; }
+.ms-head > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ms-head b { font-size: 14px; }
+.ms-xp { font-size: 12px; font-weight: 800; color: var(--soul); }
+.hd-mast .mbar i { background: linear-gradient(90deg, color-mix(in srgb, var(--hc) 60%, #000), var(--hc)); box-shadow: 0 0 8px var(--hc); }
+.ms-how { font-size: 11px; }
+.ms-track { display: flex; flex-direction: column; gap: 3px; }
+.ms-r { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 8px; padding: 5px 8px; font-size: 12px; background: rgba(255,255,255,.035); color: var(--ink-dim); }
+.ms-r b { font-weight: 900; text-align: center; color: var(--ink-dim); }
+.ms-r.key span { font-weight: 800; }
+.ms-r.on { color: var(--ink); background: color-mix(in srgb, var(--hc) 14%, rgba(255,255,255,.03)); }
+.ms-r.on b { color: #ffd77a; }
+.ms-r em { display: flex; gap: 6px; font-style: normal; }
+.ms-rw { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ms-rw svg { width: 13px; height: 13px; }
+.ms-r.on .ms-rw { opacity: .45; }
+.hd-master { color: #ffd77a; font-weight: 800; text-shadow: 0 0 8px rgba(245,195,92,.6); }

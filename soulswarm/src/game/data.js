@@ -73,34 +73,70 @@ export const RITES = {
   bossStagger: 0.25,  // a stun never stops a boss: it only pushes its next attack back by this much
   // every kill rises (Raise Chance 100%; the legion cap and overflow rules still hold); shards within `pull` m fly in
   vael: { name: 'Grave Call', short: 'CALL', cd: 20, dur: 4, pull: 12,
-    desc: 'For 4 s every foe you slay rises, and soul shards within 12 m fly to you.' },
+    desc: 'For 4 s every foe you slay rises, and soul shards within 12 m fly to you.',
+    // Ascended (Hero Mastery rank 5): the call lasts `dur` s longer and every `champEvery`-th foe it raises is a Champion
+    asc: { dur: 1, champEvery: 3 }, ascDesc: 'The call lasts 5 s, and every third foe it raises rises as a Champion.' },
   // dash `dist` m in `time` s along the stick (facing when idle), invulnerable; foes within `width` of the path take
   // dmg and are knocked aside; the legion moves +haste for hasteT s to catch up
   nyx: { name: 'Shadow Step', short: 'STEP', cd: 8, dist: 7, time: 0.18, invuln: 0.4, width: 1.5, dmg: 90, knock: 12, haste: 0.6, hasteT: 3,
-    desc: 'Dash 7 m through the horde, untouchable, slashing all in your path. Your legion surges after you.' },
+    desc: 'Dash 7 m through the horde, untouchable, slashing all in your path. Your legion surges after you.',
+    // Ascended: a second charge; the cooldown starts once both are spent or `window` s after the first step
+    asc: { window: 3 }, ascDesc: 'A second charge: step again within 3 s before the Rite recharges.' },
   // ash chains strike up to n foes on screen (the boss and elites first, then Cinder Witches, then the nearest), `span` s
 // from first to last;
   // each hit pins the foe (a stun) for `pin` s and ignites it (burn = share of the hit over 2 s; burning kills get +burnRaise
 // Raise Chance); +nova charge
   seraphine: { name: 'Ashfall', short: 'ASHFALL', cd: 18, n: 20, range: 16, span: 0.5, dmg: 120, burn: 0.6, burnRaise: 0.15, nova: 0.15, pin: 0.8,
-    desc: 'Burning chains fall on 20 foes, elites then Witches first, pinning them for 0.8 s. They ignite, and your Nova charges +15%.' },
+    desc: 'Burning chains fall on 20 foes, elites then Witches first, pinning them for 0.8 s. They ignite, and your Nova charges +15%.',
+    // Ascended: a second wave of `n` chains falls `delay` s after the first (on foes the first wave did not strike)
+    asc: { delay: 1, n: 10 }, ascDesc: 'A second wave of 10 chains falls 1 s later on the foes the first one missed.' },
   // a bell tolls `r` m around her: foes are stunned, take dmg, carry her toll for `mark` s; enemy shots are cleared and
   // Cinder Witches within `silence` m are stunned too (their fire waits)
   liora: { name: 'Death Knell', short: 'KNELL', cd: 15, r: 5, silence: 10, stun: 1.5, mark: 5, dmg: 60,
-    desc: 'A great bell tolls: foes within 5 m are stunned and marked by the toll for 5 s. Enemy fire is silenced, and Witches within 10 m with it.' },
+    desc: 'A great bell tolls: foes within 5 m are stunned and marked by the toll for 5 s. Enemy fire is silenced, and Witches within 10 m with it.',
+    // Ascended: it tolls again `delay` s later out to `r` m (stun `stun` s, dmg × `dmg`, the toll mark, shots cleared again)
+    asc: { delay: 1.2, r: 7, stun: 1, dmg: 1 }, ascDesc: 'The bell tolls a second time 1.2 s later, out to 7 m: another stun, toll and silence.' },
   // a ring of bone spikes (`r` m) for `dur` s at the cast point: foes inside are thrown out and every crossing
   // hurts (once per hitCd per foe); Witch fire falling inside shatters on the bone; minions inside heal `heal` of their
   // max HP over the duration; a boss is only shoved at bossPush m/s; the ring moves with him
   mordrake: { name: 'Ossuary Wall', short: 'WALL', cd: 18, r: 5, dur: 5, dmg: 60, hitCd: 0.5, knock: 9, heal: 0.5, bossPush: 1.2, spikes: 44,
-    desc: 'A ring of bone spikes rises around you for 5 s. Foes are hurled out and cut on every crossing, Witch fire shatters on it, and your legion inside heals 50%.' },
+    desc: 'A ring of bone spikes rises around you for 5 s. Foes are hurled out and cut on every crossing, Witch fire shatters on it, and your legion inside heals 50%.',
+    // Ascended: when the wall falls its spikes burst outward: every foe within `r` m outside the ring takes dmg, knocked away
+    asc: { r: 3.5, dmg: 120, knock: 14 }, ascDesc: 'When the wall falls, its spikes burst outward and cut every foe within 3.5 m of the ring for 120.' },
   // his jaw blazes: foes within `r` m take dmg, flee in terror for `fear` s and stand in witchfire; for `dur` s he runs
   // +haste and his trail of witchfire is `trailR` m wide, dps per second while they stand in it
   grimsby: { name: 'Hallowfire', short: 'BLAZE', cd: 16, r: 6, fear: 2, dmg: 40, dur: 6, haste: 0.3, trailR: 1.7, dps: 45,
-    desc: 'Your jaw blazes: foes within 6 m are scorched and flee in terror for 2 s. For 6 s you run 30% faster and leave a wide river of witchfire.' },
+    desc: 'Your jaw blazes: foes within 6 m are scorched and flee in terror for 2 s. For 6 s you run 30% faster and leave a wide river of witchfire.',
+    // Ascended: a terrified foe takes +dread damage from every source while it flees, and the terror lasts `fear` s
+    asc: { dread: 0.35, fear: 3 }, ascDesc: 'Terror lasts 3 s, and terrified foes take 35% more damage from every source.' },
   // `monks` bone monks rise around him (past the cap: they fade like any overflow) and for `dur` s the legion deals
   // +fury damage, the Skull Halo turns `spin` × as fast and the hymn wards him (damage taken × (1 − ward))
   osric: { name: 'Bone Mass', short: 'MASS', cd: 18, monks: 12, dur: 6, fury: 0.5, spin: 2, ward: 0.4,
-    desc: 'Twelve bone monks rise to join your legion. For 6 s your whole legion deals +50% damage, your Skull Halo spins twice as fast and you take 40% less damage.' },
+    desc: 'Twelve bone monks rise to join your legion. For 6 s your whole legion deals +50% damage, your Skull Halo spins twice as fast and you take 40% less damage.',
+    // Ascended: every `champEvery`-th monk rises as a Champion (gold, ×3 HP, ×2 damage)
+    asc: { champEvery: 2 }, ascDesc: 'Every other monk rises as a Champion.' },
+};
+
+// ---------------------------------------------------------------- Hero Mastery (meta/mastery.js, Update 9)
+// Every hero ranks 1 → 10 by being played: a run gives the hero who fought it the run's pass XP as mastery XP (with the
+// difficulty bonus; Boss Rush and the Daily Trial count, the tutorial does not; the ad double never doubles it).
+// need[r] is the XP from rank r to r + 1 (7,650 in all: about 13 runs to rank 5, 50 to rank 10). Perks stack: hp and dmg
+// multiply the hero's HP and damage, riteCd shortens the Rite's cooldown, weaponLv starts the signature weapon higher,
+// asc ascends the Rite (RITES[id].asc), aura is the rank-10 mark. Each rank-up pays its reward once.
+export const MASTERY = {
+  max: 10,
+  need: [0, 250, 400, 550, 700, 850, 1000, 1150, 1300, 1450],
+  ranks: {
+    2: { perk: { hp: 0.02 }, text: '+2% max HP', reward: { gold: 500 } },
+    3: { perk: { riteCd: 0.1 }, text: 'Rite cooldown −10%', reward: { gems: 20 } },
+    4: { perk: { dmg: 0.02 }, text: '+2% damage', reward: { gold: 1000 } },
+    5: { perk: { asc: true }, text: 'Ascended Rite', reward: { sigils: 1 } },
+    6: { perk: { hp: 0.02 }, text: '+2% max HP', reward: { gems: 30 } },
+    7: { perk: { weaponLv: 1 }, text: 'Signature weapon starts at Lv 2', reward: { gold: 1500 } },
+    8: { perk: { dmg: 0.02 }, text: '+2% damage', reward: { gems: 40 } },
+    9: { perk: { riteCd: 0.1 }, text: 'Rite cooldown −10% more', reward: { gold: 2000 } },
+    10: { perk: { aura: true }, text: 'Soulbound aura and the Master title', reward: { sigils: 1, gems: 50 } },
+  },
 };
 
 // ---------------------------------------------------------------- Enemies

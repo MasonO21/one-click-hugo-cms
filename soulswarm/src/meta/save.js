@@ -4,6 +4,7 @@ import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, REL
 import { migrateDifficulty } from './difficulty.js';
 import { BESTIARY, GRIMOIRE } from '../game/data.js';
 import { bestiaryGoals } from './bestiary.js';
+import { sanitizeMastery } from './mastery.js';
 import { now as clockNow, today, dateKey, snapshot, restore } from './clock.js';
 
 const KEY = 'soulswarm.save.v1';
@@ -46,6 +47,7 @@ export function newProfile() {
     weekly: { week: null, done: 0, claimed: false },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
     grimoire: { selected: '', seen: [] }, // meta/grimoire.js: the inscribed page and the unlocked pages already shown
+    mastery: {}, // meta/mastery.js: per hero { xp: lifetime mastery XP, paid: the highest rank whose reward was paid }
     bestiary: { kills: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])), claimed: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])) }, // meta/bestiary.js
     settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     flags: { tutorialDone: false, tutorialPaid: false, hints: {}, coach: '' }, // tutorialPaid: its reward paid once; coach: the post-tutorial pointer ('talent' → 'battle' → '')
@@ -93,6 +95,7 @@ function migrate(p) {
   { const R = out.rush; for (const k of ['tries', 'ads', 'best', 'allBest', 'clears']) R[k] = int(R[k], 0); R.claimed = int(R.claimed, 0, 0, 5); R.bestKills = int(R.bestKills, 0, 0, 5); }
   if (!(p && p.flags && 'tutorialPaid' in p.flags)) out.flags.tutorialPaid = !!out.flags.tutorialDone; // saves from before the tutorial: their first run was it
   { const G = out.grimoire; if (!GRIMOIRE.pages[G.selected]) G.selected = ''; G.seen = [...new Set(G.seen.filter((id) => GRIMOIRE.pages[id]))]; }
+  out.mastery = sanitizeMastery(out.mastery);
   return out;
 }
 

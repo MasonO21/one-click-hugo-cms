@@ -21,20 +21,21 @@ export class RiteButton {
     this.ui = ui;
     const id = run.loadout.heroId, D = RITES[id], hero = HEROES[id];
     this.def = D;
-    this.el = h(`<button class="rite ${D ? '' : 'none'}" aria-label="${D ? D.name : 'Rite'}" style="--rc:${hero.css}">
+    const asc = !!(D && D.asc && run.loadout.mastery && run.loadout.mastery.asc); // Hero Mastery rank 5: the Ascended Rite
+    this.el = h(`<button class="rite ${D ? '' : 'none'} ${asc ? 'asc' : ''}" aria-label="${D ? (asc ? 'Ascended ' : '') + D.name : 'Rite'}" style="--rc:${hero.css}">
       <svg class="ring" viewBox="0 0 100 100"><circle class="bg" cx="50" cy="50" r="46"/><circle class="fg" cx="50" cy="50" r="46"/></svg>
-      <span class="core">${riteIcon(id)}<b>${D ? D.short : ''}</b></span><em class="cd"></em></button>`);
+      <span class="core">${riteIcon(id)}<b>${D ? D.short : ''}</b></span><em class="cd"></em>${asc ? '<i class="rite-asc" aria-hidden="true"></i>' : ''}<i class="rite-echo" aria-hidden="true">2</i></button>`);
     ui.el.appendChild(this.el); // inside the HUD, so .lefty mirrors it
     this.fg = $(this.el, '.fg'); this.cdEl = $(this.el, '.cd');
     // pointerdown + stopPropagation: the tap fires at once and never reaches the joystick
     this.el.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); ui.wantsRite = true; });
-    this.f = -1; this.s = -1; this.on = null;
+    this.f = -1; this.s = -1; this.on = null; this.echo = false;
   }
 
   update(run) {
     const R = run.rites, D = this.def;
     if (!D) return;
-    const f = Math.round((R.cd / D.cd) * 200), s = R.cd > 0 ? Math.ceil(R.cd) : 0, on = R.active;
+    const f = Math.round((R.cd / (R.cdMax || D.cd)) * 200), s = R.cd > 0 ? Math.ceil(R.cd) : 0, on = R.active;
     if (f !== this.f) { this.f = f; this.fg.style.strokeDashoffset = String(289 * f / 200); }
     if (s !== this.s) {
       this.s = s;
@@ -44,6 +45,8 @@ export class RiteButton {
       if (!s) this.el.classList.remove('fire'); // a stale cast punch would outrank the ready pulse
     }
     if (on !== this.on) { this.on = on; this.el.classList.toggle('active', on); }
+    const echo = R.echoT > 0; // Ascended Shadow Step: the second charge is waiting
+    if (echo !== this.echo) { this.echo = echo; this.el.classList.toggle('echo', echo); }
   }
 
   /** Cast: the button punches and the Rite's name calls out over the battlefield. */

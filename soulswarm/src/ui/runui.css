@@ -204,3 +204,20 @@
 .share-acts { display: flex; gap: 8px; width: 100%; }
 .share-acts .btn { flex: 1; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .share-acts .btn svg { width: 18px; height: 18px; }
+
+/* Hero Mastery on the results screen: a rank badge in the hero's colour, the XP bar, rank-ups in gold */
+.res-mast { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; clip-path: var(--bevel-sm); background: linear-gradient(90deg, color-mix(in srgb, var(--hc) 14%, transparent), rgba(255,255,255,.03)); }
+.res-mast.is-up { background: linear-gradient(90deg, rgba(245,195,92,.18), color-mix(in srgb, var(--hc) 10%, transparent)); box-shadow: inset 0 0 0 1px rgba(245,195,92,.35); }
+.rm-badge { flex: none; display: grid; place-items: center; width: 34px; height: 38px; font-weight: 900; font-size: 16px; color: #fff;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--hc) 60%, #fff 0%), color-mix(in srgb, var(--hc) 30%, #0a0f1c));
+  clip-path: polygon(50% 0, 100% 22%, 100% 74%, 50% 100%, 0 74%, 0 22%); text-shadow: 0 1px 2px #000; }
+.res-mast.is-up .rm-badge { background: radial-gradient(circle at 50% 35%, #ffe7a6, #b8862e); color: #2a1a04; text-shadow: none; }
+.rm-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rm-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; }
+.rm-top span { color: var(--soul); font-weight: 800; }
+.rm-bar i { background: linear-gradient(90deg, color-mix(in srgb, var(--hc) 60%, #000), var(--hc)); box-shadow: 0 0 8px var(--hc); }
+.res-mast small { font-size: 11px; }
+.rm-up { display: flex; gap: 6px; font-size: 11.5px; line-height: 1.35; animation: rmup .5s cubic-bezier(.2,1.6,.4,1) both; }
+.rm-up b { flex: none; color: #ffd77a; }
+.rm-rw { margin-top: 2px; }
+@keyframes rmup { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: none; } }

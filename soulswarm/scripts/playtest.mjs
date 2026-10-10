@@ -3384,6 +3384,116 @@ errs = await session(async (page) => {
 });
 check('ads uncapped: no runtime errors', !errs.length, errs[0] || '');
 
+// 43. Update 9, Hero Mastery (MASTERY in data.js, meta/mastery.js): every hero ranks 1 → 10 by being played (the run's
+//     pass XP as mastery XP), with perks (HP, damage, a shorter Rite, the signature weapon at Lv2, the Ascended Rite at
+//     rank 5, the Soulbound aura at 10) and a reward per rank, paid once. Each hero's Rite ascends (RITES[id].asc).
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js'), M = await import('/src/meta/mastery.js');
+    const out = {};
+    // the curve and the perks
+    const xpTo = (rank) => { let x = 0; for (let i = 1; i < rank; i++) x += D.MASTERY.need[i]; return x; };
+    out.curve = { r1: M.masteryRank(0).rank, r2: M.masteryRank(249).rank + '/' + M.masteryRank(250).rank, r5: xpTo(5), r10: xpTo(10), max: M.masteryRank(1e6).max, into: M.masteryRank(300).into };
+    const P10 = M.masteryPerks(10), P4 = M.masteryPerks(4);
+    out.perks = { hp: +P10.hp.toFixed(2), dmg: +P10.dmg.toFixed(2), cd: +P10.riteCd.toFixed(2), wl: P10.weaponLv, asc: P10.asc, aura: P10.aura, asc4: P4.asc };
+    // results: the run's pass XP goes to its hero; rank-ups pay once (apart from the run's rewards, so the ad double skips them)
+    { const t = save.newProfile(); t.flags.bloodMoon = 'off'; t.flags.tutorialDone = true;
+      const res = (o = {}) => eco.applyRunResult(t, { chapter: 1, time: 300, kills: 900, raised: 100, bestLegion: 60, novas: 2, gates: 4, victory: false, level: 12, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, ...o });
+      const a = res(); const g0 = t.gems, s0 = t.sigils;
+      t.mastery.vael.xp = xpTo(5) - 10; t.mastery.vael.paid = 4;
+      const b = res();
+      const c = res({ heroId: 'osric' }); // a hero the profile does not own: the selected hero gets it
+      t.mastery.vael.xp = 0; const d = res(); // a rollback never pays a rank twice
+      const tut = eco.applyRunResult(save.newProfile(), { tutorial: true, victory: true, time: 200, kills: 300, chapter: 1 });
+      const rp = save.newProfile(); rp.chapter.unlocked = 3; rp.flags.bossRush = 'on';
+      const rush = eco.applyRunResult(rp, { rush: true, victory: false, bossKills: 2, kills: 400, time: 200, heroId: 'vael', byType: {} });
+      out.result = { gained: a.mastery.gained, pass: a.rewards.passXp, to: b.mastery.to, ranks: b.mastery.ranks.join(), sig: t.sigils - s0, items: b.mastery.items.map((i) => i.kind).join(),
+        runSig: b.rewards.sigils || 0, other: c.mastery.hero, noRepay: d.mastery.ranks.length, tut: tut.mastery === undefined, rush: rush.mastery && rush.mastery.gained === rush.rewards.passXp && rush.mastery.gained > 0 }; }
+    // the loadout and the run: rank 10 against rank 1
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.coach = ''; p.chapter.unlocked = 6;
+    const start = (hero, rank) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes[hero].owned = true; p.selectedHero = hero; p.mastery = { [hero]: { xp: xpTo(rank), paid: 10 } }; p.energy = 30; app.engine.manual = true;
+      app.startRun(2); const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {}; r.player.hurt = () => {}; r.addXp = () => {}; r.urns.t = 1e9;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const ring = (r, n, rad, type = 'husk', hp = 1) => { const P = r.player, a = []; for (let i = 0; i < n; i++) { const t = (i / n) * 6.283; const e = r.enemies.spawn(type, P.x + Math.cos(t) * rad, P.z + Math.sin(t) * rad, { hpMul: hp }); e.speed = 0; e.spawnT = 2; a.push(e); } r.update(1 / 30); return a; };
+    { const L1 = eco.computeLoadout(Object.assign(p, { mastery: {} }), 'vael'); p.mastery = { vael: { xp: xpTo(10), paid: 10 } }; const L10 = eco.computeLoadout(p, 'vael');
+      let r = start('vael', 1); const base = { cd: r.rites.cdMax, wl: r.skillLv.soulBolt, asc: !!r.rites.asc, btn: q('.rite')?.classList.contains('asc') };
+      r = start('vael', 10);
+      out.loadout = { hp: +(L10.hpMax / L1.hpMax).toFixed(2), dmg: +(L10.dmgMul / L1.dmgMul).toFixed(3), rank: L10.mastery.rank, base, cd: r.rites.cdMax, wl: r.skillLv[D.HEROES.vael.weapon], asc: !!r.rites.asc, btn: q('.rite')?.classList.contains('asc'), aura: r.rites.aura }; }
+    // Vael: the call lasts 5 s, and every third foe it raises is a Champion
+    { const r = start('vael', 5); const foes = ring(r, 9, 2.5); r.rites.trigger(); const dur = +r.rites.graveT.toFixed(1);
+      for (const e of foes) r.enemies.damage(e, 1e6, { source: 'bolt' }); r.update(1 / 30);
+      out.vael = { dur, raised: r.legion.count, champs: r.legion.list.filter((m) => m.champ).length }; }
+    // Nyx: a second step within 3 s, then the cooldown; an unused second step lapses into it
+    { const r = start('nyx', 5); const a = r.rites.trigger(), cd0 = r.rites.cd; step(r, 1); const b = r.rites.trigger(), cd1 = +r.rites.cd.toFixed(1); const c = r.rites.trigger();
+      r.rites.cd = 0; const d = r.rites.trigger(); step(r, 3.2);
+      out.nyx = { a, cd0, b, cd1, c, d, lapse: r.rites.cd > 0 }; }
+    // Seraphine: a second wave of 10 chains 1 s later on foes the first wave missed
+    { const r = start('seraphine', 5); r.camera.updateMatrixWorld(); const foes = ring(r, 34, 4.5, 'husk', 30); r.rites.trigger(); const n1 = r.rites.strikeN;
+      step(r, 0.9); const struck1 = foes.filter((e) => e.riteId === r.rites.castId).length; step(r, 0.3); const n2 = r.rites.strikeN; step(r, 1);
+      out.ser = { n1, struck1, n2, struck2: foes.filter((e) => e.riteId === r.rites.castId).length }; }
+    // Liora: the bell tolls again 1.2 s later, out to 7 m
+    { const r = start('liora', 5); const near = ring(r, 4, 3, 'husk', 30), far = ring(r, 4, 6.3, 'husk', 30); r.rites.trigger();
+      const s1 = far.filter((e) => e.stunT > 0).length, n1 = near.filter((e) => e.stunT > 0).length; step(r, 1.3);
+      out.liora = { near: n1, far1: s1, far2: far.filter((e) => e.stunT > 0).length }; }
+    // Mordrake: when the wall falls its spikes burst outward (3.5 m past the ring); without the ascension nothing does
+    const wallFoe = (rank) => { const r = start('mordrake', rank); r.weapons.update = () => {}; /* only the Rite may touch it */ const P = r.player; const e = r.enemies.spawn('brute', P.x + 7.4, P.z, { hpMul: 30 }); e.speed = 0; e.spawnT = 2; r.update(1 / 30);
+      r.rites.trigger(); const h0 = e.hp; step(r, 5.3); return +(h0 - e.hp).toFixed(0); };
+    out.mordrake = { asc: wallFoe(5), plain: wallFoe(4) };
+    // Grimsby: terror lasts 3 s and a terrified foe takes 35% more from every source
+    { const r = start('grimsby', 5); const [e] = ring(r, 1, 4, 'brute', 40); const f = ring(r, 1, 30, 'brute', 40)[0]; r.rites.trigger(); const fear = +e.fearT.toFixed(1);
+      const h0 = e.hp, g0 = f.hp; r.enemies.damage(e, 100, { source: 'bolt' }); r.enemies.damage(f, 100, { source: 'bolt' });
+      out.grimsby = { fear, dread: +((h0 - e.hp) / (g0 - f.hp)).toFixed(2) }; }
+    // Osric: every other monk rises as a Champion
+    { const r = start('osric', 5); const c0 = r.legion.list.filter((m) => m.champ).length, l0 = r.legion.count; r.rites.trigger();
+      out.osric = { monks: r.legion.count - l0, champs: r.legion.list.filter((m) => m.champ).length - c0 }; }
+    // the save repairs a broken block
+    { const raw = save.newProfile(); raw.mastery = { vael: { xp: '900', paid: '3' }, nyx: { xp: -50, paid: 99 }, ghost: { xp: 5 }, osric: 'x' };
+      localStorage.setItem('soulswarm.save.v1', JSON.stringify(raw)); const L = save.loadProfile ? save.loadProfile() : null;
+      const m = L ? L.mastery : null; out.save = m ? { vael: m.vael, nyx: m.nyx, ghost: !!m.ghost, osric: !!m.osric } : 'no loader'; }
+    // the hero screen: rank badges on the roster, the mastery panel and its track, the Ascended Rite line
+    if (app.run) app.exitRun(); document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+    p.selectedHero = 'vael'; p.mastery = { vael: { xp: xpTo(6) + 100, paid: 6 } }; eco.commit(p); app.meta.refresh(); await wait(150);
+    q('[data-nav="heroes"]').click(); await wait(300);
+    const badge = q('[data-act="hero"][data-id="vael"] .hcard-mast')?.textContent;
+    q('[data-act="hero"][data-id="vael"]').click(); await wait(400);
+    out.ui = { badge, rows: document.querySelectorAll('.mm-hero .ms-r').length, on: document.querySelectorAll('.mm-hero .ms-r.on').length, head: q('.mm-hero .ms-head b')?.textContent,
+      asc: q('.mm-hero .hd-asc.on')?.textContent.slice(0, 9), cd: /Cooldown 18 s/.test(q('.mm-hero .hd-rite')?.textContent || '') };
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    // the results screen: the mastery row with the rank-up
+    p.mastery = { vael: { xp: xpTo(5) - 5, paid: 4 } }; p.energy = 30; app.engine.manual = true; app.startRun(1); const r = app.run; r.player.hurt = () => {};
+    r.time = 240; r.counters.kills = 600; r.end(false); await wait(900);
+    out.res = { row: !!q('.res-mast'), up: !!q('.res-mast.is-up'), text: q('.res-mast .rm-up')?.textContent, rank: q('.res-mast .rm-badge')?.textContent };
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove()); if (app.run) app.exitRun();
+    app.engine.manual = false;
+    return out;
+  });
+  check('mastery: ranks 1-10 on a rising curve (250 XP to rank 2, 1,900 to rank 5, 7,650 to max); perks stack to +4% HP and damage, -20% Rite cooldown, a Lv2 weapon, the Ascended Rite (rank 5) and the aura',
+    s.curve.r1 === 1 && s.curve.r2 === '1/2' && s.curve.r5 === 1900 && s.curve.r10 === 7650 && s.curve.max && s.curve.into === 50 && s.perks.hp === 0.04 && s.perks.dmg === 0.04 && s.perks.cd === 0.2 && s.perks.wl === 1 && s.perks.asc && s.perks.aura && !s.perks.asc4, JSON.stringify({ c: s.curve, p: s.perks }));
+  check('mastery: a run gives its hero the pass XP; rank 5 pays a Sigil once (apart from the run rewards); a rollback never repays; the tutorial gives none; Boss Rush counts',
+    s.result.gained === s.result.pass && s.result.gained > 0 && s.result.to === 5 && s.result.ranks === '5' && s.result.sig === 1 && s.result.items === 'sigils' && !s.result.runSig && s.result.other === 'vael' && s.result.noRepay === 0 && s.result.tut && s.result.rush, JSON.stringify(s.result));
+  check('mastery: rank 10 brings +4% HP and damage, a 16 s Grave Call (20 s at rank 1), Soul Bolt at Lv2, the Ascended Rite (gold on the RITE button) and the aura',
+    s.loadout.hp >= 1.03 && s.loadout.hp <= 1.05 && s.loadout.dmg === 1.04 && s.loadout.rank === 10 && s.loadout.base.cd === 20 && s.loadout.base.wl === 1 && !s.loadout.base.asc && !s.loadout.base.btn
+    && s.loadout.cd === 16 && s.loadout.wl === 2 && s.loadout.asc && s.loadout.btn && s.loadout.aura, JSON.stringify(s.loadout));
+  check('ascended: Grave Call lasts 5 s and every third foe it raises is a Champion; Shadow Step steps twice before its (7.2 s at rank 5) cooldown, and an unused second step lapses',
+    s.vael.dur === 5 && s.vael.raised === 9 && s.vael.champs === 3 && s.nyx.a && s.nyx.cd0 === 0 && s.nyx.b && s.nyx.cd1 === 7.2 && !s.nyx.c && s.nyx.d && s.nyx.lapse, JSON.stringify({ v: s.vael, n: s.nyx }));
+  check('ascended: a second Ashfall wave of 10 chains on foes the first missed; the Knell tolls again 1.2 s later out to 7 m',
+    s.ser.n1 === 20 && s.ser.struck1 === 20 && s.ser.n2 === 10 && s.ser.struck2 === 30 && s.liora.near === 4 && s.liora.far1 === 0 && s.liora.far2 === 4, JSON.stringify({ s: s.ser, l: s.liora }));
+  check('ascended: the Ossuary Wall shatters outward as it falls (a foe 7.4 m off is cut; not before rank 5); Hallowfire\'s terror lasts 3 s and takes +35%; half of Osric\'s monks are Champions',
+    s.mordrake.asc > 100 && s.mordrake.plain === 0 && s.grimsby.fear === 3 && s.grimsby.dread === 1.35 && s.osric.monks === 12 && s.osric.champs === 6, JSON.stringify({ m: s.mordrake, g: s.grimsby, o: s.osric }));
+  check('mastery: a broken save block is repaired (numbers from strings, no negatives, paid within 1-10, unknown heroes dropped)',
+    s.save.vael && s.save.vael.xp === 900 && s.save.vael.paid === 3 && s.save.nyx.xp === 0 && s.save.nyx.paid === 10 && !s.save.ghost && !s.save.osric, JSON.stringify(s.save));
+  check('mastery UI: the roster shows the rank, the hero sheet its panel (9 rank rows, 5 reached), the Ascended Rite line and the shorter cooldown; the results screen celebrates a rank-up',
+    s.ui.badge === '6' && s.ui.rows === 9 && s.ui.on === 5 && /Rank 6 of 10/.test(s.ui.head || '') && s.ui.asc === 'Ascended:' && s.ui.cd && s.res.row && s.res.up && /Rank 5/.test(s.res.text || '') && s.res.rank === '5', JSON.stringify({ u: s.ui, r: s.res }));
+});
+check('update 9: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -14,7 +14,7 @@
 | **Weekly** | **Blood Moon** weekend (2× elites, 2× rewards). **Endless Abyss** weekly leaderboard. Weekly quest chest. | Weekly event, Endless Abyss weekly | No (config) |
 | **Every 28 days** | **Soul Pass season** (30 tiers, new theme, new premium skin) | 28-day Soul Pass season | Yes |
 | **Monthly (once per season)** | **Limited Boss Rush** (72 h) | Monthly limited boss rush | Light (new modifiers / variant) |
-| **Every 1–2 seasons** | **New hero** (Shepherd) | New hero every 1–2 seasons | Yes (heavy) |
+| **Every 1–2 seasons** | **New hero** (Shepherd), shipping with its Rite, its Ascended Rite and a fresh 10-rank Hero Mastery track (GDD §11.2) | New hero every 1–2 seasons | Yes (heavy) |
 | **Every season** | **A new Grimoire page** (GDD §4.9): a run-start boon with a price, unlocked by a new account goal or as a free Soul Pass reward (never sold, so the blank page stays a fair choice). Launch has 8 (Update 7, 2026-10-10) | Long-term goals, run variety | Light (1 painting, 1 hook) |
 | **Holidays and seasons** | **A themed Soul Urn offering** (GDD §4.10): a limited extra offering in the urn loot table for an event (a pumpkin lantern that drops candy gold at Halloween, say), or a reweighted table for a Blood Moon weekend. Launch has 7 offerings (Update 8, 2026-10-10) | Run variety, event flavour | Light (1 pickup colour, 1 effect) |
 | **Every 2–3 seasons** | **New foes**: a pair of horde foes with new AI, Bestiary entries (3 milestones each) and risen minion forms, and weapon upgrades alongside (Update 5, "The Deepening Horde", 2026-10-09: the Grave Wraith and the Corpse Priest; GDD §5) | Bestiary growth, horde variety | Yes (medium: 2 paintings, 2 models, AI) |
