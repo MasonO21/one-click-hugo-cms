@@ -75,6 +75,22 @@ export const PART_KEYS: readonly PartKey[] = ['torso', 'pelvis', 'accent', 'head
 const W = '#ffffff';
 const cache = new Map<string, THREE.BufferGeometry>();
 
+/**
+ * Level of detail of the part being built: 0 = near (close-ups, the player), 1 = far (colonists more
+ * than FAR_LOD_DIST from the camera: fewer segments, no face / brows / pockets).
+ */
+let LOD = 0;
+/** Segment count for the current LOD. */
+const n = (seg: number): number => (LOD ? Math.max(5, Math.round(seg * 0.55)) : seg);
+/** Cap rings for limbs / sweeps at the current LOD. */
+const caps = (near: number): number => (LOD ? 1 : near);
+/** Camera distance beyond which colonists switch to the far parts (≈ 50 css px tall on a phone). */
+export const FAR_LOD_DIST = 22;
+const _sc = new THREE.Color();
+function shadeHex(hex: string, k: number): string {
+  return '#' + _sc.set(hex).multiplyScalar(k).getHexString();
+}
+
 function build(key: string, fn: (b: GeoBuilder) => void, post?: (g: THREE.BufferGeometry) => void): THREE.BufferGeometry {
   let g = cache.get(key);
   if (g) return g;
@@ -92,7 +108,7 @@ function build(key: string, fn: (b: GeoBuilder) => void, post?: (g: THREE.Buffer
 const TORSO_PROFILE = [0.0, -0.03, 0.12, -0.022, 0.172, 0.0, 0.178, 0.04, 0.174, 0.1, 0.166, 0.17, 0.176, 0.24, 0.194, 0.31, 0.202, 0.37, 0.195, 0.42, 0.166, 0.462, 0.12, 0.492, 0.068, 0.508, 0.0, 0.514];
 /** Hips / seat (trousers), from the crotch to just over the belt line. */
 const PELVIS_PROFILE = [0.0, -0.13, 0.085, -0.126, 0.14, -0.098, 0.168, -0.05, 0.176, 0.0, 0.172, 0.035, 0.12, 0.05, 0.0, 0.055];
-const TORSO_DEPTH = 0.74;
+export const TORSO_DEPTH = 0.74;
 
 /** Torso radius at hip-space height y (linear in the profile). */
 export function torsoRadius(y: number): number {
@@ -108,40 +124,40 @@ export function torsoRadius(y: number): number {
 }
 
 /** Point on the torso's front surface at height y and sideways offset x (for pockets, buttons, belts). */
-function torsoFront(x: number, y: number, lift = 0.004): number {
+export function torsoFront(x: number, y: number, lift = 0.004): number {
   const r = torsoRadius(y);
   const u = Math.min(0.98, Math.abs(x) / Math.max(1e-3, r));
   return r * TORSO_DEPTH * Math.sqrt(1 - u * u) + lift;
 }
 
 function torso(b: GeoBuilder): void {
-  lathe(b, TORSO_PROFILE, 12, 0, 0, 0, W, { sz: TORSO_DEPTH });
+  lathe(b, TORSO_PROFILE, n(10), 0, 0, 0, W, { sz: TORSO_DEPTH });
 }
 
 function pelvis(b: GeoBuilder): void {
-  lathe(b, PELVIS_PROFILE, 12, 0, 0, 0, W, { sz: TORSO_DEPTH * 1.02 });
+  lathe(b, PELVIS_PROFILE, n(10), 0, 0, 0, W, { sz: TORSO_DEPTH * 1.02 });
 }
 
 /** Collar, front placket, belt + buckle and two chest pockets, all in the accent tint. */
 function accent(b: GeoBuilder): void {
   // folded collar: a soft ring around the neck base, a little lower at the front
-  b.add(new THREE.TorusGeometry(0.088, 0.026, 6, 14), W, 0, 0.482, 0.0, { rx: Math.PI / 2 + 0.28, sz: 0.85 });
-  // front placket (a soft seam line from the collar to the belt)
-  const pl: number[] = [];
-  for (let y = 0.43; y >= 0.06; y -= 0.074) pl.push(0, y, torsoFront(0, y, 0.002), 0.011);
-  sweep(b, pl, 5, W);
-  // belt band hugging the hips + buckle
+  b.add(new THREE.TorusGeometry(0.088, 0.026, n(5), n(12)), W, 0, 0.482, 0.0, { rx: Math.PI / 2 + 0.28, sz: 0.85 });
+  // belt band hugging the hips
   const r0 = torsoRadius(0.0) + 0.01;
   const r1 = torsoRadius(0.06) + 0.01;
-  lathe(b, [r0 - 0.006, -0.004, r0, 0.004, r1, 0.056, r1 - 0.006, 0.064], 14, 0, 0, 0, W, { sz: TORSO_DEPTH });
-  b.bevelBox(0.07, 0.056, 0.02, 0, 0.03, torsoFront(0, 0.03, 0.016), '#e2e2e2', 0.01);
-  // chest pockets with flaps
+  lathe(b, [r0 - 0.006, -0.004, r0, 0.004, r1, 0.056, r1 - 0.006, 0.064], n(12), 0, 0, 0, W, { sz: TORSO_DEPTH });
+  if (LOD) return;
+  // front placket (a soft seam line from the collar to the belt), buckle, chest pockets with flaps
+  const pl: number[] = [];
+  for (let y = 0.43; y >= 0.06; y -= 0.0925) pl.push(0, y, torsoFront(0, y, 0.002), 0.011);
+  sweep(b, pl, 4, W, undefined, 1);
+  b.box(0.07, 0.056, 0.02, 0, 0.03, torsoFront(0, 0.03, 0.016), '#e2e2e2');
   mirror((s) => {
     const x = s * 0.092;
     const z = torsoFront(x, 0.3, 0.004);
     const ry = s * 0.42;
-    b.bevelBox(0.07, 0.072, 0.016, x, 0.3, z, W, 0.008, { ry });
-    b.bevelBox(0.076, 0.022, 0.02, x, 0.338, z + 0.004, '#ececec', 0.007, { ry });
+    b.box(0.07, 0.072, 0.016, x, 0.3, z, W, { ry });
+    b.box(0.076, 0.022, 0.02, x, 0.338, z + 0.004, '#ececec', { ry });
   });
 }
 
@@ -192,10 +208,10 @@ export function headShell(b: GeoBuilder, color: THREE.ColorRepresentation, seg: 
 }
 
 function head(b: GeoBuilder): void {
-  limb(b, 0.056, 0.064, 0.11, 0, 0.1, 0, W, 8); // neck
-  headShell(b, W, 18, 0, Math.PI * 2, 0, Math.PI);
-  ellipsoid(b, 0.026, 0.036, 0.03, 0, 0.212, 0.2, W, 6, { rx: -0.25 }); // nose
-  mirror((s) => ellipsoid(b, 0.03, 0.05, 0.022, s * 0.18, 0.235, -0.008, '#f2f2f2', 6, { ry: s * 0.3 })); // ears
+  limb(b, 0.056, 0.064, 0.11, 0, 0.1, 0, W, n(6), undefined, 1); // neck
+  headShell(b, W, n(15), 0, Math.PI * 2, 0, Math.PI);
+  ellipsoid(b, 0.026, 0.036, 0.03, 0, 0.212, 0.2, W, 5, { rx: -0.25 }); // nose
+  mirror((s) => ellipsoid(b, 0.03, 0.05, 0.022, s * 0.18, 0.235, -0.008, '#f2f2f2', 5, { ry: s * 0.3 })); // ears
 }
 
 /** Simple dark eyes with a small catch-light and a quiet mouth; no blush. Fixed colours. */
@@ -204,108 +220,106 @@ function face(b: GeoBuilder): void {
     ellipsoid(b, 0.023, 0.031, 0.012, s * 0.071, 0.262, 0.178, '#2a201b', 6, { ry: s * 0.36 });
     b.sphere(0.0075, s * 0.071 + 0.008, 0.272, 0.19, '#ffffff', 4);
   });
-  sweep(b, [-0.032, 0.153, 0.179, 0.0062, 0, 0.146, 0.184, 0.0068, 0.032, 0.153, 0.179, 0.0062], 5, '#8a4a40');
+  sweep(b, [-0.032, 0.153, 0.179, 0.0062, 0, 0.146, 0.184, 0.0068, 0.032, 0.153, 0.179, 0.0062], 4, '#8a4a40', undefined, 1);
 }
 
 // ------------------------------------------------------------------------------------ limbs
 
 function upperArm(b: GeoBuilder): void {
-  limb(b, 0.066, 0.058, UPPER_ARM, 0, 0, 0, W, 8);
+  limb(b, 0.066, 0.058, UPPER_ARM, 0, 0, 0, W, n(7), undefined, caps(2));
 }
 
 function forearm(b: GeoBuilder): void {
-  limb(b, 0.058, 0.051, FOREARM - 0.02, 0, 0, 0, W, 8);
-  // cuff: a slightly fuller band at the wrist
-  lathe(b, [0.05, -FOREARM + 0.005, 0.058, -FOREARM + 0.015, 0.058, -FOREARM + 0.05, 0.052, -FOREARM + 0.062], 8, 0, 0, 0, '#ececec');
+  limb(b, 0.058, 0.051, FOREARM - 0.02, 0, 0, 0, W, n(7), undefined, caps(2));
 }
 
 /** Rounded mitt with a thumb, palm facing in (the instance tints it with skin). */
 function hand(b: GeoBuilder): void {
-  ellipsoid(b, 0.05, 0.066, 0.04, 0, GRIP_Y, 0.004, W, 9);
-  ellipsoid(b, 0.019, 0.034, 0.019, 0, GRIP_Y + 0.02, 0.04, W, 6, { rx: 0.5 });
+  ellipsoid(b, 0.05, 0.066, 0.04, 0, GRIP_Y, 0.004, W, n(7));
+  if (!LOD) ellipsoid(b, 0.019, 0.034, 0.019, 0, GRIP_Y + 0.02, 0.04, W, 5, { rx: 0.5 });
 }
 
 function thigh(b: GeoBuilder): void {
-  limb(b, 0.098, 0.078, THIGH, 0, 0, 0, W, 9, { sz: 0.96 });
+  limb(b, 0.098, 0.078, THIGH, 0, 0, 0, W, n(8), { sz: 0.96 }, caps(2));
 }
 
 function shin(b: GeoBuilder): void {
-  limb(b, 0.076, 0.06, SHIN - 0.02, 0, 0, 0, W, 8);
+  limb(b, 0.076, 0.06, SHIN - 0.02, 0, 0, 0, W, n(7), undefined, caps(2));
 }
 
 /** Rounded work boot (leather tint) with a darker sole and a turned-down cuff, in shin space. */
 function boot(b: GeoBuilder): void {
   const a = -SHIN;
-  lathe(b, capsuleProfile(0.066, a - 0.03, 0.07, a + 0.07, 2), 9, 0, 0, 0, W); // shaft
-  lathe(b, [0.073, a + 0.06, 0.08, a + 0.075, 0.078, a + 0.095, 0.07, a + 0.1], 9, 0, 0, 0, '#d8d8d8'); // cuff
-  ellipsoid(b, 0.07, 0.058, 0.132, 0, a - 0.052, 0.045, W, 10); // foot
-  ellipsoid(b, 0.074, 0.02, 0.138, 0, a - 0.094, 0.045, '#5a5a5a', 10); // sole
+  lathe(b, capsuleProfile(0.066, a - 0.03, 0.072, a + 0.075, 1), n(7), 0, 0, 0, W); // shaft
+  ellipsoid(b, 0.072, 0.06, 0.135, 0, a - 0.055, 0.045, W, n(9)); // foot (the sole is shaded in, see partGeometry)
 }
 
 // ------------------------------------------------------------------------------------ hair
 
 /** Hair cap: the head surface tipped back by `tilt`, down to `thetaLen` from the crown, `grow` off the skin. */
-function cap(b: GeoBuilder, thetaLen: number, tilt: number, grow = 0.016, seg = 16): void {
-  headShell(b, W, seg, 0, Math.PI * 2, 0, thetaLen, tilt, grow);
+function cap(b: GeoBuilder, thetaLen: number, tilt: number, grow = 0.016, seg = 14): void {
+  headShell(b, W, n(seg), 0, Math.PI * 2, 0, thetaLen, tilt, grow);
 }
 
 function brows(b: GeoBuilder): void {
-  mirror((s) => sweep(b, [s * 0.036, 0.303, 0.176, 0.0105, s * 0.072, 0.31, 0.172, 0.012, s * 0.106, 0.301, 0.161, 0.0085], 5, W));
+  if (LOD) return;
+  mirror((s) => sweep(b, [s * 0.036, 0.303, 0.176, 0.0105, s * 0.072, 0.31, 0.172, 0.012, s * 0.106, 0.301, 0.161, 0.0085], 4, W, undefined, 1));
 }
 
 /** Moustache resting on the upper lip. */
 function moustache(b: GeoBuilder, r = 0.017): void {
-  sweep(b, [-0.06, 0.162, 0.168, r * 0.5, -0.03, 0.176, 0.188, r, 0, 0.18, 0.196, r * 1.1, 0.03, 0.176, 0.188, r, 0.06, 0.162, 0.168, r * 0.5], 6, W);
+  sweep(b, [-0.06, 0.162, 0.168, r * 0.5, -0.03, 0.176, 0.188, r, 0, 0.18, 0.196, r * 1.1, 0.03, 0.176, 0.188, r, 0.06, 0.162, 0.168, r * 0.5], n(5), W, undefined, 1);
 }
 
 /** A beard over the jaw: the lower front of the head surface, `grow` off the skin, from `top` (theta) down. */
 function beard(b: GeoBuilder, grow: number, top: number): void {
-  headShell(b, W, 16, Math.PI * 0.12, Math.PI * 0.76, top, Math.PI - top, 0, grow);
+  headShell(b, W, n(14), Math.PI * 0.12, Math.PI * 0.76, top, Math.PI - top, 0, grow);
 }
 
 const HAIR: ((b: GeoBuilder) => void)[] = [
   // 0 crop with a soft side-swept fringe (the player's default)
   (b) => {
     cap(b, 1.72, -0.62);
-    ellipsoid(b, 0.13, 0.05, 0.1, 0.04, 0.432, 0.1, W, 10, { rz: -0.32, rx: 0.35 });
+    ellipsoid(b, 0.13, 0.05, 0.1, 0.04, 0.432, 0.1, W, n(8), { rz: -0.32, rx: 0.35 });
     brows(b);
   },
   // 1 long, past the shoulders
   (b) => {
     cap(b, 1.82, -0.5, 0.022);
-    ellipsoid(b, 0.19, 0.21, 0.1, 0, 0.17, -0.12, W, 12);
-    mirror((s) => sweep(b, [s * 0.168, 0.33, 0.06, 0.05, s * 0.19, 0.2, 0.03, 0.055, s * 0.18, 0.06, -0.02, 0.05, s * 0.15, -0.02, -0.05, 0.035], 7, W));
-    ellipsoid(b, 0.15, 0.045, 0.1, -0.03, 0.43, 0.1, W, 10, { rz: 0.25, rx: 0.35 });
+    ellipsoid(b, 0.19, 0.21, 0.1, 0, 0.17, -0.12, W, n(10));
+    mirror((s) => sweep(b, [s * 0.168, 0.33, 0.06, 0.05, s * 0.19, 0.2, 0.03, 0.055, s * 0.18, 0.06, -0.02, 0.05, s * 0.15, -0.02, -0.05, 0.035], n(6), W, undefined, 1));
+    ellipsoid(b, 0.15, 0.045, 0.1, -0.03, 0.43, 0.1, W, n(8), { rz: 0.25, rx: 0.35 });
     brows(b);
   },
   // 2 low bun
   (b) => {
     cap(b, 1.7, -0.55);
-    ellipsoid(b, 0.085, 0.08, 0.075, 0, 0.36, -0.205, W, 10);
-    b.add(new THREE.TorusGeometry(0.05, 0.012, 5, 10), '#d0d0d0', 0, 0.34, -0.17, { rx: 0.4 });
+    ellipsoid(b, 0.085, 0.08, 0.075, 0, 0.36, -0.205, W, n(8));
+    if (!LOD) b.add(new THREE.TorusGeometry(0.05, 0.012, 4, 8), '#d0d0d0', 0, 0.34, -0.17, { rx: 0.4 });
     brows(b);
   },
   // 3 curls: a crown of soft round curls
   (b) => {
     cap(b, 1.7, -0.5, 0.02);
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * Math.PI * 2;
+    const curls = LOD ? 8 : 12;
+    for (let i = 0; i < curls; i++) {
+      const a = (i / curls) * Math.PI * 2;
       const ring = i % 2;
       const el = ring ? 0.45 : 0.95;
       const x = Math.cos(a) * Math.cos(el) * 0.2;
       const z = Math.sin(a) * Math.cos(el) * 0.205 - 0.03;
       const y = HEAD_CY + Math.sin(el) * 0.22 + 0.01;
       if (z > 0.12 && y < 0.42) continue; // keep the forehead clear
-      ellipsoid(b, 0.078, 0.07, 0.078, x, y, z, W, 8);
+      ellipsoid(b, 0.08, 0.072, 0.08, x, y, z, W, n(6));
     }
-    ellipsoid(b, 0.12, 0.08, 0.12, 0, 0.47, -0.02, W, 10);
+    ellipsoid(b, 0.12, 0.08, 0.12, 0, 0.47, -0.02, W, n(8));
     brows(b);
   },
   // 4 ponytail
   (b) => {
     cap(b, 1.72, -0.58);
-    b.add(new THREE.TorusGeometry(0.034, 0.012, 5, 10), '#d0d0d0', 0, 0.36, -0.2, { rx: 1.0 });
-    sweep(b, [0, 0.37, -0.2, 0.048, 0, 0.33, -0.27, 0.05, 0, 0.22, -0.29, 0.045, 0, 0.1, -0.25, 0.032, 0, 0.02, -0.22, 0.012], 8, W);
+    if (!LOD) b.add(new THREE.TorusGeometry(0.034, 0.012, 4, 8), '#d0d0d0', 0, 0.36, -0.2, { rx: 1.0 });
+    sweep(b, [0, 0.37, -0.2, 0.048, 0, 0.33, -0.27, 0.05, 0, 0.22, -0.29, 0.045, 0, 0.1, -0.25, 0.032, 0, 0.02, -0.22, 0.012], n(6), W, undefined, 1);
     brows(b);
   },
   // 5 short crop + full beard
@@ -318,7 +332,7 @@ const HAIR: ((b: GeoBuilder) => void)[] = [
   // 6 swept back with a moustache
   (b) => {
     cap(b, 1.7, -0.5);
-    ellipsoid(b, 0.15, 0.07, 0.15, 0, 0.44, 0.0, W, 12, { rx: -0.3 });
+    ellipsoid(b, 0.15, 0.07, 0.15, 0, 0.44, 0.0, W, n(10), { rx: -0.3 });
     moustache(b, 0.015);
     brows(b);
   },
@@ -333,41 +347,51 @@ const HAIR: ((b: GeoBuilder) => void)[] = [
 
 /** Back and sides of the player's crop showing under a hat brim (+ brows). */
 function hairTrim(b: GeoBuilder): void {
-  headShell(b, W, 16, 0, Math.PI * 2, 1.05, 0.67, -0.62, 0.016);
+  headShell(b, W, n(14), 0, Math.PI * 2, 1.05, 0.67, -0.62, 0.016);
   brows(b);
 }
 
-export function partGeometry(key: PartKey): THREE.BufferGeometry {
-  switch (key) {
-    case 'torso':
-      // a touch darker toward the hem: soft painted shading, lighter shoulders
-      return build('torso', torso, (g) => gradeY(g, -0.14, 0.45, 0.84, 1.04));
-    case 'pelvis':
-      return build('pelvis', pelvis, (g) => gradeY(g, -0.13, 0.05, 0.86, 1));
-    case 'accent':
-      return build('accent', accent);
-    case 'head':
-      return build('head', head);
-    case 'face':
-      return build('face', face);
-    case 'upperArm':
-      return build('upperArm', upperArm, (g) => gradeY(g, -UPPER_ARM, 0.05, 0.9, 1.02));
-    case 'forearm':
-      return build('forearm', forearm);
-    case 'hand':
-      return build('hand', hand);
-    case 'thigh':
-      return build('thigh', thigh, (g) => gradeY(g, -THIGH, 0.05, 0.86, 1));
-    case 'shin':
-      return build('shin', shin, (g) => gradeY(g, -SHIN, 0.05, 0.82, 0.96));
-    case 'boot':
-      return build('boot', boot);
-    case 'hairTrim':
-      return build('hairTrim', hairTrim);
-    default: {
-      const i = Number(key.slice(4)) | 0;
-      return build(key, HAIR[((i % HAIR.length) + HAIR.length) % HAIR.length]);
+/** Geometry of a settler part at a level of detail (0 near, 1 far; see FAR_LOD_DIST). */
+export function partGeometry(key: PartKey, lod: 0 | 1 = 0): THREE.BufferGeometry {
+  const k = `${key}@${lod}`;
+  const hit = cache.get(k);
+  if (hit) return hit;
+  LOD = lod;
+  try {
+    switch (key) {
+      case 'torso':
+        // a touch darker toward the hem: soft painted shading, lighter shoulders
+        return build(k, torso, (g) => gradeY(g, -0.03, 0.45, 0.86, 1.04));
+      case 'pelvis':
+        return build(k, pelvis, (g) => gradeY(g, -0.13, 0.05, 0.86, 1));
+      case 'accent':
+        return build(k, accent);
+      case 'head':
+        return build(k, head);
+      case 'face':
+        return build(k, face);
+      case 'upperArm':
+        return build(k, upperArm, (g) => gradeY(g, -UPPER_ARM, 0.05, 0.9, 1.02));
+      case 'forearm':
+        return build(k, forearm);
+      case 'hand':
+        return build(k, hand);
+      case 'thigh':
+        return build(k, thigh, (g) => gradeY(g, -THIGH, 0.05, 0.86, 1));
+      case 'shin':
+        return build(k, shin, (g) => gradeY(g, -SHIN, 0.05, 0.82, 0.96));
+      case 'boot':
+        // dark sole, then the leather
+        return build(k, boot, (g) => gradeY(g, -SHIN - 0.1, -SHIN - 0.075, 0.45, 1));
+      case 'hairTrim':
+        return build(k, hairTrim);
+      default: {
+        const i = Number(key.slice(4)) | 0;
+        return build(k, HAIR[((i % HAIR.length) + HAIR.length) % HAIR.length]);
+      }
     }
+  } finally {
+    LOD = 0;
   }
 }
 
@@ -419,10 +443,14 @@ const TOOLS: Record<ToolKey, (b: GeoBuilder) => void> = {
     }
   },
   sack: (b) => {
-    ellipsoid(b, 0.17, 0.15, 0.13, 0, 0.17, 0.27, '#c8b088', 10);
-    sweep(b, [0, 0.3, 0.27, 0.05, 0, 0.36, 0.27, 0.03], 6, '#c8b088');
-    b.add(new THREE.TorusGeometry(0.035, 0.01, 4, 8), '#6a4a2a', 0, 0.31, 0.27, { rx: Math.PI / 2 });
-    b.shard(0.05, 0.06, 0.06, 0.34, 0.31, '#8e8a82');
+    // a burlap ore sack hugged to the belly, tied at the neck, lumps of ore peeking out
+    const burlap = '#a8865a';
+    ellipsoid(b, 0.17, 0.15, 0.12, 0, 0.15, 0.27, burlap, 10);
+    sweep(b, [0, 0.27, 0.25, 0.07, 0, 0.32, 0.25, 0.05, 0, 0.36, 0.24, 0.06], 8, shadeHex(burlap, 0.92));
+    b.add(new THREE.TorusGeometry(0.05, 0.012, 4, 10), '#5a3a22', 0, 0.31, 0.25, { rx: Math.PI / 2 });
+    b.shard(0.045, 0.06, -0.03, 0.39, 0.24, '#6e6a64');
+    b.shard(0.04, 0.05, 0.035, 0.385, 0.25, '#c87a3a');
+    mirror((s) => sweep(b, [s * 0.1, 0.06, 0.37, 0.012, s * 0.14, 0.15, 0.37, 0.012], 4, shadeHex(burlap, 0.8))); // seams
   },
 };
 

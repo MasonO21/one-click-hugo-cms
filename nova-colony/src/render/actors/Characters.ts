@@ -32,10 +32,12 @@ import {
   NECK_Y,
   GRIP_Y,
   FIGURE_H,
+  FAR_LOD_DIST,
   type PartKey,
   type ToolKey,
 } from '../models/characters';
 import { hatGeometry, hatSpec } from '../models/hats';
+import { outfitBodyGeometry, uniformBodyGeometry, uniformHeadGeometry } from '../models/outfits';
 import { HAIR_STYLES } from '../core/palette';
 import { colonistLook, playerLook, type LookHex } from './looks';
 import { PetActor } from './Pets';
@@ -112,6 +114,7 @@ const WHITE = new THREE.Color(1, 1, 1);
 /** The player's look with the night lift applied (scratch). */
 const _pLook = newLook();
 const _pBase = newLook();
+const _lift = new THREE.Color(1, 1, 1);
 
 /**
  * At night the player's colours are lifted by up to this fraction (QA3 #14b): the figure reads
@@ -161,10 +164,24 @@ const SWING_HOLD = 2.6;
 
 export class Characters {
   private group = new THREE.Group();
-  private parts = new Map<PartKey, Batch>();
-  private hair: Batch[] = [];
+  /** Part batches per level of detail: [near, far] (FAR_LOD_DIST). */
+  private sets: [Map<PartKey, Batch>, Map<PartKey, Batch>] = [new Map(), new Map()];
+  private hairSets: [Batch[], Batch[]] = [[], []];
+  /** Every batch this actor owns (begin / end / hide-when-empty / dispose). */
+  private all: Batch[] = [];
+  /** LOD of the settler being drawn. */
+  private lod: 0 | 1 = 0;
   private tools = new Map<ToolKey, Batch>();
-  private hat: THREE.Mesh;
+  /** Player-only cosmetics: hat and outfit extras (instance colour = the night lift). */
+  private hat: Batch;
+  private outfitExtra: Batch;
+  private outfitKey = '';
+  /** Colonist uniform extras (body in hip space, headwear in neck space), swapped with the uniform. */
+  private uniBody: Batch;
+  private uniHead: Batch;
+  private uniKey = '';
+  private uniHasBody = false;
+  private uniHasHead = false;
   private hatGlass: THREE.Mesh;
   private hatOrbit: Batch;
   private hatKey = '';
@@ -194,23 +211,37 @@ export class Characters {
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
     const mats = ctx.mats.set;
-    const mk = (geo: THREE.BufferGeometry, cap: number, shadow = false) => new Batch(this.group, geo, mats, cap, { color: true, castShadow: shadow });
+    const mk = (geo: THREE.BufferGeometry, cap: number, shadow = false) => {
+      const b = new Batch(this.group, geo, mats, cap, { color: true, castShadow: shadow });
+      this.all.push(b);
+      return b;
+    };
     const shadowParts: PartKey[] = ['torso', 'head', 'thigh'];
-    for (const k of ['torso', 'pelvis', 'accent', 'head', 'face', 'upperArm', 'forearm', 'hand', 'thigh', 'shin', 'boot', 'hairTrim'] as PartKey[]) {
-      const twice = k === 'upperArm' || k === 'forearm' || k === 'hand' || k === 'thigh' || k === 'shin' || k === 'boot';
-      this.parts.set(k, mk(partGeometry(k), twice ? 64 : 32, shadowParts.includes(k)));
+    for (const lod of [0, 1] as const) {
+      for (const k of ['torso', 'pelvis', 'accent', 'head', 'face', 'upperArm', 'forearm', 'hand', 'thigh', 'shin', 'boot', 'hairTrim'] as PartKey[]) {
+        if (lod && (k === 'face' || k === 'hairTrim')) continue; // far settlers have no face; only the player trims hair
+        const twice = k === 'upperArm' || k === 'forearm' || k === 'hand' || k === 'thigh' || k === 'shin' || k === 'boot';
+        this.sets[lod].set(k, mk(partGeometry(k, lod), twice ? 64 : 32, shadowParts.includes(k)));
+      }
+      for (let i = 0; i < HAIR_STYLES; i++) this.hairSets[lod].push(mk(partGeometry(`hair${i}` as PartKey, lod), 8));
     }
-    for (let i = 0; i < HAIR_STYLES; i++) this.hair.push(mk(partGeometry(`hair${i}` as PartKey), 8));
-    for (const k of ['axe', 'pick', 'gun', 'mug', 'logs', 'sack'] as ToolKey[]) this.tools.set(k, new Batch(this.group, toolGeometry(k), mats, 8, {}));
-    this.hat = new THREE.Mesh(emptyGeometry(), mats);
+    for (const k of ['axe', 'pick', 'gun', 'mug', 'logs', 'sack'] as ToolKey[]) {
+      const b = new Batch(this.group, toolGeometry(k), mats, 8, {});
+      this.tools.set(k, b);
+      this.all.push(b);
+    }
+    this.hat = new Batch(this.group, emptyGeometry(), mats, 1, { color: true, castShadow: true, name: 'hat' });
+    this.outfitExtra = new Batch(this.group, emptyGeometry(), mats, 1, { color: true, castShadow: false, name: 'outfit-extra' });
+    this.uniBody = new Batch(this.group, emptyGeometry(), mats, 32, { name: 'uniform-body' });
+    this.uniHead = new Batch(this.group, emptyGeometry(), mats, 32, { castShadow: true, name: 'uniform-head' });
     this.glassMat = ctx.mats.makeLit({ transparent: true, opacity: 0.26, depthWrite: false });
     this.hatGlass = new THREE.Mesh(emptyGeometry(), this.glassMat);
     this.hatGlass.renderOrder = 3;
     this.hatOrbit = new Batch(this.group, emptyGeometry(), mats, 3, {});
+    this.all.push(this.hat, this.outfitExtra, this.uniBody, this.uniHead, this.hatOrbit);
     this.vehicle = new THREE.Mesh(vehicleGeometry('atv'), mats);
     this.vehicle.castShadow = true;
-    this.hat.castShadow = true;
-    for (const m of [this.hat, this.hatGlass, this.vehicle]) {
+    for (const m of [this.hatGlass, this.vehicle]) {
       m.matrixAutoUpdate = false;
       m.visible = false;
       this.group.add(m);
@@ -243,7 +274,7 @@ export class Characters {
   }
 
   private part(k: PartKey): Batch {
-    return this.parts.get(k)!;
+    return this.sets[this.lod].get(k)!;
   }
 
   /** The look of a colonist, resolved once (and again when the colonists' uniform changes). */
@@ -453,9 +484,9 @@ export class Characters {
     composeEuler(_part, 0, NECK_Y, 0, nod, turn - tRy * 0.6, headRz);
     _neck.multiplyMatrices(_hip, _part);
     this.part('head').push(_neck, look.skin);
-    this.part('face').push(_neck, WHITE);
+    if (!this.lod) this.part('face').push(_neck, WHITE);
     if (trimHair) this.part('hairTrim').push(_neck, look.hair);
-    else this.hair[look.style].push(_neck, look.hair);
+    else this.hairSets[this.lod][look.style].push(_neck, look.hair);
     // arms: right at -X (the settler faces +Z), left at +X
     const ua = this.part('upperArm');
     const fa = this.part('forearm');
@@ -506,13 +537,11 @@ export class Characters {
     const env = ctx.env;
     const t = env.t;
     const st = ctx.game.state;
-    for (const b of this.parts.values()) b.begin();
-    for (const h of this.hair) h.begin();
-    for (const b of this.tools.values()) b.begin();
-    this.hatOrbit.begin();
+    for (const b of this.all) b.begin();
     const cosm = st.liveops.cosmetics.equipped;
 
-    // ------------------------------------------------------------- player
+    // ------------------------------------------------------------- player (always the near parts)
+    this.lod = 0;
     const p = st.player;
     const vx = (p.x - this.px) / Math.max(dt, 1e-3);
     const vz = (p.z - this.pz) / Math.max(dt, 1e-3);
@@ -529,12 +558,16 @@ export class Characters {
     const down = st.playTime < p.downUntil;
     // the player's look (outfit cosmetic) with the night lift
     const outfitId = cosm.outfit;
+    const lift = playerNightLift(env.night);
     if (outfitId !== this.playerKey) {
       this.playerKey = outfitId ?? '';
       const def = outfitId ? ctx.game.data.cosmetic(outfitId) : undefined;
       setLook(_pBase, playerLook(def?.kind === 'outfit' ? def : undefined));
+      const extra = def?.kind === 'outfit' ? outfitBodyGeometry(def.id, def.color ?? '#888888', def.accent ?? def.color ?? '#888888') : null;
+      this.outfitKey = extra ? def!.id : '';
+      if (extra) this.outfitExtra.setGeometry(extra);
     }
-    const lift = playerNightLift(env.night);
+    _lift.setScalar(lift);
     _pLook.skin.copy(_pBase.skin).multiplyScalar(lift);
     _pLook.hair.copy(_pBase.hair).multiplyScalar(lift);
     _pLook.outfit.copy(_pBase.outfit).multiplyScalar(lift);
@@ -610,6 +643,7 @@ export class Characters {
 
     // ------------------------------------------------------------- colonists
     const uniform = cosm.colonist_outfit;
+    this.syncUniform(uniform);
     const list = st.colonists.list;
     const raid = st.combat.phase === 'attack';
     for (let i = 0; i < list.length; i++) {
@@ -621,10 +655,10 @@ export class Characters {
       this.drawColonist(c, t, uniform, raid);
     }
 
-    for (const b of this.parts.values()) b.end();
-    for (const h of this.hair) h.end();
-    for (const b of this.tools.values()) b.end();
-    this.hatOrbit.end();
+    for (const b of this.all) {
+      b.end();
+      b.mesh.visible = b.count > 0; // an empty batch costs no draw call
+    }
   }
 
   /** Hat cosmetic → meshes (geometry swapped only when the equipped hat changes). */
@@ -637,25 +671,40 @@ export class Characters {
     this.hatTrim = spec?.hair === 'trim';
     this.hatOrbitSpeed = spec?.orbit?.speed ?? 0;
     if (!spec || !def) {
-      this.hat.visible = this.hatGlass.visible = false;
+      this.hatGlass.visible = false;
       return;
     }
     const g = hatGeometry(def.id, def.color ?? '#8a6a45', def.accent ?? '#4a3527');
-    this.hat.geometry = g.main;
+    this.hat.setGeometry(g.main);
     this.hatGlass.geometry = g.glass ?? this.hatGlass.geometry;
     this.hatGlass.visible = !!g.glass;
     if (g.orbit) this.hatOrbit.setGeometry(g.orbit);
-    this.hat.visible = true;
+  }
+
+  /** Colonist uniform → instanced extras (geometry swapped only when the equipped uniform changes). */
+  private syncUniform(id: string | undefined): void {
+    if ((id ?? '') === this.uniKey) return;
+    this.uniKey = id ?? '';
+    const def = id ? this.ctx.game.data.cosmetic(id) : undefined;
+    const ok = def?.kind === 'colonist_outfit';
+    const c = def?.color ?? '#888888';
+    const a = def?.accent ?? c;
+    const body = ok ? uniformBodyGeometry(def!.id, c, a) : null;
+    const head = ok ? uniformHeadGeometry(def!.id, c, a) : null;
+    this.uniHasBody = !!body;
+    this.uniHasHead = !!head;
+    if (body) this.uniBody.setGeometry(body);
+    if (head) this.uniHead.setGeometry(head);
   }
 
   /** Place the hat on the head just drawn (_neck). */
   private drawHat(t: number): void {
+    if (this.outfitKey) this.outfitExtra.push(_hip, _lift);
     if (!this.hatKey) {
-      this.hat.visible = this.hatGlass.visible = false;
+      this.hatGlass.visible = false;
       return;
     }
-    this.hat.matrix.copy(_neck);
-    this.hat.visible = true;
+    this.hat.push(_neck, _lift);
     if (this.hatGlass.visible) this.hatGlass.matrix.copy(_neck);
     if (this.hatOrbitSpeed) {
       for (let i = 0; i < 3; i++) {
@@ -668,9 +717,14 @@ export class Characters {
 
   private drawColonist(c: Colonist, t: number, uniform: string | undefined, raid: boolean): void {
     const ctx = this.ctx;
+    const env = ctx.env;
     const look = this.colonistLook(c, uniform);
     const hs = clamp(c.appearance?.height ?? 1, 0.85, 1.15);
     const y = ctx.heightAt(c.x, c.z);
+    const dx = c.x - env.camX;
+    const dy = y + 1 - env.camY;
+    const dz = c.z - env.camZ;
+    this.lod = dx * dx + dy * dy + dz * dz > FAR_LOD_DIST * FAR_LOD_DIST ? 1 : 0;
     const act = c.activity;
     const seed = c.id * 1.7;
     let pose = A_STAND;
@@ -712,6 +766,8 @@ export class Characters {
     const phase = t * (raid ? 18 : 13.5) + seed;
     setPose(walk, walk ? run : 0, phase, seed, pose, swing);
     this.drawCharacter(c.x, y, c.z, c.rot || 0, hs, look, _pose, t, false);
+    if (this.uniHasBody) this.uniBody.push(_hip);
+    if (this.uniHasHead) this.uniHead.push(_neck);
     if (tool) this.hold(tool, _foreR, 2.7);
     else if (pose === A_EAT) this.hold('mug', _foreL, 0.15);
     else if (pose === A_CARRY) this.tools.get(load === 1 ? 'logs' : 'sack')!.push(_hip);
@@ -750,7 +806,7 @@ export class Characters {
 
   dispose(): void {
     for (const u of this.unsub) u();
-    for (const b of [...this.parts.values(), ...this.hair, ...this.tools.values(), this.hatOrbit]) b.dispose();
+    for (const b of this.all) b.dispose();
     this.pet.dispose();
     this.glassMat.dispose();
     this.ctx.scene.remove(this.group);

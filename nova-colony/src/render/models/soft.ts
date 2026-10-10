@@ -38,8 +38,8 @@ export function capsuleProfile(r0: number, y0: number, r1: number, y1: number, c
  * tapering to a round cap of radius `rBot` centred `len` below it. Chained segments overlap their caps,
  * so elbows and knees stay round at any bend.
  */
-export function limb(b: GeoBuilder, rTop: number, rBot: number, len: number, x: number, y: number, z: number, color: Color, seg = 8, opts?: PrimOpts): GeoBuilder {
-  return lathe(b, capsuleProfile(rBot, -len, rTop, 0, 3), seg, x, y, z, color, opts);
+export function limb(b: GeoBuilder, rTop: number, rBot: number, len: number, x: number, y: number, z: number, color: Color, seg = 8, opts?: PrimOpts, capSeg = 3): GeoBuilder {
+  return lathe(b, capsuleProfile(rBot, -len, rTop, 0, capSeg), seg, x, y, z, color, opts);
 }
 
 /** Ellipsoid: a smooth sphere with per-axis radii. */

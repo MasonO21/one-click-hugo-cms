@@ -9,6 +9,8 @@ import { vehicleGeometry, paintFromSkin, KNOWN_VEHICLE_MODELS, toolGeometry, TOO
 import { newPetMotion, stepPet, PET_SNAP_DIST } from '../src/render/actors/petMotion';
 import { colonistLook, playerLook, varyColor, trouserShade, PLAYER_DEFAULT } from '../src/render/actors/looks';
 import { swingArm } from '../src/render/actors/Characters';
+import { outfitBodyGeometry, uniformBodyGeometry, uniformHeadGeometry } from '../src/render/models/outfits';
+import { partGeometry, PART_KEYS } from '../src/render/models/characters';
 import { HAIR_STYLES } from '../src/render/core/palette';
 
 const finite = (g: THREE.BufferGeometry) => Array.from(g.attributes.position.array as ArrayLike<number>).every(Number.isFinite);
@@ -70,6 +72,31 @@ describe('cosmetic models', () => {
       // cached per skin
       expect(vehicleGeometry(m, paintFromSkin('#123456', '#abcdef'), skins[0].id)).toBe(vehicleGeometry(m, paintFromSkin('#123456', '#abcdef'), skins[0].id));
     }
+  });
+
+  it('every outfit and colonist uniform has its own extras', () => {
+    for (const o of COSMETICS.filter((c) => c.kind === 'outfit')) {
+      const g = outfitBodyGeometry(o.id, o.color!, o.accent ?? o.color!);
+      expect(g, o.id).not.toBeNull();
+      expect(finite(g!), o.id).toBe(true);
+    }
+    for (const u of COSMETICS.filter((c) => c.kind === 'colonist_outfit')) {
+      const body = uniformBodyGeometry(u.id, u.color!, u.accent ?? u.color!);
+      const head = uniformHeadGeometry(u.id, u.color!, u.accent ?? u.color!);
+      expect(body || head, u.id).toBeTruthy();
+    }
+    expect(outfitBodyGeometry(undefined, '#fff', '#000')).toBeNull();
+    expect(uniformHeadGeometry('colonist_nope', '#fff', '#000')).toBeNull();
+  });
+
+  it('far settler parts are much lighter than near ones', () => {
+    let near = 0;
+    let far = 0;
+    for (const k of PART_KEYS) {
+      near += partGeometry(k, 0).attributes.position.count;
+      far += partGeometry(k, 1).attributes.position.count;
+    }
+    expect(far).toBeLessThan(near * 0.5);
   });
 
   it('held items build and node models pick the right tool', () => {
