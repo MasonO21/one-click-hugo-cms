@@ -332,6 +332,7 @@
     get stage() { return this.fb.stage; }
     get elem() { return this.fb.elem; }
     get size() { return this.fb.size; }
+    get mist() { return this.fb.mist; }
     set(o) {
       const key = `${o.level}|${o.skin}|${o.element}`;
       this.fb.set(o);
