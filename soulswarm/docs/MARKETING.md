@@ -29,7 +29,7 @@ This policy protects the stores' and regulators' trust (the UK ASA has upheld co
 | **App name** | 30 | `SOULSWARM: Raise the Legion` | 27 |
 | **Subtitle** | 30 | `Turn the Horde Into Your Army` | 29 |
 | **Keyword field** | 100 | `survivor,roguelike,necromancer,undead,minions,swarm,action,rpg,arcade,boss,gothic,dungeon,hero,dark` | 99 |
-| **Promotional text** | 170 | `Season 1 is live! Raise a legion of 300+ souls, pick the right Soul Gate and wipe the screen with Soul Nova. Unlock Eclipse Vael in the Soul Pass.` | 146 |
+| **Promotional text** | 170 | `30 chapters, ten bosses and six cursed realms! Raise a legion of 300+ souls, pick the right Soul Gate and wipe the screen with Soul Nova.` | 137 |
 | Primary / secondary category | — | Games › Action / Games › Role Playing | — |
 
 Keyword rules: no words already in the name or subtitle (Apple indexes those already), no spaces after commas, singular *or* plural (not both), and no competitor names or trademarks. "swarm" is listed separately because "SOULSWARM" is indexed as one word.
@@ -38,39 +38,42 @@ Keyword rules: no words already in the name or subtitle (Apple indexes those alr
 
 > **You start alone. You finish with an army.**
 >
-> SOULSWARM is a one-thumb horde-survival roguelite with a twist: every enemy you slay can rise again as a glowing soul that fights for YOU. Survive six minutes in a haunted necropolis, grow your spectral legion from 1 to 300+, and topple the Hollow King.
+> SOULSWARM is a one-thumb horde-survival roguelite with a twist: every enemy you slay can rise again as a glowing soul that fights for YOU. Survive six minutes, grow your spectral legion from 1 to 300+, and topple the chapter's boss.
 >
 > **RAISE THE LEGION**
-> Husks, Ghouls, Brutes, Cinder Witches, even exploding Bloaters: whatever falls, rises. Watch your cyan legion swell on screen and hunt the horde for you.
+> Husks, Ghouls, Brutes, Cinder Witches, Grave Wraiths, even exploding Bloaters: whatever falls rises as its own kind of soul, from taunting Bulwarks to mending Soul Priests and gold Champions. Watch your cyan legion swell and hunt the horde for you.
 >
 > **PICK THE RIGHT GATE**
-> Every 40 seconds, two Soul Gates appear. +15 or ×2? ×2 or ÷2? Do the maths, dodge the danger and walk through. One choice can double your army.
+> Soul Gates appear in pairs. +15 or ×2? ×2 or ÷2? Do the maths, dodge the danger and walk through. One choice can double your army.
 >
 > **UNLEASH SOUL NOVA**
-> Fill the Nova meter, tap once, and your entire legion detonates in a chain of spectral explosions. The bigger your army, the bigger the blast. Trade everything for a total screen wipe, then raise it all again.
+> Fill the Nova meter, tap once, and your entire legion detonates in a chain of spectral explosions. The bigger your army, the bigger the blast. Trade everything for a screen wipe, then raise it all again.
 >
 > **BUILD A NEW LEGEND EVERY RUN**
-> Choose 1 of 3 skills each level: homing Soul Bolts, a Spectral Scythe, Ashen Chains, Bone Spears, Skull Halo, Grave Pulse and 8 passives. Max them out and discover evolutions like Soul Storm and Bone Crown.
+> Choose 1 of 3 skills each level: 9 weapons, 10 passives and 9 evolutions, plus Soul Unions that fuse two evolved weapons into one. Reroll a draw or banish what you don't want.
 >
-> **FOUR SHEPHERDS OF THE DEAD**
-> Play as Vael the Gravecaller, Nyx Hollowborn, Seraphine Ashveil, Liora Bellwraith or the legendary Mordrake the Undying. Each has a signature weapon and a passive that changes how your legion fights.
+> **EIGHT SHEPHERDS OF THE DEAD**
+> Vael, Nyx, Seraphine, Liora, Grimsby, Mordrake, Osric and Isolde, each with a signature weapon, a passive and a Rite: a hero power on its own button. Master a hero to ascend their Rite.
 >
-> **CONQUER FIVE CURSED CHAPTERS**
-> From the Ashen Necropolis to the Crimson Throne, each ruled by its own boss: the Hollow King, the Cinder Matron, the Ossuary Colossus, the Fallen Seraph and the Crimson Queen. Then climb the weekly Endless Abyss leaderboards. Blood Moon weekends double the elites AND the rewards.
+> **A 30-CHAPTER CAMPAIGN**
+> Six acts across six cursed realms, from the Waking Dark to the Hollow Moon: a drowned coast of tide pools, a thornwood of brambles, plague fens, a storm spire and the first night itself. Ten bosses, each a painted colossus with three phases, and old foes return stronger. Then replay every chapter on Nightmare and Torment, or dive into the Endless Abyss.
+>
+> **SOMETHING NEW EVERY WEEK**
+> The Boss Rush event, Blood Moon weekends, a Daily Trial, a 30-tier Soul Pass, 63 Feats to earn and a painted Bestiary of 23 horrors.
 >
 > **PLAY YOUR WAY**
 > • Portrait, one thumb, auto-attack: perfect for short breaks
 > • 6–9 minute runs
-> • Colourblind modes, flash reduction and left-handed layout
+> • Flash reduction, adjustable screen shake, auto-Nova and a left-handed layout
 > • Every chapter can be completed without paying
 >
-> SOULSWARM is free to play and offers optional in-app purchases, including random items (Soul Altar). Odds and pity counters are shown in-game before every summon. You can set spending limits in Settings. Rewarded ads are always optional. There are no forced ads.
+> SOULSWARM is free to play and offers optional in-app purchases, including random items (Soul Altar). Odds and pity counters are shown in-game before every summon. Purchases are off for players under 13, and players under 18 have monthly spending limits. Rewarded ads are always optional. There are no forced ads.
 >
 > Privacy Policy: [URL] · Terms of Use: [URL]
 
-(≈2,000 characters; limit 4,000.)
+(≈2,500 characters; limit 4,000.)
 
-*Build check:* Endless Abyss, Blood Moon, colourblind modes, flash reduction and the left-handed layout are Planned (GDD §0, §17). Cut those lines if they are not in the submitted build.
+*Build check (Update 14):* everything above is in the build. Colourblind modes are Planned (GDD §17), so the listing does not claim them; leaderboards need the store build's Game Center / Play Games setup (GDD §20), so they are left out until then.
 
 ## 3. Google Play listing
 
@@ -97,7 +100,7 @@ Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it
 | 2 | **PICK THE RIGHT GATE** | A ×3 / ÷2 Soul Gate pair ahead of a 45-soul legion | Both gates readable; the legion heads for ×3. |
 | 3 | **DETONATE THE LEGION** | Mid-Nova: 180 souls detonating in a chain through two rings of the horde | Peak bloom frame, 0.45 s into the chain (after the 0.25 s wind-up). |
 | 4 | **SLAY THE HOLLOW KING** | Gravemaw mid Grave Slam telegraph, facing the camera, the legion around Vael | Ring bands and safe lanes visible. |
-| 5 | **COLLECT LEGENDARY SHEPHERDS** | The heroes screen with all five painted hero cards (Vael, Nyx, Seraphine, Liora, Mordrake) | Rarity frames (Common → Legendary) and star rows visible. |
+| 5 | **COLLECT LEGENDARY SHEPHERDS** | The heroes screen with the painted hero cards (eight Shepherds, Vael to Isolde) | Rarity frames (Common → Legendary) and star rows visible. |
 | 6 | **30 CHAPTERS, TEN BOSSES** | Chapter 25 (The Storm Spire): its finale boss, Kaelthar, the Storm Herald, turns his Tempest's lightning beams around Vael and the legion | The campaign's scale (Update 13: six acts, 30 chapters), a boss in its own storm-blue, and an attack a player reads at a glance. |
 | 7 | **UNLEASH YOUR HERO'S RITE** | Seraphine casts Ashfall: ash chains rain on the horde | The RITE button and the Soul Frenzy chip visible. |
 | 8 | **DARE NIGHTMARE & TORMENT** | Chapter 5 on Torment: the blood-red floor, a Warded and Hasted elite with its tags, Vael's cyan legion | Shows the endgame tiers and elite affixes. |
