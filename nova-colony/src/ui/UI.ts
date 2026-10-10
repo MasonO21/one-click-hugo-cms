@@ -46,6 +46,7 @@ import { Toasts } from './fx/Toasts';
 import { FloatText } from './fx/FloatText';
 import { FlyToHud } from './fx/FlyToHud';
 import { SelectionTip } from './fx/SelectionTip';
+import { FocusMarker } from './fx/FocusMarker';
 import { Guide } from './guide/Guide';
 import { ConsentPrompt } from './ConsentPrompt';
 import { NotifyPrompt } from './NotifyPrompt';
@@ -112,6 +113,8 @@ export class UI {
   private floats!: FloatText;
   private fly!: FlyToHud;
   private tip!: SelectionTip;
+  /** Crosshair over the boss the player told the turrets to focus. */
+  private focusMark!: FocusMarker;
   private guide!: Guide;
   private consent!: ConsentPrompt;
   private notifyPrompt!: NotifyPrompt;
@@ -211,7 +214,8 @@ export class UI {
       return t ?? surveyGuideTarget(this.game, performance.now() / 1000);
     };
     this.threats = new Threats(ctx);
-    world.append(this.tip.el, this.guide.layer, this.threats.layer);
+    this.focusMark = new FocusMarker(this.game, this.renderer);
+    world.append(this.tip.el, this.focusMark.el, this.guide.layer, this.threats.layer);
 
     this.hud = new Hud(ctx);
     this.build = new BuildController(ctx);
@@ -976,7 +980,10 @@ export class UI {
       case 'alien': {
         const a = g.state.combat.aliens.find((q) => q.id === Number(sel.id));
         const def = a ? g.data.alien(a.def) : undefined;
-        if (a && def) this.tip.show(alienArt(def.model) ?? '👾', def.name, `${Math.ceil(a.hp)} / ${Math.ceil(a.maxHp)} HP`, a.x, a.z);
+        // a boss, a queen or a giant in a raid: the turrets that can reach it shoot it first (the hero's call)
+        const focused = !!a && g.sys.combat.focus(a.id);
+        if (focused) this.haptic('tap');
+        if (a && def) this.tip.show(alienArt(def.model) ?? '👾', def.name, `${Math.ceil(a.hp)} / ${Math.ceil(a.maxHp)} HP${focused ? ' · turrets focusing' : ''}`, a.x, a.z);
         break;
       }
     }
@@ -1104,6 +1111,7 @@ export class UI {
       this.floats.update(dt);
       this.fly.update(dt);
       this.tip.update(dt);
+      this.focusMark.frame();
       this.guide.frame(dt);
       this.threats.frame();
     });

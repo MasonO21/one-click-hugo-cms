@@ -27,6 +27,7 @@ import { CELL, cellOf, rotatedSize } from '../../src/core/constants';
 import { buyNovaItem } from '../../src/sim/novaShop';
 import { betterItem } from '../../src/sim/meta/missionRules';
 import { upgradeAll, upgradeAllPlan } from '../../src/sim/build/upgradeAll';
+import { focusable } from '../../src/sim/combat';
 import { Mover, Nav, type Pt } from './nav';
 
 export type NovaPolicy = 'save' | 'spend';
@@ -209,6 +210,8 @@ export class PacingBot {
       return;
     }
     const inFight = st.combat.phase === 'attack' || (st.combat.phase === 'warning' && st.combat.nextAt - st.playTime < 30);
+    // a boss, queen or giant on the field: tap it so the turrets focus it
+    if (st.combat.phase === 'attack') this.doFocus();
     // the tracker says "go there": a player heads out first and taps menus later
     if (!inFight && mission && this.travelMission(mission)) {
       this.doMovement();
@@ -245,6 +248,24 @@ export class PacingBot {
   /** The guided first session (until the Reinforced Wood tier mission is done): follow the tracker only. */
   guided(): boolean {
     return !this.game.state.missions.completed.includes('m11_tier1');
+  }
+
+  // ---------------------------------------------------------------------- raids
+
+  /** Tap the first focusable invader (boss, queen, giant) when the turrets have no focus yet. One tap, no menu. */
+  private doFocus(): boolean {
+    const g = this.game;
+    const C = g.sys.combat;
+    if (C.focusTarget() != null) return false;
+    for (const a of g.state.combat.aliens) {
+      if (a.wild || a.retreat || a.state === 'dying') continue;
+      if (focusable(g.data.alien(a.def)) && C.focus(a.id)) {
+        this.onAct?.(`focus ${a.def}`);
+        if (this.log.length < 4000) this.log.push(`${(this.now() / 60).toFixed(1)}m focus ${a.def}`);
+        return true;
+      }
+    }
+    return false;
   }
 
   // ---------------------------------------------------------------------- claims

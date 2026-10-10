@@ -74,9 +74,22 @@ export class Weapons {
     return t.spec.damage * levelMult(t.b, t.def) * this.ctx.mods.turretDamage * (this.manned(t) ? 1.5 : 1);
   }
 
+  /** The alien the player asked turrets to focus (still alive and in the fight), or undefined. */
+  private focused(): Alien | undefined {
+    const c = this.ctx.game.state.combat;
+    if (c.focusId == null) return undefined;
+    const a = this.ctx.alienById.get(c.focusId);
+    if (!a || a.state === 'dying' || a.retreat || a.hp <= 0 || this.ctx.game.state.playTime > (c.focusUntil ?? 0)) {
+      c.focusId = null;
+      return undefined;
+    }
+    return a;
+  }
+
   private turrets(dt: number): void {
     const ctx = this.ctx;
     const st = ctx.game.state;
+    const focus = this.focused();
     for (const t of ctx.index.turrets) {
       t.cd -= dt;
       if (t.cd < -0.05) t.cd = -0.05;
@@ -88,6 +101,13 @@ export class Weapons {
       const mask = turretMask(spec);
       const range = spec.range * CELL * ctx.mods.turretRange;
       let target = t.target >= 0 ? ctx.alienById.get(t.target) : undefined;
+      // the tapped boss comes first for every turret that can reach it
+      if (focus && focus !== target && targetable(focus, mask)) {
+        const fx = focus.x - t.x;
+        const fz = focus.z - t.z;
+        const reach = range + (focus.rad ?? 0.5);
+        if (fx * fx + fz * fz <= reach * reach) target = focus;
+      }
       if (target) {
         const dx = target.x - t.x;
         const dz = target.z - t.z;

@@ -384,3 +384,50 @@
 .threat-edge.boss .th-arrow::after {
   border-left-color: #7a2a8a;
 }
+
+/* the boss the player told the turrets to focus: a brass crosshair that follows it */
+.focus-mark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.18s;
+  filter: drop-shadow(0 0 0.25em rgba(255, 180, 80, 0.85)) drop-shadow(0 0.06em 0.05em rgba(0, 0, 0, 0.45));
+}
+.focus-mark.on {
+  opacity: 1;
+}
+.focus-mark .fm-ring {
+  width: 3.2em;
+  height: 3.2em;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 0.18em solid #ffd27a;
+  background:
+    linear-gradient(#ffd27a, #ffd27a) center / 0.16em 100% no-repeat,
+    linear-gradient(#ffd27a, #ffd27a) center / 100% 0.16em no-repeat;
+  -webkit-mask: radial-gradient(circle, transparent 0.5em, #000 0.52em);
+  mask: radial-gradient(circle, transparent 0.5em, #000 0.52em);
+  animation: nv-focus-spin 2.4s linear infinite;
+}
+.focus-mark .fm-txt {
+  padding: 0.05em 0.45em;
+  border-radius: 99px;
+  color: #3a2a10;
+  background: #ffd27a;
+  font-size: 0.62em;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+@keyframes nv-focus-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .focus-mark .fm-ring { animation: none; }
+}

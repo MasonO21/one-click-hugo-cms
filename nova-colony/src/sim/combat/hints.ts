@@ -1,11 +1,24 @@
 /**
  * Gentle combat hints. Flyers ignore walls and only anti-air can hit them, so the first time flyers join an
  * invasion while the colony has no working AA defense, tell the player exactly what to build (once per wave).
+ * A boss leading a raid: tap it to focus the turrets (once per wave).
  */
 import type { Game } from '../../core/Game';
 
 export function installCombatHints(game: Game): () => void {
   let hintedWave = -1;
+  let bossWave = -1;
+  // a boss leads the raid: the hero can tell the turrets to focus it (CombatSystem.focus), once per wave
+  game.bus.on('alien:spawned', (e) => {
+    const st = game.state;
+    if (st.combat.phase !== 'attack' || bossWave === st.combat.wave) return;
+    const def = game.data.alien(e.def);
+    if (!def?.boss) return;
+    const alien = st.combat.aliens.find((a) => a.id === e.id) as { wild?: boolean } | undefined;
+    if (alien?.wild) return;
+    bossWave = st.combat.wave;
+    game.toast(`${def.name} leads the raid! Tap it to focus your turrets.`, 'warning', '🎯');
+  });
   return game.bus.on('alien:spawned', (e) => {
     const st = game.state;
     if (st.combat.phase !== 'attack' || hintedWave === st.combat.wave) return;

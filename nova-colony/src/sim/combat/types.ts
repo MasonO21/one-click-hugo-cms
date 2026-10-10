@@ -59,6 +59,9 @@ declare module '../../core/state' {
     bonus?: number;
     /** Invasion aliens spawned (or queued) for the current wave, incl. queen minions (UI progress). */
     waveTotal?: number;
+    /** The big alien the player tapped: turrets in range shoot it first until `focusUntil` (playTime). Transient. */
+    focusId?: number | null;
+    focusUntil?: number;
   }
 }
 
@@ -160,6 +163,8 @@ export const TUNE = {
   TURN_SPEED: 9,
   /** Separation strength between aliens. */
   SEPARATION: 1.6,
+  /** Seconds turrets keep focusing a tapped boss (re-tap to renew). */
+  FOCUS_SECONDS: 30,
 } as const;
 
 /** Travelling projectile speeds (world units / s). Hitscan kinds are absent. */

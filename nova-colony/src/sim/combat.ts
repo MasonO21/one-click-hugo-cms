@@ -19,6 +19,7 @@
 import { System } from './System';
 import type { Game } from '../core/Game';
 import type { CombatPhase, Id } from '../core/state';
+import type { AlienDef } from '../data/schema';
 import { CELL } from '../core/constants';
 import { fmtClock } from '../core/format';
 import { CombatContext } from './combat/context';
@@ -32,6 +33,11 @@ import { installCombatHints } from './combat/hints';
 import { scoutReport, scoutToast } from './combat/raidShape';
 
 export type { VictoryInfo } from './combat/types';
+
+/** Aliens worth a tap to focus: bosses, summoners (Swarm Queens) and the giants. */
+export function focusable(def: AlienDef | undefined): boolean {
+  return !!def && (!!def.boss || !!def.spawns || def.hp >= 1000);
+}
 
 export class CombatSystem extends System {
   private readonly ctx: CombatContext;
@@ -233,6 +239,26 @@ export class CombatSystem extends System {
     return n;
   }
 
+  /**
+   * The player tapped a big invader (a boss, a Swarm Queen, a Titan): every turret that can reach it shoots it first for
+   * TUNE.FOCUS_SECONDS (tap again to renew). Returns false for anything else (small fry, wild aliens, no attack).
+   */
+  focus(id: number): boolean {
+    const c = this.game.state.combat;
+    const a = this.ctx.alienById.get(id);
+    if (c.phase !== 'attack' || !a || a.wild || a.retreat || a.state === 'dying' || !focusable(this.game.data.alien(a.def))) return false;
+    c.focusId = id;
+    c.focusUntil = this.game.state.playTime + TUNE.FOCUS_SECONDS;
+    this.game.bus.emit('sfx', { id: 'ui_click' });
+    return true;
+  }
+
+  /** The alien turrets are focusing (UI marker), or null. */
+  focusTarget(): number | null {
+    const c = this.game.state.combat;
+    return c.focusId != null && this.game.state.playTime <= (c.focusUntil ?? 0) && this.ctx.alienById.has(c.focusId) ? c.focusId : null;
+  }
+
   /** Rough defense strength for UI ("Defense rating") = total turret DPS. */
   defenseRating(): number {
     this.ctx.index.refresh();
@@ -317,6 +343,7 @@ export class CombatSystem extends System {
     c.nextEntityId ??= 1;
     c.pendingReward ??= null;
     c.tutorialAttackDone ??= false;
+    c.focusId = null; // transient: a loaded save never resumes a fight
     return c;
   }
 
@@ -529,6 +556,7 @@ export class CombatSystem extends System {
     c.pendingReward = reward;
     c.spawnQueue.length = 0;
     c.nextAt = Infinity;
+    c.focusId = null;
     for (const a of c.aliens) if (!a.wild) this.ctx.retreat(a);
     this.fieldDueAt = Infinity;
     this.victoryT = TUNE.VICTORY_LINGER;

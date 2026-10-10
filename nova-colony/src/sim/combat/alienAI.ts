@@ -113,7 +113,7 @@ export class AlienAI {
     // the first summons of an invasion queen explains why "aliens remaining" just went up
     if (!a.wild && !this.summoned.has(a.id)) {
       this.summoned.add(a.id);
-      ctx.game.toast(`The ${def.name} is summoning ${minion.name.toLowerCase()}s. Take her down first!`, 'warning', '👑');
+      ctx.game.toast(`The ${def.name} is summoning ${minion.name.toLowerCase()}s. Tap her to focus your turrets!`, 'warning', '👑');
     }
   }
 
