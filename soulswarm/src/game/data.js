@@ -538,6 +538,31 @@ export const EVOLUTIONS = {
   },
 };
 
+// ---------------------------------------------------------------- Soul Unions (Update 10; weapons.js, arsenal.js)
+// When both evolutions of a pair are in the build, the pair's Union card enters the draw (weight 1,000, like an
+// evolution). Taking it fuses the two weapons into one slot (a fifth weapon fits) and adds the pair's synergy. Every
+// hero's signature weapon belongs to one pair; Necropolis stands alone.
+export const UNIONS = {
+  // every Requiem blast hurls a ring of `bolts` Soul Storm bolts outward, each curving onto a foe (blast and split as Soul Storm)
+  starfall: { name: 'Starfall Requiem', of: ['soulStorm', 'requiem'], icon: 'bolt',
+    desc: 'UNION: Every Requiem blast hurls a ring of 14 Soul Storm bolts into the horde. Frees a weapon slot.',
+    bolts: 14, dmg: 56, pierce: 2 },
+  // each moon blade leaves a witchfire patch every `gap` m of its path; a blade kill bursts into flame like a witchfire kill
+  witchMoon: { name: 'Witch Moon', of: ['harvestMoon', 'hallowPyre'], icon: 'scythe',
+    desc: 'UNION: The moon blades trail witchfire as they turn, and what they slay bursts into flame. Frees a weapon slot.',
+    gap: 2, r: 1.7, life: 2.4, dps: 72 },
+  // every Communion drain tick feeds Perdition's burn (`burn` × the tick, as a chain hit would); every chain link that
+  // lands heals linkHeal HP from the Communion's heal bank (its 6 HP a second cap holds)
+  bloodCovenant: { name: 'Blood Covenant', of: ['chainsOfPerdition', 'vampiricCommunion'], icon: 'chain',
+    desc: 'UNION: Communion beams set their prey ablaze, and every chain link that lands feeds you life. Frees a weapon slot.',
+    burn: 3, linkHeal: 0.6 },
+  // every `every` s each skull of the crown hurls a bone spear at the nearest foe within `range` m of it, bursting into
+  // Barrage shrapnel
+  ossuaryCrown: { name: 'Ossuary Crown', of: ['boneCrown', 'ossuaryBarrage'], icon: 'skull',
+    desc: 'UNION: Every 2 s each skull of the crown hurls a bone spear that bursts into shrapnel. Frees a weapon slot.',
+    every: 2, dmg: 40, range: 12 },
+};
+
 export const WEAPON_SLOTS = 4;
 export const BASE = {
   raise: 0.25, cap: 30, minionDmg: 7, minionSpeed: 9.5, minionHp: 34, pickup: 2.8,

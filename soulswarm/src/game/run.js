@@ -86,6 +86,7 @@ export class Run {
     // the signature weapon: Lv1, or higher from a Grimoire page or Hero Mastery rank 7 (meta/mastery.js)
     this.skillLv = { [loadout.hero.weapon]: Math.max(1 + ((loadout.mastery && loadout.mastery.weaponLv) || 0), this.mut.startLv) };
     this.evolved = {};
+    this.unions = {}; // Soul Unions taken (UNIONS in data.js)
     this.level = 1; this.xp = 0; this.xpNeed = xpForLevel(1);
     this.recomputeStats();
     this.player = new Player(this, loadout);
@@ -489,7 +490,7 @@ export class Run {
     const draft = chest && this.draftPicks > 0 ? [BOSS_RUSH.draft - this.draftPicks + 1, BOSS_RUSH.draft] : null; // Boss Rush: the opening picks
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
-      if (c.kind === 'evolution') this.celebrateEvolution(c); else this.audio.sfx('select');
+      if (c.kind === 'evolution' || c.kind === 'union') this.celebrateEvolution(c); else this.audio.sfx('select');
       if (chest) { this.chestQueue--; if (draft) this.draftPicks--; } else this.levelQueue--;
       this.levelPending = false;
       this.player.invuln = Math.max(this.player.invuln, 0.6);
@@ -516,7 +517,7 @@ export class Run {
     this.audio.sfx('legendary');
     this.audio.voice('a_evolution');
     this.app.haptic('heavy');
-    this.ui.banner(c.name.toUpperCase(), 'Weapon evolved', 'gold');
+    this.ui.banner(c.name.toUpperCase(), c.kind === 'union' ? 'Soul Union · a weapon slot is free' : 'Weapon evolved', 'gold');
   }
 
   /** Elites drop a Relic Chest: a free pick of 3 cards. */
@@ -777,7 +778,7 @@ export class Run {
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
       trial: this.trial, mutators: this.mut.ids, page: this.page, urns: this.counters.urns, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
-      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events, rites: this.counters.rites,
+      chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, unions: Object.keys(this.unions).length, events: this.counters.events, rites: this.counters.rites,
       bestStreak: this.counters.bestStreak,
       byType: { ...this.counters.byType }, // Bestiary kills per foe
       tutorial: !!this.guide, // the beginner tutorial: its own reward, no chapter records (economy.applyRunResult)

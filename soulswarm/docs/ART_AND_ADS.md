@@ -47,6 +47,10 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `skill-necropolis.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Necropolis (evolution) ability icon | `cab5d41b-156f-436d-995b-042fb595a5cc` |
 | `skill-soulLeech.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Soul Leech ability icon | `e3446b2c-900b-40e3-b666-476d12d7a953` |
 | `skill-vampiricCommunion.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Vampiric Communion (evolution) ability icon | `70dd45f7-4616-4c71-896d-67ef0bd279e9` |
+| `skill-starfall.jpg` | 1024×1024 | Nano Banana 2 (the lantern as the reference) | Starfall Requiem (Soul Union) ability icon | `7165cc2f-77a7-468a-a9ca-042b40ac45e0` |
+| `skill-witchMoon.jpg` | 1024×1024 | Nano Banana 2 (the lantern as the reference) | Witch Moon (Soul Union) ability icon | `170bee97-c6ff-43e6-9d23-232fe8cc9e26` |
+| `skill-bloodCovenant.jpg` | 1024×1024 | Nano Banana 2 (the lantern as the reference) | Blood Covenant (Soul Union) ability icon | `a40e4336-e556-46bc-88c3-735432ddaee0` |
+| `skill-ossuaryCrown.jpg` | 1024×1024 | Nano Banana 2 (the lantern as the reference) | Ossuary Crown (Soul Union) ability icon | `f4df3256-840a-4d38-a6a8-f0e78b9f388f` |
 | `skill-graveWard.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grave Ward (passive) ability icon | `5ff9eae7-8d13-4ea2-a5ce-17f99c6bc124` |
 | `skill-dreadReach.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Dread Reach (passive) ability icon | `de66c8f4-e03e-4e37-8597-987a1425a042` |
 | `page-banner.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grimoire page: Banner of the Damned (Update 7, 2026-10-10): the page picker, the home chip | `8cbd7de0-76de-4046-89c5-b49289d3d7df` |
@@ -167,7 +171,7 @@ To run it:
 - 9 Nano Banana Pro 2K images at 2 credits each, including Liora's splash;
 - 1 GPT Image 2.5 high image at 2.75 credits.
 
-The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more, and Update 6's six ability icons (2026-10-10; the Witchfire icons' prompt with the lantern as the reference) 12 more, and Update 7's eight Grimoire pages (the same recipe) 16 more.
+The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more, and Update 6's six ability icons (2026-10-10; the Witchfire icons' prompt with the lantern as the reference) 12 more, and Update 7's eight Grimoire pages (the same recipe) 16 more, and Update 10's four Soul Union icons (the evolution icons' prompt, grander, with a double gold halo; the lantern as the reference) 8 more at the same rate.
 
 Re-cutting the ads in the sandbox costs no credits.
 

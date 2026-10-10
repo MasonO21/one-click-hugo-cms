@@ -1,5 +1,5 @@
 // In-run stats and the level-up card draw.
-import { SKILLS, EVOLUTIONS, WEAPON_SLOTS, BASE, BANISH } from './data.js';
+import { SKILLS, EVOLUTIONS, UNIONS, WEAPON_SLOTS, BASE, BANISH } from './data.js';
 
 export function computeStats(L, lv, chapter, level) {
   const g = (k) => lv[k] || 0;
@@ -30,7 +30,10 @@ export function rollChoices(run, n = 3, exclude = null) {
   for (const [id, ev] of Object.entries(EVOLUTIONS)) {
     if (!run.evolved[id] && (lv[ev.from] || 0) >= 5 && (lv[ev.needs] || 0) >= 1) pool.push({ id, kind: 'evolution', weight: 1000 });
   }
-  const weaponsOwned = Object.keys(SKILLS).filter((k) => SKILLS[k].type === 'weapon' && lv[k]).length;
+  // Soul Unions: both evolutions in the build draw the pair's Union; each Union fuses two weapons into one slot
+  const unions = run.unions || {};
+  for (const [id, U] of Object.entries(UNIONS)) if (!unions[id] && U.of.every((ev) => run.evolved[ev])) pool.push({ id, kind: 'union', weight: 1000 });
+  const weaponsOwned = Object.keys(SKILLS).filter((k) => SKILLS[k].type === 'weapon' && lv[k]).length - Object.keys(unions).length;
   for (const [id, s] of Object.entries(SKILLS)) {
     const cur = lv[id] || 0;
     if (cur >= s.max || (ban && ban.has(id)) || (exclude && exclude.includes(id))) continue;
@@ -71,6 +74,10 @@ export function describe(run, p) {
     const ev = EVOLUTIONS[p.id];
     return { ...p, name: ev.name, icon: ev.icon, desc: ev.desc, level: 0, max: 0, rarity: 'legendary' };
   }
+  if (p.kind === 'union') {
+    const U = UNIONS[p.id];
+    return { ...p, name: U.name, icon: U.icon, desc: U.desc, level: 0, max: 0, rarity: 'legendary' };
+  }
   if (p.kind === 'bonus') {
     return p.id === 'heal'
       ? { ...p, name: 'Second Wind', icon: 'heart', desc: 'Restore 50% HP', level: 0, max: 0, rarity: 'rare' }
@@ -83,6 +90,7 @@ export function describe(run, p) {
 
 export function applyChoice(run, c) {
   if (c.kind === 'evolution') run.evolved[c.id] = true;
+  else if (c.kind === 'union') run.unions[c.id] = true;
   else if (c.kind === 'bonus') {
     if (c.id === 'heal') run.player.heal(run.player.maxHp * 0.5);
     else run.bonusGold += 150;

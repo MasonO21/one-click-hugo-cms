@@ -129,6 +129,7 @@ button { font: inherit; color: inherit; }
 }
 .pill-hot { background: linear-gradient(90deg, #ff2e55, #ff7a2e); color: #fff; }
 .pill-gold { background: linear-gradient(90deg, #ffcf4a, #ff9a1f); color: #2a1300; }
+.pill-union { background: linear-gradient(90deg, #7ff8ff, #ffcf4a); color: #06202a; }
 .pill-soul { background: linear-gradient(90deg, #4ef2ff, #2aa8ff); color: #00202a; }
 .pill-diff { background: linear-gradient(90deg, var(--dc), color-mix(in srgb, var(--dc) 50%, #14000a)); color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.45); } /* Nightmare / Torment, --dc = DIFFICULTY[].css */
 

@@ -1,7 +1,7 @@
 // Shepherd weapons. Each fires on its own cooldown, scaled by the run's stats.
 // Evolutions (EVOLUTIONS in data.js) upgrade a weapon in place; their tunables live in their data entries.
 import * as THREE from 'three';
-import { SKILLS, EVOLUTIONS } from './data.js';
+import { SKILLS, EVOLUTIONS, UNIONS } from './data.js';
 import { makeArc, makeRuneCircle } from './fxmeshes.js';
 import { skullGeometry } from '../engine/models.js';
 import { makeCharMaterial, addInstanceAttrs } from '../engine/materials.js';
@@ -18,7 +18,7 @@ const EVO_OF = {}; // weapon id -> the evolution that upgrades it
 for (const [id, ev] of Object.entries(EVOLUTIONS)) EVO_OF[ev.from] = id;
 
 const MAX_SHARDS = 120;
-const MAX_FLAMES = 64, WF_TICK = 0.25, TOSS_FLIGHT = 0.45; // witchfire patches alive at once, damage tick (s), lantern flight (s)
+const MAX_FLAMES = 96, WF_TICK = 0.25, TOSS_FLIGHT = 0.45; // witchfire patches alive at once, damage tick (s), lantern flight (s)
 
 // Crescent blade: a unit disc minus a disc centred at (CR_C, 0) that passes through the tips at ±CR_A rad.
 const CR_A = 0.9, CR_C = 0.22, CR_RHO = Math.hypot(Math.cos(CR_A) - CR_C, Math.sin(CR_A));
@@ -96,6 +96,7 @@ export class Weapons {
       this.moonTrails.push(a); run.scene.add(a);
     }
     this.moonAngle = 0; this.moonR = 0;
+    this.moonDrop = [null, null, null, null]; this.ocT = UNIONS.ossuaryCrown.every; // Soul Unions: Witch Moon's last patch per blade, Ossuary Crown's volley timer
     this.healBank = HM.healPerSec; this.healAcc = 0; this.healTextT = 0;
     // Chains of Perdition: enemies currently burning (DoT state lives on the pooled enemy objects)
     this.burning = [];
@@ -276,6 +277,7 @@ export class Weapons {
       const dmg = this.hit(base);
       const from = pts[pts.length - 2];
       const killed = E.damage(cur, dmg, this.opts(cur.x - from.x, cur.z - from.z, 2, this.crit, 'chain', hell && j >= 3)); // Perdition: numbers on the first 3 links only
+      if (run.unions.bloodCovenant) this.arsenal.covenant(UNIONS.bloodCovenant.linkHeal); // Blood Covenant: each link feeds her
       if (!j && stun && !killed && cur.type !== 'boss') this.pin(cur, stun); // never the boss: its next attack would keep slipping back
       const hx = cur.x, hz = cur.z, sd = dmg * SKILLS.chains.splashDmg; // scorch the foes packed around the struck one
       E.query(hx, hz, hell ? CP.splash : SKILLS.chains.splash, (o) => { if (o !== cur && o.active) E.damage(o, sd, { kx: o.x - hx, kz: o.z - hz, knock: 1, source: 'chain', silent: true }); });
@@ -384,6 +386,7 @@ export class Weapons {
       _s.set(1.3, 1.3, 1.3);
       _m.compose(_p, _q, _s);
       this.moons.setMatrixAt(i, _m);
+      if (run.unions.witchMoon) this.moonFire(i, x, z); // Witch Moon: the blade trails witchfire
       const tr = this.moonTrails[i];
       tr.visible = true;
       tr.position.set(P.x, 0.1, P.z);
@@ -413,7 +416,15 @@ export class Weapons {
     const a = this._ba, dmg = this.hit(HM.bladeDmg);
     const killed = run.enemies.damage(e, dmg, this.opts(Math.sin(a) + Math.cos(a) * 0.4, -Math.cos(a) + Math.sin(a) * 0.4, 4, this.crit, 'scythe', !this.crit && Math.random() < 0.6));
     run.particles.burst(e.x, 1, e.z, 5, this.cols.soul, { speed: 5, life: 0.3, size: 0.4 });
-    if (killed) this.reap(e);
+    if (killed) { this.reap(e); if (run.unions.witchMoon) this.pyreBurst(e.x, e.z); } // Witch Moon: its kills burst into flame
+  }
+
+  /** Witch Moon (Soul Union): a witchfire patch every `gap` m of a blade's path (the oldest patches give way first). */
+  moonFire(i, x, z) {
+    const U = UNIONS.witchMoon, d = this.moonDrop[i];
+    if (d && (x - d.x) ** 2 + (z - d.z) ** 2 < U.gap * U.gap) return;
+    if (this.flame(x, z, U.r * this.run.stats.area, U.life, U.dps)) this.moonDrop[i] = { x, z };
+    else if (!d) this.moonDrop[i] = { x, z };
   }
 
   /** Harvest Moon: a scythe kill heals the Shepherd, from a bank that refills at healPerSec. */
@@ -615,6 +626,20 @@ export class Weapons {
     run.pickups.magnetNear(P.x, P.z, RQ.shardR);
     run.audio.sfx('explosion', { volume: 0.5, pitch: 0.85 });
     this.rqFx = 0.45;
+    if (run.unions.starfall) this.starfall();
+  }
+
+  /** Starfall Requiem (Soul Union): the blast hurls a ring of Soul Storm bolts outward; each curves onto a foe. */
+  starfall() {
+    const run = this.run, P = run.player, U = UNIONS.starfall, T = this.nearestN(P.x, P.z, 14, U.bolts);
+    for (let i = 0; i < U.bolts; i++) {
+      const a = (i / U.bolts) * TAU + run.time * 0.7, t = T.length ? T[i % T.length] : null;
+      const ta = t ? Math.atan2(t.z - P.z, t.x - P.x) : Math.PI / 2; // (no target: the bolt flies along +z, turned by the spread)
+      const [dmg, crit] = this.roll(U.dmg);
+      run.projectiles.bolt(P.x, P.z, t, dmg, U.pierce, { spread: a - ta, explode: 1.5, crit, split: true, speed: 15 });
+    }
+    run.particles.ring(P.x, P.z, 1.4, 30, this.cols.white, { life: 0.35, size: 0.5, speed: 6 });
+    run.audio.sfx('shoot', { volume: 0.5, pitch: 1.3 });
   }
 
   blastHit(e) {
@@ -807,10 +832,29 @@ export class Weapons {
       run.particles.ring(P.x, P.z, R2, 40, c, { life: 0.5, size: 0.45, y: 0.3 });
       run.fx.shockwave(P.x, P.z, R2, 0xff8a3d, 0.35, 0.05);
     }
+    if (crown && run.unions.ossuaryCrown && (this.ocT -= dt) <= 0) { this.ocT = UNIONS.ossuaryCrown.every; this.crownVolley(n); }
     this.skullN = n;
     this.skulls.count = n;
     this.skulls.instanceMatrix.needsUpdate = true;
     this.skullMat.uniforms.uTime.value += dt;
+  }
+
+  /** Ossuary Crown (Soul Union): each skull hurls a bone spear at the nearest foe near it; the spears burst as the
+   *  Barrage's do, just past their mark. */
+  crownVolley(n) {
+    const run = this.run, E = run.enemies, U = UNIONS.ossuaryCrown, shots = run.projectiles.shots;
+    let fired = 0;
+    for (let i = 0; i < n; i++) {
+      const x = this.skullXZ[i * 2], z = this.skullXZ[i * 2 + 1], t = E.nearest(x, z, U.range);
+      if (!t) continue;
+      const dx = t.x - x, dz = t.z - z, d = Math.hypot(dx, dz) || 1, dmg = this.hit(U.dmg);
+      run.projectiles.spear(x, z, dx / d, dz / d, dmg, 1e9, this.crit);
+      const s = shots[shots.length - 1];
+      if (s && s.kind === 'spear') { s.life = Math.min(OB.maxReach, d + OB.past) / s.speed; this.barrage.push(s); this.barrageDmg.push(dmg * OB.shrapnel); }
+      run.particles.burst(x, 1, z, 5, this.cols.bone, { speed: 3, life: 0.25, size: 0.3 });
+      fired++;
+    }
+    if (fired) run.audio.sfx('shoot', { volume: 0.45, pitch: 0.7 });
   }
 
   // ---------------------------------------------------------------- glow pass

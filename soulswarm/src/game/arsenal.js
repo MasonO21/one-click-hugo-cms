@@ -4,7 +4,7 @@
 // - Soul Leech: drain beams on the toughest foes in reach (the boss, then elites, then the most HP) that heal the
 //   Shepherd; Vampiric Communion forks each beam into the horde and, once he is whole, feeds his most wounded minions.
 import * as THREE from 'three';
-import { SKILLS, EVOLUTIONS } from './data.js';
+import { SKILLS, EVOLUTIONS, UNIONS } from './data.js';
 import { tombstoneGeometry } from '../engine/models.js';
 import { makeCharMaterial, addInstanceAttrs } from '../engine/materials.js';
 import { hdr } from '../engine/particles.js';
@@ -197,8 +197,9 @@ export class Arsenal {
   drain(e, base) {
     if (!e.active) return 0;
     const dmg = this.W.hit(base), h = e.hp, fl = e.flash;
-    this.run.enemies.damage(e, dmg, this.W.opts(0, 0, 0, this.W.crit, 'leech', !this.W.crit && this.tickN % 5 !== 0));
+    const dead = this.run.enemies.damage(e, dmg, this.W.opts(0, 0, 0, this.W.crit, 'leech', !this.W.crit && this.tickN % 5 !== 0));
     e.flash = Math.max(fl, 0.3); // a steady drain glows faintly instead of bleaching the target white every tick
+    if (!dead && e.active && this.run.unions.bloodCovenant) this.W.ignite(e, dmg * UNIONS.bloodCovenant.burn); // Blood Covenant: the drain sets it ablaze
     return Math.max(0, Math.min(h, h - Math.max(0, e.hp)));
   }
 
@@ -207,6 +208,14 @@ export class Arsenal {
     const E = this.run.enemies, dx = t.x - x0, dz = t.z - z0, len = Math.hypot(dx, dz), n = Math.floor(len / 0.9);
     this._searTarget = t; this._searDmg = dmg;
     for (let k = 1; k < n; k++) { const u = k / n; E.query(x0 + dx * u, z0 + dz * u, SL.searR, this._sear); }
+  }
+
+  /** Blood Covenant (Soul Union): a chain link feeds the Shepherd hp from the Communion's heal bank (its cap holds). */
+  covenant(hp) {
+    const P = this.run.player;
+    if (P.dead) return;
+    const take = Math.min(hp, this.healBank, P.maxHp - P.hp);
+    if (take > 0) { this.healBank -= take; P.heal(take, true); this.healShown += take; }
   }
 
   /** Stolen life heals the Shepherd from the bank; with Communion, what he can't take mends his most wounded minions. */

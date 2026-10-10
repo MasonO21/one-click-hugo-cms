@@ -3495,6 +3495,81 @@ errs = await session(async (page) => {
 });
 check('update 9: no runtime errors', !errs.length, errs[0] || '');
 
+// 44. Update 10, Soul Unions (UNIONS in data.js; weapons.js, arsenal.js): with both evolutions of a pair in the build,
+//     the pair's Union card enters the draw (weight 1,000, once); taking it fuses the two weapons into one slot and adds
+//     the synergy: Starfall Requiem, Witch Moon, Blood Covenant, Ossuary Crown.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const D = await import('/src/game/data.js'), K = await import('/src/game/skills.js');
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.coach = ''; p.chapter.unlocked = 6; p.flags.bloodMoon = 'off';
+    const out = {};
+    const start = (hero = 'vael') => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes[hero].owned = true; p.selectedHero = hero; p.energy = 30; app.engine.manual = true; app.startRun(2); const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {}; r.player.hurt = () => {}; r.addXp = () => {}; r.urns.t = 1e9;
+      r.skillLv = {}; r.evolved = {}; r.unions = {};
+      return r;
+    };
+    const evolve = (r, uid) => { for (const ev of D.UNIONS[uid].of) { const E = D.EVOLUTIONS[ev]; r.skillLv[E.from] = 5; r.skillLv[E.needs] = 1; r.evolved[ev] = true; } r.recomputeStats(); };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const ring = (r, n, rad, hp = 30, type = 'husk') => { const P = r.player, a = []; for (let i = 0; i < n; i++) { const t = (i / n) * 6.283; const e = r.enemies.spawn(type, P.x + Math.cos(t) * rad, P.z + Math.sin(t) * rad, { hpMul: hp }); e.speed = 0; e.spawnT = 2; a.push(e); } r.update(1 / 30); return a; };
+    const has = (r, kind, id) => K.rollChoices(r, 3).some((c) => c.kind === kind && (!id || c.id === id));
+    // the draw: one evolution draws nothing; both draw the Union every time; never twice
+    { let r = start(); const E = D.EVOLUTIONS.soulStorm; r.skillLv.soulBolt = 5; r.skillLv.might = 1; r.evolved.soulStorm = true; r.skillLv.gravePulse = 5; r.recomputeStats();
+      const one = Array.from({ length: 20 }, () => has(r, 'union')).filter(Boolean).length;
+      evolve(r, 'starfall'); const both = Array.from({ length: 20 }, () => has(r, 'union', 'starfall')).filter(Boolean).length;
+      const card = K.rollChoices(r, 3).find((c) => c.kind === 'union');
+      // the slot: four weapons fill the slots; the Union frees one
+      r.skillLv.chains = 1; r.skillLv.spears = 1;
+      const full = Array.from({ length: 10 }, () => K.rollChoices(r, 40).some((c) => c.kind === 'weapon' && !r.skillLv[c.id])).some(Boolean);
+      K.applyChoice(r, card);
+      const free = Array.from({ length: 10 }, () => K.rollChoices(r, 40).some((c) => c.kind === 'weapon' && !r.skillLv[c.id])).some(Boolean);
+      const twice = Array.from({ length: 20 }, () => has(r, 'union')).some(Boolean);
+      out.draw = { one, both, name: card && card.name, rarity: card && card.rarity, full, free, twice, taken: !!r.unions.starfall }; }
+    // Starfall Requiem: the blast hurls a ring of 14 bolts (none without the Union)
+    const blast = (u) => { const r = start(); evolve(r, 'starfall'); if (u) r.unions.starfall = true; ring(r, 12, 6); const n0 = r.projectiles.shots.filter((x) => x.kind === 'bolt').length; r.weapons.detonate(6.5); return r.projectiles.shots.filter((x) => x.kind === 'bolt').length - n0; };
+    out.starfall = { plain: blast(false), union: blast(true) };
+    // Witch Moon: the blades lay witchfire along their path; a blade kill bursts into flame
+    const moon = (u) => { const r = start('nyx'); evolve(r, 'witchMoon'); if (u) r.unions.witchMoon = true; r.weapons.timers.witchfire = 1e9; r.weapons.timers.scythe = 1e9; r.player.x += 0; const f0 = r.weapons.flames.length; step(r, 1); return r.weapons.flames.length - f0; };
+    out.witchMoon = { plain: moon(false), union: moon(true) };
+    { const r = start('nyx'); evolve(r, 'witchMoon'); r.unions.witchMoon = true; r.weapons.timers.witchfire = 1e9; r.weapons.timers.scythe = 1e9; r.weapons.updateWitchfire = () => {};
+      const [e] = ring(r, 1, 3.7, 0.01); const f0 = r.weapons.flames.length; r.weapons.moonFire = () => {}; r.weapons.burstBank = 8;
+      r.weapons._ba = 0; r.weapons.bladeHit(e); out.witchMoon.burst = r.weapons.flames.length - f0; out.witchMoon.killed = !e.active; }
+    // Blood Covenant: the drain sets its prey ablaze; each chain link feeds the Shepherd
+    const covenant = (u) => { const r = start('seraphine'); evolve(r, 'bloodCovenant'); if (u) r.unions.bloodCovenant = true; r.weapons.timers.chains = 1e9;
+      const foes = ring(r, 10, 3, 60, 'brute'); step(r, 1.2); const lit = foes.filter((e) => e.active && e.burnUid === e.uid).length;
+      const P = r.player; P.hp = P.maxHp * 0.5; const h0 = P.hp; r.weapons.arsenal.updateLeech = () => {}; r.weapons.arsenal.healBank = 6; r.weapons.fire('chains', 5);
+      return { lit, healed: +(P.hp - h0).toFixed(1) }; };
+    out.covenant = { plain: covenant(false), union: covenant(true) };
+    // Ossuary Crown: every 2 s each skull hurls a spear that bursts as the Barrage's do
+    const crown = (u) => { const r = start('osric'); evolve(r, 'ossuaryCrown'); if (u) r.unions.ossuaryCrown = true; r.weapons.timers.spears = 1e9; ring(r, 16, 7, 60);
+      let spears = 0; const sp = r.projectiles.spear.bind(r.projectiles); r.projectiles.spear = (...a) => { spears++; sp(...a); }; step(r, 2.1); return { spears, barrage: r.weapons.barrage.length > 0 || spears > 0 }; };
+    out.crown = { plain: crown(false), union: crown(true) };
+    // the card, the celebration and the build: the Union card's pill and art, the banner, the result's count and tiles
+    { const r = start(); evolve(r, 'starfall'); r.levelQueue = 1; r.showLevelUp(); await wait(200);
+      const c = [...document.querySelectorAll('.lvl-back .card')].find((n) => n.classList.contains('union'));
+      out.ui = { card: !!c, pill: c?.querySelector('.pill-union')?.textContent, art: !!c?.querySelector('img.skill-art') };
+      r.t += 1; c && c.click(); await wait(150);
+      out.ui.banner = q('.banner span')?.textContent; out.ui.taken = !!r.unions.starfall;
+      let res = null; const end0 = r.onEnd; r.onEnd = (x) => { res = x; end0(x); }; r.end(false); await wait(900);
+      out.ui.result = res && res.unions; out.ui.tile = !!q('.res-build .res-w.union');
+      document.querySelectorAll('.modal-back').forEach((n) => n.remove()); }
+    if (app.run) app.exitRun(); app.engine.manual = false;
+    return out;
+  });
+  check('unions: one evolution draws no Union; both draw it every time (once only); four weapons fill the slots and the Union frees one',
+    s.draw.one === 0 && s.draw.both === 20 && s.draw.name === 'Starfall Requiem' && s.draw.rarity === 'legendary' && !s.draw.full && s.draw.free && !s.draw.twice && s.draw.taken, JSON.stringify(s.draw));
+  check('unions: Starfall Requiem\'s blast hurls a ring of 14 bolts; Witch Moon\'s blades lay witchfire and their kills burst into flame',
+    s.starfall.plain === 0 && s.starfall.union === 14 && s.witchMoon.union >= s.witchMoon.plain + 6 && s.witchMoon.killed && s.witchMoon.burst === 1, JSON.stringify({ sf: s.starfall, wm: s.witchMoon }));
+  check('unions: Blood Covenant\'s beams set their prey ablaze and each chain link feeds the Shepherd; Ossuary Crown\'s skulls hurl spears every 2 s',
+    s.covenant.plain.lit === 0 && s.covenant.union.lit >= 3 && s.covenant.plain.healed === 0 && s.covenant.union.healed > 3 && s.crown.plain.spears === 0 && s.crown.union.spears >= 6, JSON.stringify({ bc: s.covenant, oc: s.crown }));
+  check('unions UI: the Union card (painted, "Soul Union"), its banner (a weapon slot is free), the result\'s count and the results tile',
+    s.ui.card && s.ui.pill === 'Soul Union' && s.ui.art && /weapon slot is free/.test(s.ui.banner || '') && s.ui.taken && s.ui.result === 1 && s.ui.tile, JSON.stringify(s.ui));
+});
+check('update 10: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

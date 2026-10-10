@@ -3,12 +3,13 @@
 // and kills/min for every weapon at Lv5 and evolved. Needs the dev server.
 // usage: HP=8 RATE=22 SECS=50 node scripts/weapon-bench.mjs http://localhost:5173/ [soulBolt,chains,...]
 //        LV=1 ... benches the bare weapon at that level instead (what a hero starts a run with), no evolution
+//        UNION=1 ... benches each Soul Union pair (both weapons evolved) without and with the Union (UNIONS in data.js)
 import { execSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const pw = require(execSync('npm root -g').toString().trim() + '/playwright');
 const URL = process.argv[2]; const ONLY = process.argv[3] ? process.argv[3].split(',') : null;
-const HP = +(process.env.HP || 4), RATE = +(process.env.RATE || 9), SECS = +(process.env.SECS || 60), LV = +(process.env.LV || 0);
+const HP = +(process.env.HP || 4), RATE = +(process.env.RATE || 9), SECS = +(process.env.SECS || 60), LV = +(process.env.LV || 0), UNION = process.env.UNION === '1';
 const W = {
   soulBolt: [{ soulBolt: 5, might: 1 }, 'soulStorm'], skullHalo: [{ skullHalo: 5, minionFury: 1 }, 'boneCrown'],
   scythe: [{ scythe: 5, haste: 1 }, 'harvestMoon'], chains: [{ chains: 5, frenzy: 1 }, 'chainsOfPerdition'],
@@ -21,17 +22,22 @@ const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).
 p.on('pageerror', (e) => console.log('ERR', e.message));
 await p.goto(URL); await p.waitForTimeout(2500);
 const rows = [];
-for (const [id, [lv, evo]] of Object.entries(W)) {
-  if (ONLY && !ONLY.includes(id)) continue;
-  for (const ev of LV ? [null] : [null, evo]) {
-    const res = await p.evaluate(({ lv, ev, HP, RATE, SECS }) => {
+// Soul Unions: each pair's two weapons at Lv5 with both evolutions, without and with the Union
+const PAIRS = UNION ? await p.evaluate(async () => Object.entries((await import('/src/game/data.js')).UNIONS).map(([id, U]) => [id, U.of])) : [];
+const JOBS = UNION
+  ? PAIRS.flatMap(([uid, of]) => { const lv = Object.assign({}, ...Object.values(W).filter(([, e]) => of.includes(e)).map(([l]) => l)); return [[uid, lv, of, null], [uid, lv, of, uid]]; })
+  : Object.entries(W).flatMap(([id, [lv, evo]]) => (LV ? [null] : [null, evo]).map((ev) => [id, lv, ev, null]));
+for (const [id, lv, ev, un] of JOBS) {
+  if (!UNION && ONLY && !ONLY.includes(id)) continue;
+  {
+    const res = await p.evaluate(({ lv, ev, un, HP, RATE, SECS }) => {
       let a = 1234; Math.random = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
       const app = window.__soulswarm; if (app.run) app.exitRun();
       document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
       app.profile.energy = 30; app.profile.flags.tutorialDone = true; app.profile.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1 };
       app.engine.manual = true; app.startRun(1);
       const r = app.run; r.player.hurt = () => {}; r.addXp = () => {}; r.director = () => {}; r.stats.cap = 0;
-      r.skillLv = { ...lv }; r.evolved = ev ? { [ev]: true } : {}; r.recomputeStats(); r.stats.cap = 0;
+      r.skillLv = { ...lv }; r.evolved = Object.fromEntries([].concat(ev || []).map((x) => [x, true])); r.unions = un ? { [un]: true } : {}; r.recomputeStats(); r.stats.cap = 0;
       const types = ['husk', 'husk', 'husk', 'husk', 'ghoul', 'ghoul', 'brute', 'brute', 'witch', 'husk'];
       let eff = 0, kills = 0; const orig = r.enemies.damage.bind(r.enemies);
       r.enemies.damage = (e, amt, o = {}) => { const live = e.active, h = e.hp; const k = orig(e, amt, o); if (live && o.source !== 'blast') { eff += Math.min(h, h - Math.max(0, e.hp)); if (k) kills++; } return k; };
@@ -43,10 +49,11 @@ for (const [id, [lv, evo]] of Object.entries(W)) {
         r.update(1 / 30);
       }
       return { dps: Math.round(eff / SECS), kpm: Math.round(kills / SECS * 60), alive: r.enemies.count };
-    }, { lv: LV ? { [id]: LV } : lv, ev, HP, RATE, SECS });
-    rows.push({ id, ev: ev || (LV ? 'Lv' + LV : 'Lv5'), ...res }); console.log(JSON.stringify(rows[rows.length - 1]));
+    }, { lv: LV ? { [id]: LV } : lv, ev, un, HP, RATE, SECS });
+    rows.push({ id, ev: UNION ? (un ? 'union' : 'pair') : ev || (LV ? 'Lv' + LV : 'Lv5'), ...res }); console.log(JSON.stringify(rows[rows.length - 1]));
   }
 }
 console.log(`\nsupply ≈ ${RATE}/s at hpMul ${HP}`);
-for (const id of Object.keys(W)) { const a = rows.find((x) => x.id === id && x.ev === 'Lv5'), e = rows.find((x) => x.id === id && x.ev !== 'Lv5'); if (a && e) console.log(`${id.padEnd(11)} Lv5 ${String(a.dps).padStart(5)} dps ${String(a.kpm).padStart(4)} kpm alive ${String(a.alive).padStart(3)} | ${e.ev.padEnd(18)} ${String(e.dps).padStart(5)} dps ${String(e.kpm).padStart(4)} kpm alive ${String(e.alive).padStart(3)} | x${(e.dps / a.dps).toFixed(2)}`); }
+if (UNION) for (const [id] of PAIRS) { const a = rows.find((x) => x.id === id && x.ev === 'pair'), e = rows.find((x) => x.id === id && x.ev === 'union'); if (a && e) console.log(`${id.padEnd(14)} pair ${String(a.dps).padStart(5)} dps ${String(a.kpm).padStart(4)} kpm | union ${String(e.dps).padStart(5)} dps ${String(e.kpm).padStart(4)} kpm | x${(e.dps / a.dps).toFixed(2)}`); }
+for (const id of UNION ? [] : Object.keys(W)) { const a = rows.find((x) => x.id === id && x.ev === 'Lv5'), e = rows.find((x) => x.id === id && x.ev !== 'Lv5'); if (a && e) console.log(`${id.padEnd(11)} Lv5 ${String(a.dps).padStart(5)} dps ${String(a.kpm).padStart(4)} kpm alive ${String(a.alive).padStart(3)} | ${e.ev.padEnd(18)} ${String(e.dps).padStart(5)} dps ${String(e.kpm).padStart(4)} kpm alive ${String(e.alive).padStart(3)} | x${(e.dps / a.dps).toFixed(2)}`); }
 await b.close();

@@ -2,7 +2,7 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL, HEROES, MASTERY, RITES } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, UNIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL, HEROES, MASTERY, RITES } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART, CHAPTER_ART, skillArt } from './art.js';
 import { RiteButton } from './riteui.js';
@@ -216,12 +216,12 @@ export class RunUI {
       cards.innerHTML = '';
       const banOk = !shrine && this.run.banishLeft > 0; // Banish: the ✕ strikes a skill from this run's draws
       list.forEach((c, i) => {
-        const evo = c.kind === 'evolution';
+        const evo = c.kind === 'evolution' || c.kind === 'union', union = c.kind === 'union';
         const rc = evo ? RARITY_COLOR.legendary : RARITY_COLOR[c.rarity] || RARITY_COLOR.common;
         const pips = c.max ? Array.from({ length: c.max }, (_, k) => `<i class="${k < c.level - 1 ? 'on' : k === c.level - 1 ? 'next' : ''}"></i>`).join('') : '';
-        const tag = evo ? '<span class="pill pill-gold">Evolution</span>' : c.isNew ? '<span class="pill pill-soul">New</span>' : c.kind === 'weapon' || c.kind === 'passive' ? `<span class="pill">Lv ${c.level}</span>` : c.tag ? `<span class="pill pill-soul">${c.tag}</span>` : '';
+        const tag = union ? '<span class="pill pill-union">Soul Union</span>' : evo ? '<span class="pill pill-gold">Evolution</span>' : c.isNew ? '<span class="pill pill-soul">New</span>' : c.kind === 'weapon' || c.kind === 'passive' ? `<span class="pill">Lv ${c.level}</span>` : c.tag ? `<span class="pill pill-soul">${c.tag}</span>` : '';
         const canBan = banOk && (c.kind === 'weapon' || c.kind === 'passive');
-        const card = h(`<button class="card ${evo ? 'evo' : ''} ${canBan ? 'bannable' : ''}" style="--rc:${rc}; animation-delay:${i * 70}ms">
+        const card = h(`<button class="card ${evo ? 'evo' : ''} ${union ? 'union' : ''} ${canBan ? 'bannable' : ''}" style="--rc:${rc}; animation-delay:${i * 70}ms">
           <div class="ic">${skillArt(c.id, c.icon)}</div>
           <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div>
           ${canBan ? `<span class="ban" role="button" tabindex="0" aria-label="Banish ${c.name}">${icon('close')}</span>` : ''}</button>`);
@@ -287,7 +287,7 @@ export class RunUI {
     return Object.entries(run.skillLv).filter(([id]) => SKILLS[id].type === 'weapon').map(([id, lv]) => {
       const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
       return `<span class="res-w ${evo ? 'evo' : ''}">${skillArt(evo ? evo[0] : id, SKILLS[id].icon)}<b>${evo ? evo[1].name : SKILLS[id].name}</b><small>${evo ? '★ Evolved' : 'Lv ' + lv}</small></span>`;
-    }).join('');
+    }).join('') + Object.keys(run.unions || {}).map((id) => `<span class="res-w evo union">${skillArt(id, UNIONS[id].icon)}<b>${UNIONS[id].name}</b><small>✦ Soul Union</small></span>`).join('');
   }
 
   // ---------------------------------------------------------------- pause
@@ -296,7 +296,7 @@ export class RunUI {
     const build = Object.entries(run.skillLv).map(([id, lv]) => {
       const evo = Object.entries(EVOLUTIONS).find(([eid, e]) => e.from === id && run.evolved[eid]);
       return evo ? `<span class="pill pill-gold">★ ${evo[1].name}</span>` : `<span class="pill">${SKILLS[id].name} ${lv}</span>`;
-    }).join(' ');
+    }).join(' ') + Object.keys(run.unions || {}).map((id) => ` <span class="pill pill-union">✦ ${UNIONS[id].name}</span>`).join('');
     modal({
       title: 'Paused',
       dismissable: false, cls: 'modal-pause',
