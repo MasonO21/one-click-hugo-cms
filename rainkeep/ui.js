@@ -683,6 +683,7 @@
         ${skill}
         ${KH.heroKin ? KH.heroKin(id) : ''}
         ${KH.heroCharm ? KH.heroCharm(id) : ''}
+        ${KH.heroSpar ? KH.heroSpar(id) : ''}
         ${KH.heroHeirloom ? KH.heroHeirloom(id) : ''}
         ${KH.heroTale ? KH.heroTale(id) : ''}
         <div class="card stack"><div class="row"><div class="grow"><b>Level ${h.lvl} / ${cap}</b><div class="muted small">Next level costs ${cost} Field Journals · you have ${fmt(S.journals)}</div></div></div>

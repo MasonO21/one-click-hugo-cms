@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.37.0',
+  version: '4.38.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1323,6 +1323,12 @@ const DATA = {
     warPts: 30, // Oasis Wars points per attack
   },
 
+  // ---------- The Sparring Ring ----------
+  // From Rainwyrm Lv 10 heroes off the squad can take a seat in the ring, where they spar with the squad and fight at
+  // its level: the lowest level among the squad's heroes, but never past a seated hero's own level cap (so stars still
+  // matter). Four seats, two more for Starglass; a seat whose hero leaves can't take another for twelve hours.
+  spar: { unlock: 10, seats: 4, extra: [300, 600], cooldown: 43200 },
+
   // ---------- Hero Kinships ----------
   // Pairs of heroes whose stories are tied. A kinship forms once both are recruited and works whenever both march in
   // the same squad: one bonus for the whole squad (attack, defense, health, the Torrent, or damage taken), bigger for
@@ -1836,6 +1842,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.38', items: [
+      { icon: 'i-duel', name: 'The Sparring Ring', text: "Heroes off the squad can now spar with it: up to four sit in the ring on the Heroes tab and fight at the squad's level, so a kinship partner or the hero whose skill answers a foe's trait is ready when you need them.", act: 'tab:heroes', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
+    ] },
     { v: '4.37', items: [
       { icon: 'i-check', name: 'Ready now', text: 'A new Ready entry on the left gathers everything waiting for you in one list: idle builders, a quest to claim, attacks left, a full stack of Trowels, dishes to cook. One tap goes to each.', act: 'ready', open: (S) => S.quest >= 6, needs: 'chapter quest 7' },
     ] },
@@ -2190,6 +2199,7 @@ const DATA = {
     { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
+    { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 3 } },
     { id: 'charm3', text: 'Have three heroes wear relic charms', stat: 'charmsWorn', n: 3, reward: { trowel: 10 } },
     { id: 'charm10', text: 'Raise a relic charm to Lv 10', stat: 'charmTop', n: 10, reward: { starglass: 300, charge: 2 } },
     { id: 'lev1', text: 'Attack the Sand Leviathan', stat: 'levAttacks', n: 1, reward: { whetstone: 3 } },

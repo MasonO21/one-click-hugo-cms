@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts, trade, decrees, talents, derby, pacts, dry, journeys, charters, cook, dig, founding, kin, leviathan, charms, traits
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts, trade, decrees, talents, derby, pacts, dry, journeys, charters, cook, dig, founding, kin, leviathan, charms, traits, spar
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -393,6 +393,12 @@ const HOURS = Number(process.argv[3] || 8);
           if (on) kn.used[on.id] = (kn.used[on.id] || 0) + 1;
         }
         if (!S.squad.some((id) => KH.heroBusy(id))) S.squad = best;
+        // the Sparring Ring: the highest-starred heroes off the squad fill the free seats
+        if (KH.spar && KH.spar.unlocked() && !NO.includes('spar')) {
+          const free = S.spar.seats.map((x, i) => (!x.id && x.until <= S.time ? i : -1)).filter((i) => i >= 0);
+          const pool = Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && KH.spar.seatOf(id) < 0).sort((x, y) => S.heroes[y].stars - S.heroes[x].stars || KH.heroPower(y) - KH.heroPower(x));
+          free.forEach((i, k) => { if (pool[k]) { A.sparset(`${i}:${pool[k]}`); UI.sheet = null; } });
+        }
         // relic charms: the strongest charms on the squad (skill power counted a little lower)
         if (KH.charms && KH.charms.unlocked() && !NO.includes('charms')) {
           const val = (k) => KH.charms.valueOf(k) * (KH.charms.kinds[k].fx === 'skill' ? 0.8 : 1);

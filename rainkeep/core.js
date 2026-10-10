@@ -322,7 +322,8 @@
   // ======================================================================
   function heroStats(id) {
     const h = S.heroes[id], r = DATA.rarities[HERO[id].rarity];
-    const m = (1 + 0.09 * (h.lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'stat') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'stat') : 0));
+    const lvl = KH.sparLevel ? KH.sparLevel(id) : h.lvl; // a hero in the Sparring Ring fights at the squad's level (spar.js)
+    const m = (1 + 0.09 * (lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'stat') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'stat') : 0));
     const tl = (k) => (1 + (KH.talentBoost ? KH.talentBoost(id, k) : 0)) * (1 + (KH.charmBoost ? KH.charmBoost(id, k) : 0)); // hero talents (talents.js), relic charms (charms.js)
     return { atk: r.atk * m * tl('atk'), def: r.def * m * tl('def'), hp: r.hp * m * tl('hp') };
   }
