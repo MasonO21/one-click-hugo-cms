@@ -241,7 +241,12 @@ function openDb(file) {
       rid: String(r.id), ch: r.channel, mid: String(r.mid), by: r.author, text: r.text, at: r.msg_at, rep: r.reporter, rat: r.at,
     })),
     deleteReport: (rid) => q('DELETE FROM reports WHERE id = ?').run(rid).changes,
-    deleteChat: (channel, mid) => q('DELETE FROM chat WHERE channel = ? AND mid = ?').run(channel, mid).changes,
+    // a removed message closes every report of it, so it doesn't come back on the moderators' list
+    deleteChat: (channel, mid) => {
+      const n = q('DELETE FROM chat WHERE channel = ? AND mid = ?').run(channel, mid).changes;
+      q('DELETE FROM reports WHERE channel = ? AND mid = ?').run(channel, mid);
+      return n;
+    },
 
     // ---- help requests
     addHelp: (h) => q(`INSERT INTO helps (rid, aid, pid, plot, label, at, end_at, need) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)

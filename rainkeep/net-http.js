@@ -110,8 +110,9 @@
         }
         st.online = true;
         if (r.ok) return r.data;
-        // 'gone': a 404 answers null ("there is no such thing"), unlike a failure, which answers the fallback
-        if (soft === 'gone' && r.status === 404) return null;
+        // 'gone:<code>': the server's own 404 with that code answers null ("there is no such thing"); any other
+        // failure (a proxy's 404 page, a wrong address) answers the fallback
+        if (typeof soft === 'string' && soft.startsWith('gone:') && r.status === 404 && r.data && r.data.error === soft.slice(5)) return null;
         if (!(soft && r.status === 404)) note(method + ' ' + path.split('?')[0] + ' ' + r.status + ' ' + ((r.data && r.data.error) || ''));
         return fallback;
       } catch (e) {
@@ -269,7 +270,7 @@
       alliances: safe(async (n) => arr(await call('GET', '/v1/alliances?' + query({ limit: n || 20 }), undefined, [])).map(caravan), []),
       // null when the Caravan is gone, undefined when the server couldn't be asked (never read as "gone")
       alliance: safe(async (aid) => {
-        const a = await call('GET', '/v1/alliances/' + seg(aid), undefined, undefined, 'gone');
+        const a = await call('GET', '/v1/alliances/' + seg(aid), undefined, undefined, 'gone:no_alliance');
         if (a === undefined) return undefined;
         if (a) rememberAll(a.members);
         return caravan(a);

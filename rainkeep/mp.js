@@ -80,15 +80,22 @@
   // ======================================================================
   // The Caravan (alliance): found, join, leave
   // ======================================================================
-  let alUnsub = null, helpUnsub = null, worldUnsub = null, watchedAid = null, deadAt = 0;
-  // a listener the store ended comes back on a later tick, after a pause
+  let alUnsub = null, helpUnsub = null, worldUnsub = null, watchedAid = null;
+  const deadAt = { al: 0, world: 0 };
+  // a listener the store ended comes back on a later tick, after a pause (its own: the Square's ending doesn't
+  // hold up a change of Caravan)
   const dead = (which) => () => {
-    deadAt = now();
+    deadAt[which] = now();
     if (which === 'world') { if (worldUnsub) worldUnsub(); worldUnsub = null; } else watchedAid = undefined;
   };
+  function unwatchAlliance() {
+    if (alUnsub) alUnsub(); if (helpUnsub) helpUnsub();
+    alUnsub = helpUnsub = null; watchedAid = null;
+  }
   function watchAlliance() {
     const aid = S.online.aid;
-    if (aid === watchedAid || now() - deadAt < 30000) return;
+    if (aid === watchedAid) return;
+    if (watchedAid === undefined && aid && now() - deadAt.al < 30000) return; // only a dead listener waits
     const again = watchedAid === undefined && aid && M.al && M.al.aid === aid;
     if (alUnsub) alUnsub(); if (helpUnsub) helpUnsub();
     alUnsub = helpUnsub = null; watchedAid = aid;
@@ -125,7 +132,7 @@
   function loadTop(force) {
     if (!force && fresh(M.topAt, 30000)) return;
     M.topAt = now();
-    net.topPlayers('power', 100).then((list) => { M.top = list; wantNames(list.map((p) => p.id)); refresh(); });
+    net.topPlayers('power', 100).then((list) => { M.top = list; M.topLoaded = true; wantNames(list.map((p) => p.id)); refresh(); });
     net.topPlayers('lp', 50).then((list) => { M.lp = list; refresh(); });
   }
   function loadAlliances(force) {
@@ -218,7 +225,7 @@
     if (!(await net.sendChat(channel, text))) { el.value = text; KH.toast('Slow down a moment, then send again.', 'warn'); }
   };
   function watchWorld(want) {
-    if (want && !worldUnsub && now() - deadAt > 30000) worldUnsub = net.watchChat('world', (list) => { M.chat.world = list; wantNames(list.map((m) => m.by)); refresh(); }, dead('world'));
+    if (want && !worldUnsub && now() - deadAt.world > 30000) worldUnsub = net.watchChat('world', (list) => { M.chat.world = list; wantNames(list.map((m) => m.by)); refresh(); }, dead('world'));
     if (!want && worldUnsub) { worldUnsub(); worldUnsub = null; }
   }
   const unread = (key) => { const list = M.chat[key]; const last = list.length ? list[list.length - 1] : null; return !!last && last.by !== me() && last.at > (S.online.chatSeen[key] || 0); };
@@ -411,9 +418,14 @@
     if (!on() || now() - btAt < 60000) return;
     btAt = now();
     // read from ten minutes back, so an attacker whose clock runs a little slow is still seen; each record is
-    // applied once, by its id
+    // applied once, by its id (a save from before ids were kept counts what it had already read as seen)
+    const legacy = !S.online.seenIds;
     const seenIds = S.online.seenIds || (S.online.seenIds = []);
-    const list = (await net.battlesAgainst(Math.max(0, S.online.seenBt - 10 * 60000))).sort((a, b) => a.at - b.at).filter((r) => r.bid && !seenIds.includes(r.bid));
+    const raw = await net.battlesAgainst(Math.max(0, S.online.seenBt - 10 * 60000));
+    if (legacy) for (const r of raw) if (r.bid && r.at <= S.online.seenBt && !seenIds.includes(r.bid)) seenIds.push(r.bid);
+    const list = raw.slice().sort((a, b) => a.at - b.at).filter((r) => r.bid && !seenIds.includes(r.bid));
+    // a full page means more to read: soon, and past what this page held
+    if (raw.length >= 50) { btAt = 0; S.online.seenBt = Math.max(S.online.seenBt, ...raw.map((r) => r.at)); }
     if (!list.length) return;
     let lost = 0;
     for (const r of list) {
@@ -423,8 +435,6 @@
       S.online.log.unshift({ att: r.att, at: r.at, win: r.win, d: r.d });
     }
     S.online.seenIds = seenIds.slice(-200);
-    // a long backlog is read fifty at a time
-    if (list.length >= 50) btAt = 0;
     S.online.log = S.online.log.slice(0, 12);
     wantNames(list.map((r) => r.att));
     const wins = list.filter((r) => r.win).length;
@@ -459,7 +469,7 @@
   KH.on('netReady', (e) => {
     if (!S) return;
     // a refused write (a viewer who can't write) or a withdrawn grant: back to the single-player Caravan
-    if (!e.online) { watchWorld(false); refresh(); return; }
+    if (!e.online) { watchWorld(false); unwatchAlliance(); refresh(); return; }
     if (UI.sub.caravan == null) UI.sub.caravan = 'online';
     syncProfile(true);
     watchAlliance();
@@ -583,8 +593,9 @@
     const body = t === 'arena' ? arenaView() : t === 'board' ? boardView() : t === 'square' ? squareView() : caravanView();
     const al = !!S.online.aid && (helpable().length > 0 || unread('al'));
     // alone on the link: how friends get here (the share menu is the platform's, the game can't open it)
-    const alone = M.topAt && M.top.filter((p) => p.id !== me()).length === 0
-      ? `<div class="card stack mp-alone"><b>Only you so far</b><p class="small">${net.isAdmin() ? 'Share this game from the <b>Share</b> menu at the top of the page and give friends <b>Contributor</b> access: they appear here as soon as they open it, and you can found a Caravan together.' : 'Friends join when the game\'s owner shares it with them (Contributor access). They appear here as soon as they open it.'}</p></div>` : '';
+    // (people outside the owner's organization can only write shared data as Editors invited by email: db.d.ts)
+    const alone = M.topLoaded && M.top.filter((p) => p.id !== me()).length === 0
+      ? `<div class="card stack mp-alone"><b>Only you so far</b><p class="small">${net.isAdmin() ? 'Share this game from the <b>Share</b> menu at the top of the page. People in your organization: <b>Contributor</b> access. Anyone else: invite them by email as <b>Editor</b>, with link sharing off (outside an organization only Editors can play online; Editors could also change the page, so invite people you trust). They appear here as soon as they open it.' : 'Friends join when the game\'s owner shares it with them. They appear here as soon as they open it.'}</p></div>` : '';
     return `${head}<div class="panel-head"><h2>Wardens online</h2><p>${M.top.length ? `${M.top.length} warden${M.top.length === 1 ? '' : 's'} · ${M.top.filter(onlineNow).length} online` : 'Real players'}</p></div>
       ${alone}${seg(t, [['caravan', 'Caravan', al], ['arena', 'Arena', S.online.log.some((l) => l.win && !l.revenged)], ['board', 'Wardens'], ['square', 'Square', unread('world')]], 'mptab')}${body}`;
   };

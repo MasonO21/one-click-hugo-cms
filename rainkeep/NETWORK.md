@@ -6,7 +6,7 @@ backends behind it:
 
 | Backend | Where | Used when |
 |---|---|---|
-| **Artifact** (`net.js`, `ArtifactNet`) | the claude.ai artifact's shared database (`db`), identity (`user`) | the game is opened from its claude.ai link: everyone the owner shares it with (as Contributor or above) plays together |
+| **Artifact** (`net.js`, `ArtifactNet`) | the claude.ai artifact's shared database (`db`), identity (`user`) | the game is opened from its claude.ai link: everyone the owner shares it with who may write shared data (Contributor or above inside the owner's organization; an Editor invited by email from outside it) plays together |
 | **HTTP** (`net-http.js`, `HttpNet`) | the Rainkeep server (`server/`) | the native app or a self-hosted web build with `DATA.server` set |
 
 With neither (offline, a page opened from disk, a viewer without write access), `KH.net.online()` is false and
@@ -63,7 +63,7 @@ A reported chat message travels in the reporter's own playtest report (`rep`: th
 at, rat }`), which only the owner reads (the artifact's rules can't make a collection writable by testers but
 readable only by the owner, since a path's write level can't be below its read level). The owner removes a message
 from the Playtest sheet: the message is deleted and its id recorded in `cfg/mod` (`{ removed: { mid: time } }`,
-admin-written), so the reports naming it drop off. The server keeps reports and removals itself
+owner-written), so the reports naming it drop off. The server keeps reports and removals itself
 (`POST /v1/chat/:channel/:mid/report`). Blocking is local: a blocked player's messages and keep are hidden on the
 blocker's device only.
 
@@ -95,7 +95,8 @@ older than three days are deleted by whoever reads them.
 
 ### Playtest report: `pt/{id}` (artifact) · `POST /v1/telemetry` (HTTP)
 
-One document per tester, readable only by the owner (artifact rule `read: admin`) or an admin token (server):
+One document per tester, readable only by the artifact's owner (rule `pt` read and write `owner`, `pt/{self}` read and
+write `interact`, so each tester writes and reads only their own) or an admin token (server):
 
 | Field | Meaning |
 |---|---|
@@ -113,9 +114,26 @@ One document per tester, readable only by the owner (artifact rule `read: admin`
 | `old` | true for a save that began before playtest reports: no first-session funnel |
 | `fb` | the last 30 feedback notes `{ at, r: 1–5, t ≤ 500, stage, ver }` |
 
-### Live config: `cfg/live` (artifact, admin-written) · `GET /v1/config` (HTTP)
+### Live config: `cfg/live` (artifact, owner-written) · `GET /v1/config` (HTTP)
 
 `{ motd ≤ 200, motdId, test: { week, focus ≤ 200 } }`: a message of the day shown once per `motdId`.
+
+### Artifact database rules (declared at publish)
+
+```js
+capabilities: {
+  db: { rules: [
+    { path: 'players', read: 'view', write: 'owner' }, { path: 'players/{self}', write: 'interact' },
+    { path: 'pt', read: 'owner', write: 'owner' }, { path: 'pt/{self}', read: 'interact', write: 'interact' },
+    { path: 'cfg', read: 'view', write: 'owner' },
+  ] },
+  user: { scopes: ['profile'] },
+}
+```
+
+Everything else (`al`, `chat`, `hp`, `bt`) keeps the defaults: read `view`, write `interact`. So a player writes only
+their own profile and their own playtest report, only the owner reads the reports and writes `cfg`, and names
+resolve through `user.profiles()` (scope `profile`).
 
 ## The client interface (`KH.net`)
 
@@ -128,7 +146,7 @@ in `KH.net.status()`. `watch*` calls return an unsubscribe function.
 | `online()` | true when a backend answered and this player can write |
 | `kind()` | `'artifact'`, `'http'` or `null` |
 | `me()` | this player's id |
-| `isAdmin()` | true for the artifact's owner or an admin token: the playtest dashboard |
+| `isAdmin()` | true for the artifact's own owner (not Editors, who may be testers) or an admin token: the playtest dashboard and moderation |
 | `names(ids)` | `{ id: display name }` |
 | `putProfile(p)` | writes this player's profile |
 | `player(id)` | one profile |

@@ -175,6 +175,8 @@ function cleanTelemetry(d) {
     t.days = [...days].sort((a, b) => a - b).slice(-60);
   }
   put('sessions', int(d.sessions, 0, 1e7, null));
+  // a save from before playtest reports: no first-session funnel (playtest.js)
+  if (d.old === true) t.old = true;
   put('secs', int(d.secs, 0, 1e10, null));
   put('ftue', numMap(d.ftue, 40, 1e9));
   put('stage', int(d.stage, LIMITS.stage[0], LIMITS.stage[1], null));

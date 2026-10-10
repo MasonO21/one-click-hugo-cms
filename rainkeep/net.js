@@ -44,25 +44,27 @@
   function ArtifactNet(db, user, me, canWrite, admin, unsure) {
     const st = { calls: 0, errors: 0, lastError: null };
     // a viewer the platform said nothing about finds out with a refused write; a withdrawn grant ends play
-    // online for this visit (db.d.ts: invalid_argument on a well-formed write, revoked)
-    const lost = (e) => {
+    // online for this visit (db.d.ts: invalid_argument on a well-formed write, revoked). Only a refused set or add
+    // decides: an update also rejects invalid_argument when its document is gone (a help request just filled)
+    const lost = (e, decides) => {
       const c = e && e.code;
-      if (canWrite && (c === 'revoked' || (unsure && c === 'invalid_argument'))) { canWrite = false; KH.emit('netReady', { online: false, kind: 'artifact' }); }
+      if (canWrite && (c === 'revoked' || (unsure && decides && c === 'invalid_argument'))) { canWrite = false; KH.emit('netReady', { online: false, kind: 'artifact' }); }
     };
     // p: a promise, or a function that makes one (refs are built inside it, so a bad path rejects, never throws)
     const safe = (p, dflt) => {
       st.calls++;
       return Promise.resolve().then(() => (typeof p === 'function' ? p() : p)).then((v) => v, (e) => { st.errors++; st.lastError = (e && (e.code || e.message)) || String(e); if (e && e.code === 'revoked') lost(e); return dflt; });
     };
-    const wsafe = (fn, dflt) => { st.calls++; return Promise.resolve().then(fn).then((v) => v, (e) => { st.errors++; st.lastError = (e && (e.code || e.message)) || String(e); lost(e); return dflt; }); };
-    // one write at a time per document (the store asks for it): later writes to the same path wait their turn
+    const wsafe = (fn, dflt, decides) => { st.calls++; return Promise.resolve().then(fn).then((v) => v, (e) => { st.errors++; st.lastError = (e && (e.code || e.message)) || String(e); lost(e, decides); return dflt; }); };
+    // one write at a time per document (the store asks for it): later writes to the same path wait their turn.
+    // decides: a set that creates or replaces (see lost)
     const chain = {};
-    const write = (path, fn) => { const run = (chain[path] || Promise.resolve()).then(fn, fn); chain[path] = run.catch(() => {}); return wsafe(() => run.then(() => true), false); };
+    const write = (path, fn, decides) => { const run = (chain[path] || Promise.resolve()).then(fn, fn); chain[path] = run.catch(() => {}); return wsafe(() => run.then(() => true), false, decides); };
     // a listener the store ended (a budget, a stopped bridge, a withdrawn grant) is dead: only a fresh subscribe
     // brings it back, which the caller does after a pause (onDead)
     const listen = (q, map, cb, onDead) => {
       try {
-        return q().onSnapshot((s) => cb(map(s)), (e) => { st.errors++; st.lastError = e && e.code; lost(e); if (onDead) onDead(e && e.code); });
+        return q().onSnapshot((s) => cb(map(s)), (e) => { st.errors++; st.lastError = e && e.code; lost(e, false); if (onDead) onDead(e && e.code); });
       } catch (e) { st.errors++; st.lastError = e && (e.code || e.message); if (onDead) setTimeout(() => onDead('throw'), 0); return () => {}; }
     };
     const docs = (snap) => (snap && snap.docs ? snap.docs.filter((d) => d.exists) : []);
@@ -77,7 +79,7 @@
         const ps = await safe(user.profiles(list), {});
         return Object.fromEntries(list.map((id) => [id, (ps[id] && ps[id].name) || '']));
       },
-      putProfile: (p) => write(`players/${me}`, () => db.doc(`players/${me}`).set(p)),
+      putProfile: (p) => write(`players/${me}`, () => db.doc(`players/${me}`).set(p), true),
       player: (id) => (idOf(id) ? safe(() => db.doc(`players/${id}`).get().then((d) => (d.exists ? cleanProfile(id, d.data()) : null)), null) : Promise.resolve(null)),
       topPlayers: (by, n) => safe(players().orderBy(by === 'lp' ? 'lp' : 'power', 'desc').limit(Math.min(100, n || 50)).get().then((s) => docs(s).map((d) => cleanProfile(d.id, d.data()))), []),
       opponents: (power, n) => safe(players().where('power', '>=', power * 0.6).where('power', '<=', power * 1.4).limit(60).get()
@@ -89,7 +91,7 @@
       createAlliance: async (o) => {
         const id = await safe(() => db.collection('al').doc().id, null);
         if (!id) return null;
-        const ok = await write(`al/${id}`, () => db.doc(`al/${id}`).set({ name: str(o.name, 24), tag: str(o.tag, 4), color: o.color, motto: str(o.motto, 80), leader: me, created: Date.now(), open: true }));
+        const ok = await write(`al/${id}`, () => db.doc(`al/${id}`).set({ name: str(o.name, 24), tag: str(o.tag, 4), color: o.color, motto: str(o.motto, 80), leader: me, created: Date.now(), open: true }), true);
         return ok ? id : null;
       },
       updateAlliance: (aid, patch) => write(`al/${aid}`, () => db.doc(`al/${aid}`).update(patch)),
@@ -102,7 +104,7 @@
         if (!t || Date.now() - lastChat < 2000) return false;
         lastChat = Date.now();
         const col = () => db.collection(`chat/${channel}/m`);
-        const ok = await wsafe(() => col().add({ by: me, at: Date.now(), text: t }).then(() => true), false);
+        const ok = await wsafe(() => col().add({ by: me, at: Date.now(), text: t }).then(() => true), false, true);
         // each channel keeps its newest 100: now and then the sender clears what is older
         if (ok && Math.random() < 0.15) {
           safe(() => col().orderBy('at', 'desc').limit(300).get().then((s) => Promise.all(docs(s).slice(100).map((d) => col().doc(d.id).delete()))), null);
@@ -115,7 +117,7 @@
         const id = await safe(() => db.collection('hp').doc().id, null);
         if (!id) return null;
         if (onId) onId(id);
-        const ok = await write(`hp/${id}`, () => db.doc(`hp/${id}`).set({ aid: o.aid, by: me, plot: str(o.plot, 24), label: str(o.label, 40), at: Date.now(), end: o.end, need: o.need, hs: {} }));
+        const ok = await write(`hp/${id}`, () => db.doc(`hp/${id}`).set({ aid: o.aid, by: me, plot: str(o.plot, 24), label: str(o.label, 40), at: Date.now(), end: o.end, need: o.need, hs: {} }), true);
         return ok ? id : null;
       },
       // a nested merge: two helpers at once both count
@@ -124,15 +126,28 @@
       watchHelps: (aid, cb, onDead) => listen(() => db.collection('hp').where('aid', '==', aid).limit(100), (s) => docs(s).map((d) => cleanHelp(d.id, d.data())), cb, onDead),
       oldHelps: (aid, before) => safe(() => db.collection('hp').where('aid', '==', aid).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`hp/${d.id}`).delete()))), null),
       boss: (aid, day) => safe(() => db.doc(`al/${aid}/boss/${day}`).get().then((d) => (d.exists ? cleanBoss(d.data()) : null)), null),
-      // the day's boss is made once, then every hit is a nested merge of the hitter's own total: two members
-      // striking first at the same moment both count
+      // The day's boss is made once, by whoever strikes first while holding the document's lease (two members
+      // striking first at once would otherwise both create it, the later wiping the earlier's damage); then every
+      // hit is a nested merge of the hitter's own total, checked once after it lands.
       hitBoss: async (aid, day, hp, total) => {
         const path = `al/${aid}/boss/${day}`;
-        const made = await write(path, async () => { const ref = db.doc(path); const d = await ref.get(); if (!d.exists) await ref.set({ hp, dmg: {} }); });
+        const made = await write(path, async () => {
+          const ref = db.doc(path);
+          let d = await ref.get();
+          if (d.exists && d.data().hp != null) return;
+          const lease = typeof ref.acquire === 'function' ? await ref.acquire({ holder: me, ttlMs: 5000 }) : { acquired: true };
+          if (!lease.acquired) { await new Promise((r) => setTimeout(r, 1500)); return; } // another member is making it
+          d = await ref.get();
+          if (!d.exists || d.data().hp == null) await ref.set({ hp, dmg: {} });
+        });
         if (!made) return false;
-        return write(path, () => db.doc(path).update({ dmg: { [me]: total } }));
+        const hit = () => write(path, () => db.doc(path).update({ dmg: { [me]: total } }));
+        // (a hit just after another member's lease may find the boss not yet made: once more, a moment later)
+        if (!(await hit()) && !(await new Promise((r) => setTimeout(r, 1500)).then(hit))) return false;
+        const after = await safe(() => db.doc(path).get().then((d) => (d.exists ? cleanBoss(d.data()) : null)), null);
+        return after && after.dmg[me] !== total ? hit() : true;
       },
-      postBattle: (rec) => wsafe(() => db.collection('bt').add({ ...rec, att: me, at: Date.now() }).then(() => true), false),
+      postBattle: (rec) => wsafe(() => db.collection('bt').add({ ...rec, att: me, at: Date.now() }).then(() => true), false, true),
       // oldest first, so a long list is read in order and nothing is skipped (mp.js remembers what it has seen)
       battlesAgainst: (since) => safe(() => db.collection('bt').where('def', '==', me).where('at', '>', since).orderBy('at').limit(50).get().then((s) => docs(s).map((d) => cleanBattle(d.id, d.data()))), []),
       dropBattles: (before) => safe(() => db.collection('bt').where('def', '==', me).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`bt/${d.id}`).delete()))), null),
@@ -144,8 +159,9 @@
         return safe(() => db.doc(`chat/${ch}/m/${mid}`).delete().then(() => write('cfg/mod', async () => { const d = await mod.get(); if (d.exists) await mod.update({ removed: { [mid]: Date.now() } }); else await mod.set({ removed: { [mid]: Date.now() } }); })), false);
       },
       moderation: () => safe(() => db.doc('cfg/mod').get().then((d) => (d.exists && d.data().removed && typeof d.data().removed === 'object' ? d.data().removed : {})), {}),
-      putTelemetry: (doc) => write(`pt/${me}`, () => db.doc(`pt/${me}`).set(doc)),
-      allTelemetry: () => safe(() => db.collection('pt').limit(1000).get().then((s) => docs(s).map((d) => ({ id: d.id, ...d.data() }))), []),
+      putTelemetry: (doc) => write(`pt/${me}`, () => db.doc(`pt/${me}`).set(doc), true),
+      // the id is the document's own, never one a report claims for itself
+      allTelemetry: () => safe(() => db.collection('pt').limit(1000).get().then((s) => docs(s).map((d) => ({ ...d.data(), id: d.id }))), []),
       config: () => safe(() => db.doc('cfg/live').get().then((d) => (d.exists ? d.data() : null)), null),
     };
     return net;
@@ -213,7 +229,9 @@
     // a viewer who may not write shared data (Viewer, Commenter) plays alone; when the platform says nothing,
     // the first refused write decides (ArtifactNet: lost)
     const can = await user.can('data.write');
-    const admin = (await user.isOwner()) || (await user.canEdit());
+    // the Playtest sheet and moderation are the owner's alone: testers invited as Editors (outside an
+    // organization, the level that can write) must not read each other's reports
+    const admin = !!(await user.isOwner());
     impl = ArtifactNet(db, user, me, can !== false, admin, can == null);
   }
   KH.on('booted', () => {

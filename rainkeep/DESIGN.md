@@ -341,7 +341,7 @@ Other measured outcomes:
 
 LAUNCH.md has the plan in full. In short:
 
-1. Closed test (now): share the link at Contributor access with 20 to 50 genre players for two weeks; read the
+1. Closed test (now): share the link with 20 to 50 genre players for two weeks (LAUNCH.md says at which access); read the
    Playtest sheet for retention, the first-session funnel, frame rates and feedback. Android testers can sideload the
    debug build (`scripts/android-debug-build.sh`, NATIVE.md).
 2. Fix what the test finds, then deploy the server (`server/README.md`) and ship TestFlight and Google Play internal

@@ -10,9 +10,15 @@ on players once the numbers say it will come back.
 **What:** 20 to 50 people play the claude.ai link for two weeks.
 
 **How:**
-1. Open the game's link, then **Share** it with each tester at **Contributor** access (Viewers and Commenters can
-   play but not join the online side or send reports). Testers need a claude.ai account in your organization or
-   an email invitation.
+1. Open the game's link, then **Share** it with each tester. Who can play online depends on who they are, because
+   online play writes to the link's shared data:
+   - **People in your organization** (a Team or Enterprise plan): **Contributor** access.
+   - **Anyone else** (personal accounts, people outside your organization): invite each one **by email as Editor**
+     and leave link sharing off. Outside an organization, Viewers, Commenters and even Contributors can only read,
+     so they would play alone; an Editor invited by email can write. Editors can also publish changes to the page,
+     so invite people you trust, and ask them not to.
+   - Viewers and Commenters can still play, on their own, without reports.
+   The Playtest sheet and moderation stay yours alone (the artifact's owner), whatever level testers have.
 2. Tell them three things: play at least once a day for a week, use **Menu → Feedback** for anything confusing,
    slow or broken, and invite each other into a Caravan.
 3. Optional: set a message of the day for the testers (`cfg/live` in the artifact database:

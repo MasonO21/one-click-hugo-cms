@@ -165,10 +165,17 @@
     // break the sheet
     const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object' && !Array.isArray(x)) : []);
     const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
-    T.list = list.filter((r) => r && typeof r === 'object' && r.first).map((r) => ({
-      ...r, days: Array.isArray(r.days) ? r.days.filter((d) => Number.isFinite(d)) : [], err: arr(r.err), fb: arr(r.fb), rep: arr(r.rep),
-      ftue: r.old ? {} : obj(r.ftue), feat: obj(r.feat), dev: obj(r.dev),
-    }));
+    const C = KH.netClean;
+    T.list = list.filter((r) => r && typeof r === 'object' && r.first).map((r) => {
+      const dev = obj(r.dev);
+      return {
+        ...r, days: Array.isArray(r.days) ? r.days.filter((d) => Number.isFinite(d)) : [],
+        err: arr(r.err).map((e) => ({ m: C.str(e.m, 160), n: C.int(e.n, 1, 1e6, 1), at: C.num(e.at, 0, 1e14) })),
+        fb: arr(r.fb).map((f) => ({ at: C.num(f.at, 0, 1e14), r: C.int(f.r, 0, 5), t: C.str(f.t, 500), stage: C.int(f.stage, 0, 400), ver: C.str(f.ver, 12) })),
+        rep: arr(r.rep), old: !!r.old, ftue: r.old ? {} : obj(r.ftue), feat: obj(r.feat),
+        dev: { ...dev, tier: C.str(dev.tier, 12), gpu: C.str(dev.gpu, 80) },
+      };
+    });
     // chat reports travel in the reporters' own reports; the ones whose message the owner removed drop off
     const removed = await net.moderation(), seen = new Set();
     T.reports = [];
@@ -195,7 +202,9 @@
       const back = due.filter((r) => (r.days || []).map(N).includes(firstDay(r) + k));
       return { n: back.length, of: due.length };
     };
-    const funnel = FTUE.map(([k, label]) => { const t = L.map((r) => r.ftue && N(r.ftue[k], NaN)).filter((x) => Number.isFinite(x)); return { k, label, n: t.length, med: med(t) }; });
+    // the funnel counts only testers whose first session it saw (not saves from before playtest reports)
+    const FL = L.filter((r) => !r.old);
+    const funnel = FTUE.map(([k, label]) => { const t = FL.map((r) => r.ftue && N(r.ftue[k], NaN)).filter((x) => Number.isFinite(x)); return { k, label, n: t.length, of: FL.length, med: med(t) }; });
     const errs = {};
     for (const r of L) for (const e of r.err || []) { const m = String(e.m || '').slice(0, 160); errs[m] = (errs[m] || 0) + N(e.n, 1); }
     const fb = [];
@@ -216,7 +225,7 @@
     const lines = [`Rainkeep playtest, ${new Date().toISOString().slice(0, 10)}: ${s.n} testers, ${s.today} played today.`,
       `Retention: day 1 ${pct(s.d1.n, s.d1.of)} (${s.d1.n}/${s.d1.of}), day 3 ${pct(s.d3.n, s.d3.of)} (${s.d3.n}/${s.d3.of}), day 7 ${pct(s.d7.n, s.d7.of)} (${s.d7.n}/${s.d7.of}).`,
       `Median: ${s.sessions ?? '–'} sessions, ${s.mins != null ? Math.round(s.mins) : '–'} minutes played, stage ${s.stage ?? '–'}. Simulated spend $${s.spend.toFixed(2)} from ${s.payers} testers.`,
-      'First-session funnel:', ...s.funnel.map((f) => `  ${f.label}: ${pct(f.n, s.n)}${f.med != null ? ` (median ${Math.round(f.med / 60)} min in)` : ''}`),
+      'First-session funnel:', ...s.funnel.map((f) => `  ${f.label}: ${pct(f.n, f.of)}${f.med != null ? ` (median ${Math.round(f.med / 60)} min in)` : ''}`),
       `Devices: ${Object.entries(s.tiers).map(([k, v]) => `${k} ${v}`).join(', ')}; median ${s.fps ?? '–'} fps in the keep, first screen at ${s.ui != null ? `${(s.ui / 1000).toFixed(1)} s` : '–'}.`,
       'Errors:', ...(s.errs.length ? s.errs.map(([m, n]) => `  ${n}× ${m}`) : ['  none']),
       'Feedback:', ...(s.fb.length ? s.fb.map((f) => `  [${f.r || '-'}/5, stage ${f.stage}] ${f.t}`) : ['  none'])];
@@ -228,7 +237,7 @@
     if (!T.list) return { title: 'Playtest', lvl: '', body: '<p class="muted">Reading the testers\' reports…</p>' };
     const s = stats();
     const card = (v, label) => `<div class="pt-kpi"><b>${v}</b><span>${label}</span></div>`;
-    const funnel = s.funnel.map((f) => `<div class="row pt-f"><span class="grow small">${esc(f.label)}</span><div class="pt-bar"><i style="width:${s.n ? (100 * f.n) / s.n : 0}%"></i></div><b class="small">${pct(f.n, s.n)}</b></div>`).join('');
+    const funnel = s.funnel.map((f) => `<div class="row pt-f"><span class="grow small">${esc(f.label)}</span><div class="pt-bar"><i style="width:${f.of ? (100 * f.n) / f.of : 0}%"></i></div><b class="small">${pct(f.n, f.of)}</b></div>`).join('');
     const people = (T.list || []).slice().sort((a, b) => N(b.last) - N(a.last)).slice(0, 40).map((r) => `<div class="row pt-p"><div class="grow small"><b>${esc(T.names[r.id] || 'A tester')}</b><div class="muted">${(r.days || []).length} day${(r.days || []).length === 1 ? '' : 's'} · ${Math.round(N(r.secs) / 60)} min · stage ${N(r.stage)} · Wyrm ${N(r.wyrm)}${r.dev && r.dev.tier ? ` · ${esc(r.dev.tier)}` : ''}${r.fps ? ` · ${N(r.fps)} fps` : ''}</div></div><span class="muted small">${new Date(N(r.last)).toLocaleDateString()}</span></div>`).join('');
     const fb = s.fb.map((f) => `<div class="pt-fb"><div class="muted small">${esc(T.names[f.id] || 'A tester')} · ${f.r ? `${f.r}/5 · ` : ''}stage ${f.stage} · ${new Date(f.at).toLocaleDateString()}</div><p class="small">${esc(f.t) || '<i>no note</i>'}</p></div>`).join('');
     const errs = s.errs.map(([m, n]) => `<div class="row small"><b>${n}×</b><span class="grow">${esc(m)}</span></div>`).join('');
@@ -241,8 +250,8 @@
         <div class="section-label">Feedback</div><div class="card stack">${fb || '<p class="muted small">No notes yet.</p>'}</div>
         ${(T.reports || []).length ? `<div class="section-label">Reported messages</div><div class="card stack">${T.reports.map((r) => `<div class="row pt-p"><div class="grow small"><b>${esc(T.names[r.by] || 'A player')}</b> in ${r.ch === 'world' ? 'the Square' : 'a Caravan'}: "${esc(r.text)}"</div><button class="btn small" data-act="ptremove" data-arg="${esc(r.rid)}">Remove</button></div>`).join('')}</div>` : ''}
         <div class="section-label">Errors</div><div class="card stack">${errs || '<p class="muted small">None reported.</p>'}</div>
-        <div class="section-label">Testers</div><div class="card stack">${people || '<p class="muted small">No reports yet. Share the game\'s link (Contributor access) and they appear as people play.</p>'}</div>
-        <div class="section-label">Inviting testers</div><div class="card stack small"><p>Share this game's link (Share, top right on claude.ai) with each tester at <b>Contributor</b> access: Viewers and Commenters can play but not join the online side or send reports. Then send them the invitation.</p><button class="btn alt" data-act="ptinvite">Copy the invitation</button></div>
+        <div class="section-label">Testers</div><div class="card stack">${people || '<p class="muted small">No reports yet. Share the game (see Inviting testers) and they appear as people play.</p>'}</div>
+        <div class="section-label">Inviting testers</div><div class="card stack small"><p>Share this game from the Share menu at the top of the page. People in your organization: <b>Contributor</b> access. Anyone else (personal accounts): invite them by email as <b>Editor</b> and leave link sharing off, because outside an organization only Editors can write the shared data online play and reports need; Editors could also change the page, so invite people you trust. Viewers and Commenters can play, alone. Then send the invitation.</p><button class="btn alt" data-act="ptinvite">Copy the invitation</button></div>
         <div class="row"><button class="btn alt grow" data-act="ptcopy">Copy summary</button><button class="btn alt grow" data-act="playtest">Refresh</button></div>`,
     };
   };

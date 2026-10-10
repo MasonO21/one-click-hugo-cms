@@ -101,7 +101,7 @@ test('reports are stored with a copy of the message for moderators', async (t) =
   assert.equal((await s.req('DELETE', `/v1/admin/chat/world/${m.mid}`, { token: ADMIN })).status, 200);
   assert.deepEqual((await s.req('GET', '/v1/chat/world', { token: b.token })).body, []);
   assert.equal((await s.req('DELETE', `/v1/admin/chat/world/${m.mid}`, { token: ADMIN })).status, 404);
-  assert.equal((await s.req('DELETE', `/v1/admin/reports/${reps[0].rid}`, { token: ADMIN })).status, 200);
+  // removing the message closed its reports too
   assert.deepEqual((await s.req('GET', '/v1/admin/reports', { token: ADMIN })).body, []);
   assert.equal((await s.req('DELETE', `/v1/admin/reports/${reps[0].rid}`, { token: ADMIN })).status, 404);
 });
