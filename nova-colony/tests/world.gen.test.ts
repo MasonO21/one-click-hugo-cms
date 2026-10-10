@@ -144,6 +144,21 @@ describe('world generation', () => {
         }
         expect(gen.props.length).toBeGreaterThan(1500);
       });
+
+      it('stands no prop in a lake: every prop foot is above the water surface', () => {
+        const V = WORLD_CELLS + 1;
+        for (const p of gen.props) {
+          const gx = (p.x + HALF_WORLD) / CELL;
+          const gz = (p.z + HALF_WORLD) / CELL;
+          const ix = Math.floor(gx);
+          const iz = Math.floor(gz);
+          const tx = gx - ix;
+          const tz = gz - iz;
+          const i = iz * V + ix;
+          const h = (gen.heights[i] * (1 - tx) + gen.heights[i + 1] * tx) * (1 - tz) + (gen.heights[i + V] * (1 - tx) + gen.heights[i + V + 1] * tx) * tz;
+          expect(h, `${p.model} at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`).toBeGreaterThanOrEqual(WATER_LEVEL);
+        }
+      });
     });
   }
 });

@@ -814,6 +814,20 @@ function buildProps(data: DataRegistry, seed: number, reg: RegionBuild, reserved
   return props;
 }
 
+/** A point on a lake's bank ring (the cells around the water) whose ground lies under the water surface. */
+function inShallows(heights: Float32Array, reserved: Uint8Array, x: number, z: number): boolean {
+  const gx = x / CELL + HALF_CELLS;
+  const gz = z / CELL + HALF_CELLS;
+  const cx = Math.floor(gx);
+  const cz = Math.floor(gz);
+  if (cx < 0 || cz < 0 || cx >= N || cz >= N || !(reserved[cz * N + cx] & RES_BIT_MARGIN)) return false;
+  const tx = gx - cx;
+  const tz = gz - cz;
+  const i = cz * V + cx;
+  const h = (heights[i] * (1 - tx) + heights[i + 1] * tx) * (1 - tz) + (heights[i + V] * (1 - tx) + heights[i + V + 1] * tx) * tz;
+  return h < WATER_LEVEL;
+}
+
 // ------------------------------------------------------------------------------------------------
 // Entry point
 // ------------------------------------------------------------------------------------------------
@@ -862,7 +876,10 @@ export function generateWorld(data: DataRegistry, seed: number, profile?: Record
   lap('pois');
   const nodes = buildNodes(data, seed, reg, reserved);
   lap('nodes');
-  const props = buildProps(data, seed, reg, reserved, nodes);
+  // Lakes stand at WATER_LEVEL, above their carved beds, so the bank cells around a lake dip under the surface
+  // toward the water. Drop the few props whose foot would stand in the lake; filtering after placement keeps the
+  // rest of the scatter (and its random sequence) as it was.
+  const props = buildProps(data, seed, reg, reserved, nodes).filter((p) => !inShallows(heights, reserved, p.x, p.z));
   lap('props');
 
   const regionCenters = data.biomes.map((b, i) => {
