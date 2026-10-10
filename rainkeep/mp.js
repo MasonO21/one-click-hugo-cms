@@ -49,7 +49,7 @@
     net.names(miss).then((r) => { Object.assign(M.names, r); refresh(); });
   };
   const fresh = (at, ms) => now() - at < ms;
-  const onlineNow = (p) => p && now() - p.seen < 5 * 60000;
+  const onlineNow = (p) => p && (p.id === me() || now() - p.seen < 5 * 60000);
 
   // ======================================================================
   // My profile: what other players see of this keep
@@ -459,8 +459,9 @@
     if (UI.tab === 'caravan' && UI.sub.caravan !== 'sim') {
       const t = UI.mpTab || 'caravan';
       if (t === 'caravan') { if (S.online.aid) { loadMembers(); loadBoss(); } else loadAlliances(); }
-      if (t === 'arena') { loadOpponents(); loadTop(); }
-      if (t === 'board') loadTop();
+      if (t === 'arena') loadOpponents();
+      // the board feeds the header on every tab ("wardens · online"), so it stays fresh on all of them
+      loadTop();
       watchWorld(t === 'square');
       if (t === 'square' && M.chat.world.length) S.online.chatSeen.world = M.chat.world[M.chat.world.length - 1].at;
       if (t === 'caravan' && M.chat.al.length) S.online.chatSeen.al = M.chat.al[M.chat.al.length - 1].at;
@@ -471,9 +472,9 @@
     // a refused write (a viewer who can't write) or a withdrawn grant: back to the single-player Caravan
     if (!e.online) { watchWorld(false); unwatchAlliance(); refresh(); return; }
     if (UI.sub.caravan == null) UI.sub.caravan = 'online';
-    syncProfile(true);
+    // the board is read once this keep's own profile is there, so a first visit doesn't show it missing
+    syncProfile(true).then(() => loadTop(true));
     watchAlliance();
-    loadTop(true);
     refresh();
   });
   window.addEventListener('pagehide', () => { if (on() && S) net.putProfile(profile()); });
