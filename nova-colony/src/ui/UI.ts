@@ -826,7 +826,8 @@ export class UI {
       const d = g.data.resource(first[0]);
       this.toasts.show(`Need ${fmt(Math.ceil(first[1]))} more ${d?.name ?? first[0]}`, 'warning', resourceArt(first[0]) ?? d?.icon ?? '📦');
     });
-    bus.on('player:backpackFull', () => this.toasts.show('Backpack full! Walk back to the colony to unload.', 'warning', '🎒'));
+    // a full backpack is said by the sim (player.ts: once per few seconds, "storage full" inside the colony): no second
+    // toast here on every swing
     // the sim already explains an unavailable video; a skipped one needs no scolding toast at all
     bus.on('ad:failed', () => {
       this.lastAdFail = performance.now();

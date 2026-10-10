@@ -8,6 +8,7 @@ import { fmt, fmtDuration } from '../../core/format';
 import { bagCovers } from '../../core/bag';
 import { btn, section, unlockChip } from '../widgets';
 import { tierUnlockGroups } from '../logic/describe';
+import { tierRoomNote } from '../logic/awayNews';
 import { fill, h, setVar } from '../dom';
 import { alienArt, artOrEmoji, buildingArt, hudArt, iconEl, resIcon, resourceArt, tierArt } from '../art';
 
@@ -24,7 +25,9 @@ export class ColonyPanel extends Panel {
     const g = this.game;
     const req = this.requirements();
     const aff = req ? (bagCovers(g.state.resources.amounts, req.cost) ? 1 : 0) : 2;
-    return `${g.state.colony.tier}|${g.state.research.completed.length}|${aff}|${g.state.buildings.list.length}|${g.state.colonists.list.length}`;
+    // storage capacity of the tier-up goods (the "build storage" note follows an upgraded store)
+    const room = req && !aff ? Object.keys(req.cost).map((k) => g.sys.economy.capacity(k)).join('.') : '';
+    return `${g.state.colony.tier}|${g.state.research.completed.length}|${aff}|${g.state.buildings.list.length}|${g.state.colonists.list.length}|${room}`;
   }
 
   /**
@@ -140,6 +143,9 @@ export class ColonyPanel extends Panel {
         );
       }
       rows.appendChild(h('div', { class: 'row req' }, h('span', { class: 'chip ' + (req.affordable ? 'good' : 'bad'), text: req.affordable ? '✔ Resources' : '✖ Resources' }), this.progressChips(req.cost)));
+      // the goals outgrow the stores a tier starts with: say so before the player wonders why a chip stops filling
+      const room = req.affordable ? null : tierRoomNote(g, req.cost);
+      if (room) rows.appendChild(h('div', { class: 'mute small tier-room', text: room }));
       card.appendChild(rows);
       const ok = req.researchDone && req.affordable;
       const reason = !req.researchDone ? 'Research it first' : !req.affordable ? 'Gather a few more resources' : false;

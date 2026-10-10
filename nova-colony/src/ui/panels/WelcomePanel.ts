@@ -11,6 +11,7 @@ import { confetti } from '../fx/Confetti';
 import { countUp, fill, h } from '../dom';
 import { hudArt, iconEl, resourceArt } from '../art';
 import { offlineWorkedText } from '../logic/time';
+import { awayNews, awayNewsText } from '../logic/awayNews';
 
 export interface WelcomeArg {
   seconds: number;
@@ -86,6 +87,9 @@ export class WelcomePanel extends Panel {
     // honest about the labs' offline cap: research stops once they have banked it (the rest of the colony kept going)
     const capMin = this.data.balance.offlineResearchMinutes;
     if (s.rpCapped && s.rp > 0 && capMin) right.appendChild(h('div', { class: 'mute small center wb-note', text: `🔬 Your labs bank up to ${capMin % 60 === 0 ? `${capMin / 60} hours` : fmtDuration(capMin * 60)} of research while you're away.` }));
+    // the clocks that kept running while production took it easy: survivors, squads, caches
+    const news = awayNewsText(awayNews(this.game));
+    if (news) right.appendChild(h('div', { class: 'small center wb-note wb-news', text: news }));
 
     const dbl = btn({
       label: '▶ DOUBLE REWARDS',

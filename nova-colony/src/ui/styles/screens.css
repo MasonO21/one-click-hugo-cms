@@ -334,6 +334,16 @@
 .cand-wait b {
   font-size: 1.15em;
 }
+/* a long wait for the next survivor: the other roads into the colony */
+.recruit-wait {
+  line-height: 1.35;
+  padding: 0 0.6em;
+}
+/* the tier-up goods outgrow the stores: build storage */
+.tier-room {
+  line-height: 1.35;
+  margin-top: 0.15em;
+}
 
 /* ---------- research ---------- */
 .rp-bank {

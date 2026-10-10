@@ -11,6 +11,7 @@ import { adButton, btn, costChips, emptyState, portrait } from '../widgets';
 import { fill, h } from '../dom';
 import { hudArt, professionArt } from '../art';
 import { bagCovers } from '../../core/bag';
+import { recruitCountdownText, recruitWaitNote } from '../logic/awayNews';
 
 export class RecruitPanel extends Panel {
   readonly name = 'recruit';
@@ -24,7 +25,8 @@ export class RecruitPanel extends Panel {
     const g = this.game;
     const cs = g.state.colonists;
     const hasBoard = this.hasBoard() ? 1 : 0;
-    const waiting = g.sys.colonists.nextArrivalIn() == null ? 1 : 0;
+    const next = g.sys.colonists.nextArrivalIn();
+    const waiting = next == null ? 1 : recruitWaitNote(next) ? 2 : 0;
     const aff = cs.candidates.map((c) => (bagCovers(g.state.resources.amounts, c.cost) ? 1 : 0)).join('');
     return `${cs.candidates.map((c) => c.colonist.id).join('.')}|${aff}|${g.sys.colonists.freeBeds()}|${hasBoard}|${waiting}|${g.sys.colonists.boardSeats()}`;
   }
@@ -44,12 +46,9 @@ export class RecruitPanel extends Panel {
     for (const el of this.body.querySelectorAll('[data-countdown]')) el.textContent = text;
   }
 
-  /** "12:41" until the next survivor ("2d 4h" for a long wait); "Board full" while every seat is taken. */
+  /** "12:41" until the next survivor ("1d 4h", "7 days" for a long wait); "Board full" while every seat is taken. */
   private countdownText(): string {
-    const s = this.game.sys.colonists.nextArrivalIn();
-    if (s == null) return 'Board full';
-    if (s <= 0) return 'Any moment';
-    return s >= 86400 ? `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h` : fmtHMS(s);
+    return recruitCountdownText(this.game.sys.colonists.nextArrivalIn(), fmtHMS);
   }
 
   render(): void {
@@ -71,6 +70,9 @@ export class RecruitPanel extends Panel {
     if (!board) wrap.appendChild(h('div', { class: 'card warn-card', text: '🏗️ Build a Recruitment Board to welcome new survivors to your colony.' }));
     else if (beds <= 0) wrap.appendChild(h('div', { class: 'card warn-card', text: '🛏️ Every bed is taken — build a Shelter so new colonists have somewhere to sleep.' }));
 
+    // a long wait for the next survivor (days apart from Alloy on): the other roads into the colony
+    const waitNote = board ? recruitWaitNote(g.sys.colonists.nextArrivalIn()) : null;
+    if (waitNote) wrap.appendChild(h('div', { class: 'mute small center recruit-wait', text: waitNote }));
     if (!cs.candidates.length) wrap.appendChild(emptyState('📡', 'No survivors on the radio yet', 'The radio is on. The next survivor to answer the call will wait here for you.'));
     const grid = h('div', { class: 'grid cand-grid' });
     cs.candidates.forEach((cand, i) => {
