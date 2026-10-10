@@ -149,7 +149,7 @@
     return {
       title: `Stage ${n}${foe.boss ? ' · Boss' : ''}`, lvl: `${count(m)}/3`,
       body: `<div class="card stack"><div class="row"><div class="grow"><b>${esc(foe.name)}</b><div class="muted small">${esc(foe.chapter)}</div></div><span class="chip">${fmt(ours)} vs ${fmt(theirs)}</span></div>
-          ${foe.traits && foe.traits.length && KH.traitRows ? `<div class="traits">${KH.traitRows(foe, home)}</div>` : ''}</div>
+          ${foe.traits && foe.traits.length && KH.traitRows ? `<div class="traits">${KH.traitRows(foe, home)}</div>` : ''}${KH.artRow ? KH.artRow(foe) : ''}</div>
         <div class="card stack">${rows}</div>
         <p class="muted small">A stage fought again pays only its stars. The live battle is where the last ones are won: breathe into a wind-up, Mend before the squad drops below half.</p>
         <button class="btn wide ${home.length && count(m) < 3 ? '' : 'off'}" data-act="starfight" data-arg="${n}">${count(m) === 3 ? 'All three stars won' : home.length ? `${icon('i-sword')}Fight for the stars` : 'Squad is away on the Dunes'}</button>`,

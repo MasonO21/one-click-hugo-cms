@@ -292,15 +292,19 @@
   }
 
   // foe traits (DATA.traits) on the stage card and in battle: what each does and whether the squad can answer it
-  const TRAIT_ANSWER = { armored: ['pierce'], regen: ['atk', 'burst'], venom: ['heal'], frenzy: ['breath'], shell: ['breath'] };
-  function traitAnswered(t, heroes) {
-    const need = TRAIT_ANSWER[t];
-    if (need[0] === 'breath') return !S.dormant && S.lv.wyrm >= 1;
-    return heroes.some((id) => need.includes(KH.skillKind(id)));
+  // a hero's skill, or the breath in the right Breath Art (DATA.battle.arts)
+  const TRAIT_ANSWER = { armored: ['pierce'], regen: ['atk', 'burst'], venom: ['heal'], frenzy: [], shell: [] };
+  const ART_ANSWER = { regen: ['riptide'], venom: ['veil'], frenzy: ['torrent', 'riptide'], shell: ['torrent'] };
+  function traitAnswered(t, heroes, art) {
+    if (!S.dormant && (ART_ANSWER[t] || []).includes(art || KH.artOf())) return true;
+    return heroes.some((id) => TRAIT_ANSWER[t].includes(KH.skillKind(id)));
   }
+  KH.traitAnswered = traitAnswered;
   function traitRows(foe, heroes) {
     const TL = DATA.traits.list;
-    const need = { armored: 'Sunder', regen: 'Volley or Charge', venom: 'Mend' };
+    const need = { armored: 'Sunder', regen: 'Volley or Charge', venom: 'Mend' }, AR = DATA.battle.arts;
+    // a breath that would answer it, one tap away
+    const artFix = (t) => { const a = S.dormant ? null : (ART_ANSWER[t] || []).find((x) => KH.artOpen(x)); return a ? ` <button class="btn small alt tr-art" data-act="breathart" data-arg="${a}">${icon(AR[a].icon)}Breathe a ${esc(AR[a].name)}</button>` : ''; };
     // the swap and what it costs the squad's power (troops and all), so the player can weigh it against the answer
     const swap = (t) => {
       const c = traitAnswerer(t);
@@ -311,13 +315,13 @@
       const pw = (h) => KH.statPower(KH.teamStats(foe.cls, { heroes: h })), d = Math.round((pw(after) / Math.max(1, pw(S.squad)) - 1) * 100);
       return ` <button class="btn small alt tr-swap" data-act="traitswap" data-arg="${t}|${(foe.traits || []).join(',')}">Swap in ${esc(HERO[c].name.split(' ')[0])} <small>(squad ${d >= 0 ? '+' : '−'}${Math.abs(d)}%)</small></button>`;
     };
-    return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span>${!traitAnswered(t, heroes) && need[t] ? `<div class="small tr-need">No hero in the squad has ${need[t]}.${swap(t)}</div>` : ''}</div>
+    return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span>${!traitAnswered(t, heroes) ? `<div class="small tr-need">${need[t] ? `No hero in the squad has ${need[t]}.` : `The ${esc(AR[KH.artOf()].name)} can't answer it.`}${need[t] ? swap(t) : ''}${artFix(t)}</div>` : ''}</div>
       ${traitAnswered(t, heroes) ? `<span class="chip tr-ok" title="Your squad can answer it">${icon('i-check')}</span>` : `<span class="chip tr-no" title="No hero in the squad can answer it">!</span>`}</div>`).join('');
   }
   // the strongest free hero whose skill answers a trait, to swap in for the squad's weakest
   function traitAnswerer(t) {
     const need = TRAIT_ANSWER[t];
-    if (!need || need[0] === 'breath') return null;
+    if (!need || !need.length) return null;
     return Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && !(KH.heroBusy && KH.heroBusy(id)) && need.includes(KH.skillKind(id))).sort((a, b) => KH.heroPower(b) - KH.heroPower(a))[0] || null;
   }
   // the squad hero a swap would replace: the weakest one at home who isn't the only answer to the foe's other trait
@@ -338,6 +342,19 @@
     audio('tap');
   };
   KH.traitRows = traitRows;
+  // the breath as it lands, in each Breath Art
+  const breathFx = (a, foeSel, usSel) => {
+    const W = S.wyrm.name, lines = [];
+    if (a.art === 'veil') { if (a.heal) floaty(usSel, `+${fmt(a.heal)}`, 'heal'); lines.push(a.broke ? `${W}'s mist swallows the wind-up!` : `${W} veils the squad in cool mist.`); if (a.cured) lines.push('The venom is drawn out.'); }
+    else {
+      floaty(foeSel, `−${fmt(a.dmg)}`, 'torrent');
+      if (a.art === 'riptide') lines.push(a.broke ? `${W}'s riptide drags the foe under before the blow!` : `${W}'s riptide drags the foe under.`);
+      else lines.push(a.broke ? `${W}'s breath breaks the wind-up!` : `${W} breathes a torrent!`);
+      if (a.cracked) lines.push('The sand-shell cracks!');
+      if (a.calmed) lines.push('The frenzy breaks.');
+    }
+    return lines;
+  };
   const traitChips = (foe) => (foe.traits || []).map((t) => `<span class="chip tr-chip">${icon(DATA.traits.list[t].icon)}${esc(DATA.traits.list[t].name)}</span>`).join('');
 
   function panelExpedition() {
@@ -377,7 +394,7 @@
         <div class="vs"><div class="side"><span class="muted small">Your squad</span><b>${fmt(ours)}</b></div><span class="odds" style="color:${odds[1]}">${odds[0]}</span><div class="side right"><span class="muted small">Enemy</span><b>${fmt(theirs)}</b></div></div>
         <div class="row wrap"><div class="squad">${home.map((id) => `<button class="slot" data-act="hero" data-arg="${id}">${portrait(id)}</button>`).join('') || '<div class="slot">—</div>'}</div>
           <div class="grow costs">${S.lv.barracks ? `<span class="cost" title="Troops marching (cap ${KH.marchCap()})">${icon('i-people')}${fmt(sum(team.troops))}</span>` : '<span class="muted small">Build Barracks to add troops</span>'}${breath ? `<span class="cost" title="${esc(S.wyrm.name)}'s torrent opens the fight">${icon('i-water')}${Math.round(breath * 100)}%</span>` : S.dormant ? '<span class="cost short">Wyrm dormant</span>' : ''}</div></div>
-        ${KH.formationRow ? KH.formationRow(foe) : ''}
+        ${KH.formationRow ? KH.formationRow(foe) : ''}${KH.artRow ? KH.artRow(foe) : ''}
         <div style="margin-top:12px"><div class="costs" style="margin-bottom:8px" title="First clear">${rewardHTML(KH.stageRewards(n))}</div><button class="btn wide ${home.length ? '' : 'off'}" data-act="fight" data-primary>${home.length ? 'Fight' : 'Squad is away on the Dunes'}</button></div>
       </div>
       ${endless || !KH.starList ? `<div class="section-label">${esc(ch.name)}</div><div class="stage-list">${cells}</div>` : ''}${KH.starList ? KH.starList(endless ? DATA.finalStage : ch.from) : ''}
@@ -994,7 +1011,7 @@
       // breath and hero skills fired this round (auto-battle)
       const lines = [];
       for (const a of r.acts || []) {
-        if (a.kind === 'breath') { floaty('#b-foe', `−${fmt(a.dmg)}`, 'torrent'); lines.push(a.broke ? `${S.wyrm.name}'s breath breaks the wind-up!` : `${S.wyrm.name} breathes a torrent!`); audio('roar'); }
+        if (a.kind === 'breath') { lines.push(...breathFx(a, '#b-foe', '#b-us')); audio('roar'); }
         else { if (a.dmg) floaty('#b-foe', `−${fmt(a.dmg)}`, 'skill'); if (a.heal) floaty('#b-us', `+${fmt(a.heal)}`, 'heal'); lines.push(skillLine(a)); }
       }
       if (r.ours) { floaty('#b-foe', `−${fmt(r.ours)}`, ''); audio('hit'); haptic('light'); }
@@ -1053,7 +1070,7 @@
         </div>
       </div>
       <div id="b-foot"><div class="b-acts">
-        ${st.breath > 0 ? `<button class="btn gold" data-act="bbreath" id="b-breath">${icon('i-water')}Breath</button>` : ''}
+        ${st.breath > 0 ? `<button class="btn gold" data-act="bbreath" id="b-breath">${icon(DATA.battle.arts[st.art].icon)}${esc(DATA.battle.arts[st.art].name)}</button>` : ''}
         <button class="btn alt small" data-act="bauto" id="b-auto"></button><button class="btn alt small" data-act="bspeed" id="b-speed"></button><button class="btn alt small" data-act="bskip">Skip</button></div>
         <p class="muted small b-tip">Tap a hero when their ring is full. Save the breath for a wind-up to break it.</p></div>`;
     el.hidden = false;
@@ -1100,7 +1117,7 @@
     const rec = KH.battleStep(st, acts);
     const sp = speed(), lines = [];
     for (const a of rec.acts) {
-      if (a.kind === 'breath') { floaty('#b-foe', `−${fmt(a.dmg)}`, 'torrent'); audio('roar'); lines.push(a.broke ? `${S.wyrm.name}'s breath breaks the wind-up!` : `${S.wyrm.name} breathes a torrent!`); if (a.cracked) lines.push('The sand-shell cracks!'); if (a.calmed) lines.push('The frenzy breaks.'); }
+      if (a.kind === 'breath') { audio('roar'); lines.push(...breathFx(a, '#b-foe', '#b-us')); }
       else { if (a.dmg) floaty('#b-foe', `−${fmt(a.dmg)}`, 'skill'); if (a.heal) floaty('#b-us', `+${fmt(a.heal)}`, 'heal'); lines.push(skillLine(a)); if (a.cured) lines.push('The venom is drawn out.'); audio('upgrade'); }
     }
     const bars = () => {
@@ -1112,6 +1129,7 @@
     $('#b-ehb').style.width = `${(st.eh / B.foe.hp) * 100}%`; $('#b-eh').textContent = fmt(st.eh);
     B.timer = setTimeout(() => {
       if (UI.battle !== B || B.done) return;
+      if (rec.stunned) $('#b-log').textContent = `${B.foe.name} thrashes under the water and lands nothing.`;
       if (rec.theirs) {
         floaty('#b-us', `−${fmt(rec.theirs)}`, rec.windup ? 'hurt big' : 'hurt');
         audio('hurt');
@@ -1181,7 +1199,7 @@
     const win = B.result.win;
     $('#b-log').textContent = win ? `${B.foe.name} defeated${rounds.length ? ` in ${rounds.length} round${rounds.length > 1 ? 's' : ''}` : ' by the torrent alone'}.` : B.result.timeout ? B.timeoutLine || 'The squad could not break through in time.' : B.loseLine || 'The squad falls back to the keep.';
     const counter = Object.keys(DATA.counters).find((c) => DATA.counters[c] === B.foe.cls);
-    const missing = (B.foe.traits || []).filter((t) => !traitAnswered(t, B.team.heroes || []));
+    const missing = (B.foe.traits || []).filter((t) => !traitAnswered(t, B.team.heroes || [], B.st ? B.st.art : undefined));
     const answer = { armored: 'a hero with Sunder', regen: 'a hero with Volley or Charge', venom: 'a hero with Mend' };
     const tips = win || B.noTips ? '' : `<p class="muted small">Level your heroes, train more troops, or bring a ${DATA.classes[counter].name} hero: they hit ${esc(B.foe.name)} 20% harder.${missing.filter((t) => answer[t]).map((t) => ` It is ${DATA.traits.list[t].name}: bring ${answer[t]}.`).join('')}</p>`;
     $('#b-foot').innerHTML = `<div class="b-result">

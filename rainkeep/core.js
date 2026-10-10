@@ -475,8 +475,10 @@
       team, foe, opts, th: opts.startHp != null ? clamp(opts.startHp, 1, team.hp) : team.hp, eh: foe.hp, r: 0, rounds: [], over: false, win: false, timeout: false,
       fdef: foe.def * (1 - team.fx.pierce),
       // opts.breathHp: size the breath from a different foe's health (the Leviathan's is far too big to measure by)
-      breath: !S.dormant && !opts.noBreath ? (opts.breathHp || foe.hp) * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0) + (team.fx.torrent || 0)) : 0,
+      breath: !S.dormant && !opts.noBreath ? (opts.breathHp || foe.hp) * breathShare(team, opts) : 0,
       breathUsed: false,
+      // Breath Arts: what the one breath does (the Torrent unless another is chosen and open)
+      art: artOf(opts.art), share: breathShare(team, opts), veil: 0, stun: 0,
       skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge + (KH.talentBoost ? KH.talentBoost(id, 'charge') : 0), k: 0.85 + 0.15 * skillScale(id) })),
       guard: 0, sunder: 0,
       windup: (foe.boss ? BT.boss.first : BT.windupFirst) === 1, // the coming round's blow is a wind-up
@@ -484,6 +486,10 @@
       traits: foe.traits || [], shell: (foe.traits || []).includes('shell') ? DATA.traits.list.shell.rounds : 0, rage: 0, ward: 0,
     };
   }
+  // the breath's share: of the foe's health for a Torrent, of the squad's for a Mist Veil
+  const breathShare = (team, opts = {}) => DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0) + (team.fx.torrent || 0));
+  const artOpen = (a) => !!DATA.battle.arts[a] && S.lv.wyrm >= DATA.battle.arts[a].unlock;
+  const artOf = (a) => { a = a || S.breathArt || 'torrent'; return artOpen(a) ? a : 'torrent'; };
   const roundHit = (st) => dmgOf(st.team.atk, st.fdef * (st.sunder ? 1 - DATA.battle.skills.pierce.cut * (st.traits && st.traits.includes('armored') ? 2 : 1) : 1)) * (st.shell > 0 ? 1 - DATA.traits.list.shell.cut : 1);
   // acts: { breath: true, skills: [index, ...] } applied before the round's blows
   function battleStep(st, acts = {}) {
@@ -492,12 +498,24 @@
     const ready = (sk) => sk.charge >= BT.charge;
     if (acts.breath && st.breath > 0 && !st.breathUsed) {
       st.breathUsed = true;
-      const broke = st.windup;
-      st.eh = Math.max(0, st.eh - st.breath);
+      const AR = BT.arts, art = st.art, broke = st.windup, a = { kind: 'breath', art, broke };
       if (broke) st.windup = false;
-      const cracked = st.shell > 0, calmed = st.rage > 0 && st.traits.includes('frenzy');
-      st.shell = 0; if (calmed) st.rage = 0;
-      rec.acts.push({ kind: 'breath', dmg: st.breath, broke, cracked, calmed });
+      if (art === 'veil') {
+        // the Mist Veil: heals the squad, softens the next blows, draws out venom
+        a.heal = Math.min(st.team.hp - st.th, st.team.hp * st.share * AR.veil.heal); st.th += a.heal;
+        st.veil = AR.veil.rounds;
+        if (st.traits.includes('venom')) { st.ward = Math.max(st.ward, AR.veil.ward); a.cured = true; }
+        a.dmg = 0;
+      } else {
+        // the Torrent, or the Riptide's lesser blow that holds the foe under
+        a.dmg = st.breath * (art === 'riptide' ? AR.riptide.hit : 1);
+        st.eh = Math.max(0, st.eh - a.dmg);
+        a.calmed = st.rage > 0 && st.traits.includes('frenzy');
+        if (a.calmed) st.rage = 0;
+        if (art === 'riptide') st.stun = AR.riptide.rounds;
+        else { a.cracked = st.shell > 0; st.shell = 0; }
+      }
+      rec.acts.push(a);
     }
     for (const i of acts.skills || []) {
       const sk = st.skills[i];
@@ -525,19 +543,23 @@
     const wind = st.windup ? (st.foe.boss ? BT.boss.windup : BT.windup) : 1;
     rec.windup = st.windup;
     rec.guarded = st.guard > 0;
+    rec.stunned = st.stun > 0;
     const TL = DATA.traits.list, rage = st.traits.includes('frenzy') ? 1 + TL.frenzy.ramp * st.rage : 1;
-    rec.theirs = dmgOf(st.foe.atk, st.team.def) * (1 - st.team.fx.dr) * wind * rage * (st.guard ? 1 - BT.skills.dr.cut : 1) * rand(0.92, 1.08);
+    // held under by a Riptide the foe lands nothing; a Mist Veil softens what it does land
+    rec.theirs = rec.stunned ? 0 : dmgOf(st.foe.atk, st.team.def) * (1 - st.team.fx.dr) * wind * rage * (st.guard ? 1 - BT.skills.dr.cut : 1) * (st.veil ? 1 - BT.arts.veil.cut : 1) * rand(0.92, 1.08);
     st.th = Math.max(0, st.th - rec.theirs);
     if (st.th > 0) st.th = Math.min(st.team.hp, st.th + st.team.fx.heal * st.team.hp);
     // foe traits at the end of the round
     if (st.traits.length) {
-      if (st.traits.includes('regen') && !rec.struck && st.eh > 0) { rec.regen = Math.min(st.foe.hp - st.eh, (st.opts.breathHp || st.foe.hp) * TL.regen.heal); st.eh += rec.regen; }
+      if (st.traits.includes('regen') && !rec.struck && !rec.stunned && st.eh > 0) { rec.regen = Math.min(st.foe.hp - st.eh, (st.opts.breathHp || st.foe.hp) * TL.regen.heal); st.eh += rec.regen; }
       if (st.traits.includes('venom') && st.th > 0) { if (st.ward > 0) st.ward--; else { rec.venom = st.team.hp * TL.venom.dot; st.th = Math.max(0, st.th - rec.venom); } }
       if (st.shell > 0) st.shell--;
       if (st.traits.includes('frenzy')) st.rage++;
     }
     if (st.guard) st.guard--;
     if (st.sunder) st.sunder--;
+    if (st.veil) st.veil--;
+    if (st.stun) st.stun--;
     for (const sk of st.skills) sk.charge = Math.min(BT.charge, sk.charge + 1);
     rec.th = st.th; rec.eh = st.eh;
     st.rounds.push(rec);
@@ -553,10 +575,14 @@
   function autoActs(st) {
     const BT = DATA.battle, acts = { skills: [] };
     if (st.breath > 0 && !st.breathUsed) {
-      // finish the foe, break a wind-up, crack a sand-shell, calm a frenzy once it builds, or burn early against
-      // ordinary foes (but not into a shell that would be cracked anyway, nor before a frenzy has built)
-      const tr = st.traits || [], frenzy = tr.includes('frenzy');
-      if (st.eh <= st.breath || st.windup || (st.shell > 1) || (frenzy && st.rage >= 3) || (!st.foe.boss && st.r === 0 && !frenzy)) acts.breath = true;
+      const tr = st.traits || [], frenzy = tr.includes('frenzy'), hp = st.th / st.team.hp;
+      // a Mist Veil once the squad is worn, before a wind-up lands on a hurt squad, or against venom
+      if (st.art === 'veil') { if (hp < 0.5 || (st.windup && hp < 0.85) || (tr.includes('venom') && !st.ward && hp < 0.7)) acts.breath = true; }
+      // a Riptide to finish the foe, to hold it under through a wind-up, or to calm a frenzy
+      else if (st.art === 'riptide') { if (st.eh <= st.breath * BT.arts.riptide.hit || st.windup || (frenzy && st.rage >= 3)) acts.breath = true; }
+      // a Torrent to finish the foe, break a wind-up, crack a sand-shell, calm a frenzy once it builds, or burn early
+      // against ordinary foes (but not into a shell that would be cracked anyway, nor before a frenzy has built)
+      else if (st.eh <= st.breath || st.windup || (st.shell > 1) || (frenzy && st.rage >= 3) || (!st.foe.boss && st.r === 0 && !frenzy)) acts.breath = true;
     }
     const hpK = st.th / st.team.hp;
     st.skills.forEach((sk, i) => {
@@ -1361,7 +1387,7 @@
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
     heroStats, heroCap, skillScale, skillText, stewardOf, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
-    teamStats, chapterOf, foeStats, stageLevel, enemyFor, traitsFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
+    teamStats, chapterOf, foeStats, stageLevel, enemyFor, traitsFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, artOpen, artOf, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
     batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable, levelPath, levelPackOpen, levelPackGrants,
   });

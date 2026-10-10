@@ -545,6 +545,19 @@ const DATA = {
       heal: { name: 'Mend', desc: "Restores 12% of your side's health.", heal: 0.12 },
       pierce: { name: 'Sunder', desc: "Cuts the foe's defense by 30% for 2 rounds.", rounds: 2, cut: 0.3 },
     },
+    // Breath Arts (4.40): what the Rainwyrm's one breath a fight does. Every art breaks a wind-up. The Torrent hits for
+    // the breath's share of the foe's health and cracks a sand-shell or calms a frenzy; the Mist Veil heals the squad
+    // instead (heal times the breath's share of the squad's health), cuts the damage it takes for two rounds and draws
+    // out venom; the Riptide hits for 40% of a Torrent and holds the foe under for two rounds (no blows, no
+    // regeneration), calming a frenzy. Tuned by simulation so that on a plain foe all three need about the same
+    // strength, and each is a few percent ahead against its own traits: the Veil against venom, the Riptide against
+    // regeneration, the Torrent against shells and frenzy. The Veil and Riptide are what take the Unbroken star.
+    arts: {
+      order: ['torrent', 'veil', 'riptide'],
+      torrent: { name: 'Torrent', icon: 'i-water', unlock: 1, text: 'A wall of water: damage, cracks a sand-shell, calms a frenzy.' },
+      veil: { name: 'Mist Veil', icon: 'i-raincloud', unlock: 6, heal: 1.6, rounds: 2, cut: 0.3, ward: 2, text: 'Cool mist over the squad: heals it, softens the next blows, draws out venom.' },
+      riptide: { name: 'Riptide', icon: 'i-storm', unlock: 11, hit: 0.4, rounds: 2, text: 'Drags the foe under for two rounds: less damage, but no blows and no healing while it struggles, and a frenzy calmed.' },
+    },
   },
   patrolCapMinutes: 120,
   ending: {
@@ -1337,7 +1350,7 @@ const DATA = {
   // (resources and journals scale with the keep when claimed).
   stars: {
     unbroken: 0.5, swift: 5,
-    chests: [[10, { journals: 3, crate_food: 1, speed15: 2 }], [20, { journals: 5, starglass: 20, whetstone: 1 }], [30, { starglass: 40, beacons: 1, whetstone: 2 }]],
+    chests: [[10, { journals: 3, crate_food: 1, speed15: 2 }], [20, { journals: 5, starglass: 30, whetstone: 1 }], [30, { starglass: 60, beacons: 1, whetstone: 2 }]],
   },
 
   // ---------- Hero Kinships ----------
@@ -1853,6 +1866,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.40', items: [
+      { icon: 'i-raincloud', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:world', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
+    ] },
     { v: '4.39', items: [
       { icon: 'i-star', name: 'Stage Stars', text: "Every story stage now holds three stars: the victory, ending the fight with half the squad's health, and winning within five rounds. Tap a cleared stage on the Expedition tab to fight it again for the stars it is missing; each chapter's stars fill three chests.", act: 'stars', open: (S) => S.stage > 2, needs: 'Clear stage 2' },
     ] },
@@ -2214,6 +2230,7 @@ const DATA = {
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
     { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 3 } },
+    { id: 'arts3', text: 'Learn all three Breath Arts', stat: 'artsOpen', n: 3, reward: { starglass: 60 } },
     { id: 'stars30', text: 'Win 30 stage stars', stat: 'stars', n: 30, reward: { journals: 3 } },
     { id: 'stars150', text: 'Win 150 stage stars', stat: 'stars', n: 150, reward: { starglass: 100 } },
     { id: 'stars300', text: 'Win 300 stage stars', stat: 'stars', n: 300, reward: { starglass: 200, beacons: 2 } },

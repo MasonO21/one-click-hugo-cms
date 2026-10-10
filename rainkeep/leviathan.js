@@ -133,7 +133,7 @@
       title: 'The Sand Leviathan', lvl: `Hunt ${v.hunt}`,
       body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'leviathan', 'Too big to kill, too dangerous to leave alone.') : ''}
         <div class="card stack"><div class="row"><span class="grow">It fights as a <b>${esc(DATA.classes[f.cls].name)}</b> this hunt: ${esc(DATA.classes[counterOf(f.cls)].name)} counter it.</span><span class="chip">${icon('i-clock')}${fmtTime(Math.max(0, L.hunt - (S.time - v.start)))}</span></div>
-          ${f.traits.length && KH.traitRows ? `<div class="traits">${KH.traitRows(f, KH.squadHome())}</div>` : ''}
+          ${f.traits.length && KH.traitRows ? `<div class="traits">${KH.traitRows(f, KH.squadHome())}</div>` : ''}${KH.artRow ? KH.artRow(f) : ''}
           <div class="row"><span class="lv-pips">${Array.from({ length: L.attacks }, (_, i) => `<i class="${i < v.left ? 'on' : ''}"></i>`).join('')}</span><span class="grow muted small">${v.left} attack${v.left === 1 ? '' : 's'} left · best ${fmt(v.best)}</span>
           <button class="btn gold ${v.left ? '' : 'off'}" data-act="levattack">${icon('i-sword')}Attack</button></div></div>
         <div class="card stack"><div class="section-label">Marks this hunt · par ${v.par ? fmt(v.par) : 'set by your first attack'}</div>${v.par ? marks : ''}<p class="muted small">Par is what the squad that makes the hunt's first attack does on auto-battle. Breathe into its wind-ups and time the skills to beat it.</p></div>
