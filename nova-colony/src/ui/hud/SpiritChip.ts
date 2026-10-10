@@ -17,6 +17,8 @@ export class SpiritChip {
   readonly el: HTMLElement;
   private readonly ring: HTMLElement;
   private readonly v: HTMLElement;
+  /** Minutes left, inside the ring (a portrait phone shows this instead of the clock, so the row stays one line). */
+  private readonly min: HTMLElement;
   private readonly popIc: HTMLElement;
   private shown = '';
 
@@ -24,7 +26,8 @@ export class SpiritChip {
     private readonly ctx: UiCtx,
     showPop: (anchor: HTMLElement, build: () => Node) => void,
   ) {
-    this.ring = h('span', { class: 'sp-ring' }, iconEl(buildingArt('campfire'), '🔥', 'ic', 'span'));
+    this.min = h('b', { class: 'sp-min' });
+    this.ring = h('span', { class: 'sp-ring' }, iconEl(buildingArt('campfire'), '🔥', 'ic', 'span'), this.min);
     this.v = h('span', { class: 'v' });
     this.el = h('button', { class: 'schip spirit tap', type: 'button', hidden: true, id: 'chip-spirit', 'aria-label': 'Colony Spirit', data: { sfx: 'ui_click' } }, this.ring, this.v);
     this.popIc = iconEl(buildingArt('campfire'), '🔥', 'ic', 'span');
@@ -46,6 +49,7 @@ export class SpiritChip {
       setVar(this.ring, '--p', key);
     }
     setText(this.v, fest ? fmtHMS(sp.left()) : '');
+    setText(this.min, fest ? `${Math.max(1, Math.ceil(sp.left() / 60))}m` : '');
     setHidden(this.v, !fest);
   }
 

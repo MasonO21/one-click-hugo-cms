@@ -90,12 +90,30 @@
 .mc .mc-btn {
   margin-top: auto;
 }
+/* a portrait phone: one column of cards */
 @media (orientation: portrait) {
   .mastery-list {
     grid-template-columns: 1fr;
     gap: 0.55em;
   }
+}
+/* a phone either way: compact cards (the bonus line says what a bought line does, so its blurb goes) */
+@media (orientation: portrait), (max-height: 500px) {
   .mastery .mc {
-    padding: 0.6em 0.7em 0.7em;
+    gap: 0.4em;
+    padding: 0.55em 0.7em 0.65em;
+  }
+  .mastery .mc-blurb {
+    display: none;
+  }
+  .mc-head .mc-ic,
+  .mc-head .mc-ic img {
+    width: 2.8em;
+    height: 2.8em;
+  }
+  .nv-root .mastery .btn.mc-btn {
+    min-height: 3.1em;
+    padding-top: 0.35em;
+    padding-bottom: 0.4em;
   }
 }

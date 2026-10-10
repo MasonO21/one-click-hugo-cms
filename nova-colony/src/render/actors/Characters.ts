@@ -397,7 +397,8 @@ export class Characters {
       }
       case A_CHEER: {
         // a mug in the left hand, lifted high for a toast now and then; a gentle sway and a little bounce on the beat
-        const toast = smooth(clamp((Math.sin(t * 0.55 + sd * 1.7) - 0.55) * 3, 0, 1));
+        // the crowd raises its mugs together, give or take a beat
+        const toast = smooth(clamp((Math.sin(t * 0.8 + (sd % 2.1) * 0.5) - 0.35) * 2.5, 0, 1));
         const beat = Math.sin(t * 4.4 + sd);
         uaL = lerp(-0.42, -2.5, toast);
         uaLz = lerp(-0.16, -0.3, toast);

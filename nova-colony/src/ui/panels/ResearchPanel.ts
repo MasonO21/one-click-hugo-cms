@@ -27,6 +27,8 @@ export class ResearchPanel extends Panel {
   private cat = '';
   private sel: string | null = null;
   private static lastCat = '';
+  /** Mastery line icons, kept across re-renders so a level bought never makes the pictures blink. */
+  private readonly mIcons = new Map<string, HTMLElement>();
 
   title(): PanelTitle {
     return { icon: '🔬', art: hudArt('tech'), text: 'Research' };
@@ -158,6 +160,12 @@ export class ResearchPanel extends Panel {
     );
   }
 
+  private masteryIcon(id: string, art: string, emoji: string): HTMLElement {
+    let el = this.mIcons.get(id);
+    if (!el) this.mIcons.set(id, (el = researchIcon(art, emoji, 'mc-ic', 'span')));
+    return el;
+  }
+
   private masteryCard(m: MasteryInfo): HTMLElement {
     const g = this.game;
     const rs = g.sys.research;
@@ -165,7 +173,7 @@ export class ResearchPanel extends Panel {
     const head = h(
       'div',
       { class: 'mc-head' },
-      researchIcon(line.art, line.icon, 'mc-ic', 'span'),
+      this.masteryIcon(line.id, line.art, line.icon),
       h('div', { class: 'grow' }, h('div', { class: 'mc-name' }, line.name, h('span', { class: 'mc-lv', text: m.level > 0 ? `Lv ${m.level}` : 'New' })), h('div', { class: 'mc-now', text: m.level > 0 ? `${pct(m.bonus)} ${line.label}` : line.blurb })),
     );
     const card = h('div', { class: 'card mc' + (m.open ? '' : ' locked') + (m.ready ? ' ready' : ''), data: { mastery: line.id } }, head);

@@ -54,6 +54,25 @@
   }
 }
 /* (reduced motion: base.css stops every animation under .nv-root.reduce-motion) */
+.schip.spirit .sp-min {
+  display: none;
+  position: relative;
+  font-size: 0.68em;
+  font-weight: 900;
+  color: #fff3d6;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+/* a portrait phone keeps the status row on one line: the minutes go inside the ring, the clock is in the popover */
+@media (orientation: portrait) {
+  .schip.spirit.fest .v,
+  .schip.spirit.fest .sp-ring .ic {
+    display: none;
+  }
+  .schip.spirit.fest .sp-min {
+    display: block;
+  }
+}
 .hud-pop .sp-note {
   margin-top: 0.4em;
   font-size: 0.86em;

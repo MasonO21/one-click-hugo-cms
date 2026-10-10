@@ -57,6 +57,14 @@ generators, farmers crops, cooks meals, engineers repair, guards defend, scienti
 Happiness (simple) from beds, food, water, electricity, entertainment, comfortable rooms, decor,
 safety → productivity **bonuses**. Unhappy colonists do NOT leave.
 
+**Colony Spirit & festivals** (what a happy colony is worth once happiness tops out, from the Reinforced tier): while
+average happiness is above 75, a Spirit meter fills during online play, faster with decor and entertainment per
+colonist, medical care and friendship hearts; every granted wish adds a chunk. Full: a 10-minute **festival** with +25%
+production (online only), everyone off duty gathers round the campfire to raise a mug under string lights and paper
+lanterns, and a festival chest (the tier's supply crates, plus a Supply Cache from Stone) lands in the Inventory. An
+engaged colony holds one about every 45–55 online minutes mid-game. Nothing moves while the app is closed. A HUD chip
+shows the meter (tap: what fills it) or the festival countdown; a side chain counts 1 / 5 / 15 festivals.
+
 ## 8. Resources
 Basic: wood, stone, fiber, food, water. Intermediate: iron, copper, coal, steel, electronics.
 Advanced: alien crystals, advanced alloys, energy cells, nano-material, titanium.
@@ -87,6 +95,11 @@ assault rifle, energy rifle, plasma rifle, titanium rifle. Combat is secondary t
 ## 17–18. Research & automation
 Big but easy tech tree: construction, power, food, water, defense, weapons, automation, robotics,
 exploration, colonist upgrades, titanium tech. Scientists generate research points.
+**Research Mastery** (the long tail, and the post-Titanium sink): from the Stone tier, six repeatable lines turn spare
+points into small lasting bonuses: Production +3%, Logistics +5% storage, Construction +5% build speed, and from Steel
+Defense +3% turret damage, Crew +3% colonist work speed, Expeditions +4% haul. Each level costs ×1.5 the one before
+(from ~5 minutes of research at the tier the line opens); no cap, half the bonus per level past 20. Research panel,
+Mastery tab. Offline, the labs bank at most two hours of research points (Welcome Back says when they filled up).
 Automation chain: player chops → colonist chops → logging station → automated harvester → drones.
 
 ## 19–20. Vehicles & events
@@ -123,7 +136,7 @@ open, one per colonist; never during an alien attack, never from someone away, a
 of minutes' worth of a resource with one tap, place one more lantern / flower bed / bench / fountain…, hand-craft a quick
 recipe, walk up and Chat, or open any cache out there. Each is doable in 1–10 minutes at its tier; a bubble over their
 head, a pink badge on the Crew button and a Wishes tab show what is waiting, and "Show me" opens the right menu or
-points the guide arrow. Granting one: "Wish granted!" +8 happiness for 4 hours, a friendship heart (0–5; three hearts
+points the guide arrow. Granting one: "Wish granted!" +8 happiness for 4 hours and a chunk of Colony Spirit (§6–7), a friendship heart (0–5; three hearts
 +5% productivity, five = Best friends +3 happiness for good) and a small thank-you gift (~3 minutes of colony output,
 sometimes 1–2 Nova). Who and what are rolled from the save seed and a counter (no save-scumming); nothing moves offline
 and an open wish simply fades after 45 minutes of play: no penalty, ever. A "Good Neighbour" side chain (1 → 10 → 30

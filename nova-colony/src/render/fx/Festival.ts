@@ -21,6 +21,8 @@ const ROPE = '#3a2c24';
 const BULB_A = '#ffc46a';
 const BULB_B = '#ffe2b0';
 const LANTERNS = ['#ffb35a', '#d8553e', '#ffe2b0'];
+/** Bunting for daylight: brick, amber, teal and cream (no candy colours). */
+const PENNANTS = ['#b84a36', '#e2a542', '#3f8580', '#eadcbc'];
 const POST_H = 2.7;
 const P = (o: PrimOpts): PrimOpts => o;
 
@@ -51,15 +53,19 @@ function strand(b: GeoBuilder, x0: number, y0: number, z0: number, x1: number, y
     pts.push(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - Math.sin(t * Math.PI) * sag, z0 + (z1 - z0) * t);
   }
   b.pipe(pts, 0.018, ROPE, 3, false);
-  const bulbs = Math.max(4, Math.round(len * 1.6));
-  for (let i = 0; i < bulbs; i++) {
-    const t = (i + 0.5) / bulbs;
+  // bunting hangs in the strand's vertical plane
+  const ry = Math.atan2(-(z1 - z0), x1 - x0);
+  const n = Math.max(6, Math.round(len * 2.2));
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n;
     const x = x0 + (x1 - x0) * t;
     const y = y0 + (y1 - y0) * t - Math.sin(t * Math.PI) * sag;
     const z = z0 + (z1 - z0) * t;
-    // every third light is a paper lantern, the rest small bulbs
-    if (i % 3 === 1) lantern(b, x, y, z, LANTERNS[(i + seed) % LANTERNS.length], 0.15);
-    else b.puff(0.065, x, y - 0.08, z, (i + seed) % 2 ? BULB_A : BULB_B, 0, P({ slot: SLOT_GLOW, sy: 1.25 }));
+    // bulb, pennant, bulb, paper lantern ... : warm points of light at night, colour by day
+    const k = (i + seed) % 4;
+    if (k === 1) b.wedge(0.24, 0.3, 0.02, x, y - 0.02, z, PENNANTS[(i + seed * 3) % PENNANTS.length], P({ rz: Math.PI, ry }));
+    else if (k === 3) lantern(b, x, y, z, LANTERNS[(i + seed) % LANTERNS.length], 0.15);
+    else b.puff(0.065, x, y - 0.08, z, k === 0 ? BULB_A : BULB_B, 0, P({ slot: SLOT_GLOW, sy: 1.25 }));
   }
 }
 
@@ -72,7 +78,7 @@ function glowTexture(): THREE.Texture {
       const dx = (x + 0.5) / size - 0.5;
       const dy = (y + 0.5) / size - 0.5;
       const r = Math.min(1, Math.hypot(dx, dy) * 2);
-      const a = Math.pow(1 - r, 2.2);
+      const a = Math.pow(1 - r, 1.8);
       const i = (y * size + x) * 4;
       data[i] = data[i + 1] = data[i + 2] = 255;
       data[i + 3] = Math.round(a * 255);
@@ -215,7 +221,8 @@ export class Festival {
     mesh.receiveShadow = false;
     this.mesh = mesh;
     this.group.add(mesh);
-    this.glow.position.set(this.cx, this.cy + 0.06, this.cz);
+    // a little above the ground: the terrain mesh rides a touch above the height sampler round the camp
+    this.glow.position.set(this.cx, this.cy + 0.4, this.cz);
     this.glow.scale.set(R * 2.4, 1, R * 2.4);
     this.group.visible = true;
   }

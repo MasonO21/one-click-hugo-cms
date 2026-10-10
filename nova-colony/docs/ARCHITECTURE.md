@@ -40,6 +40,8 @@ Render and UI read `game.state` directly every frame (cheap, no copying).
 | World, player, exploration, vehicles, world events | `src/sim/world.ts`, `player.ts`, `worldEvents.ts` (+ `src/sim/world/*`) | world agent |
 | Expeditions & the Frontier (squads, hauls, Star Chart) | `src/sim/expeditions.ts` (+ `src/sim/expedition/*`), content in `src/data/expeditions.ts` | expeditions |
 | Colonist wishes & friendship (wishes, hearts, gifts) | `src/sim/wishes.ts` (+ `src/sim/wish/*`), content in `src/data/wishes.ts`, bubbles in `src/render/actors/WishBubbles.ts` | wishes |
+| Research Mastery (repeatable research) | `src/sim/mastery.ts` (rules; spent by `ResearchSystem`, applied by `src/sim/econ/modifiers.ts`), content in `src/data/mastery.ts`, UI the Mastery tab of `src/ui/panels/ResearchPanel.ts` | research |
+| Colony Spirit & festivals | `src/sim/colony/spirit.ts` (+ `spiritRules.ts`), content in `src/data/spirit.ts`, HUD `src/ui/hud/SpiritChip.ts`, camp dressing `src/render/fx/Festival.ts` | spirit |
 | Missions, tutorial, live-ops, monetization, save, platform adapters, Capacitor | `src/sim/missions.ts`, `tutorial.ts`, `liveops.ts`, `src/platform/*` (except types/mock), `capacitor.config.ts`, native project files | meta agent |
 | Achievements & the Colony Journal | `src/sim/achievements.ts` (+ `src/sim/meta/achievementRules.ts`), content in `src/data/achievements.ts`, `src/platform/achievements.ts`, UI `src/ui/panels/JournalPanel.ts` + `src/ui/logic/achievements.ts` | achievements |
 | Rendering | `src/render/*` (except api.ts) | render agent |
