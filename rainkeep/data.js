@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.35.0',
+  version: '4.36.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -512,6 +512,20 @@ const DATA = {
   // the third act's bosses every five stages still end the story within reach of a Skyriver keep
   enemy: { atk: 80.6, def: 47, hp: 918, gAtk: 1.13, gDef: 1.12, gHp: 1.14, lateFrom: 30, lAtk: 1.027, lDef: 1.022, lHp: 1.032, endAtk: 1.03, endDef: 1.025, endHp: 1.035, boss: 1.5, act3Ease: 0.75 },
   maxRounds: 12,
+  // Foe traits: from stage 16 every expedition foe has one (a boss two), each with a counter the squad can play:
+  // Sunder against armor, a skill strike against regeneration, Mend against venom, the Torrent against frenzy and
+  // against a sand-shell. A foe with a trait is a little weaker otherwise (ease), so a counter played well comes out ahead.
+  traits: {
+    from: 16, ease: 0.94,
+    list: {
+      armored: { name: 'Armored', icon: 'i-tr-armored', def: 1.5, text: 'Half again as hard to hurt. Sunder cuts twice as deep.' },
+      regen: { name: 'Regenerating', icon: 'i-tr-regen', heal: 0.06, text: 'Heals 6% a round, unless a skill strikes it that round.' },
+      venom: { name: 'Venomous', icon: 'i-tr-venom', dot: 0.04, ward: 2, text: 'Poisons the squad for 4% a round. Mend cures it and wards for two rounds.' },
+      frenzy: { name: 'Frenzied', icon: 'i-tr-frenzy', ramp: 0.08, text: 'Hits 8% harder every round. The Torrent calms it.' },
+      shell: { name: 'Sand-shelled', icon: 'i-tr-shell', rounds: 3, cut: 0.5, text: 'Takes half damage for its first three rounds. The Torrent cracks the shell.' },
+    },
+    order: ['armored', 'regen', 'venom', 'frenzy', 'shell'],
+  },
   // ---------- Battle tactics ----------
   // Every foe winds up a heavy blow on round 3 and every 4th round after (bosses every 3rd), announced
   // a round ahead.

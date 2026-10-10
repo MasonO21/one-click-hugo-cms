@@ -428,7 +428,18 @@
     const foe = boss || ch.foes[(n - ch.from) % ch.foes.length];
     const isBoss = !!boss;
     const name = depth > 0 && !far ? `${foe[0]} · depth ${depth}` : foe[0];
-    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), ...foeStats(stageLevel(n), isBoss ? DATA.enemy.boss : 1) };
+    const traits = traitsFor(n, isBoss), st = foeStats(stageLevel(n), isBoss ? DATA.enemy.boss : 1);
+    if (traits.length) { const T = DATA.traits; for (const k of ['atk', 'def', 'hp']) st[k] *= T.ease; if (traits.includes('armored')) st.def *= T.list.armored.def; }
+    return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), traits, ...st };
+  }
+  // foe traits (DATA.traits): none before stage 16, then one each (two for a boss), turning through the five so
+  // neighbouring stages differ
+  function traitsFor(n, boss) {
+    const T = DATA.traits, O = T.order;
+    if (n < T.from) return [];
+    const a = O[(n * 2 + Math.floor(n / O.length)) % O.length];
+    if (!boss) return [a];
+    return [a, O[(O.indexOf(a) + 2) % O.length]];
   }
   function stageRewards(n) {
     const boss = !!DATA.bosses[n] || (n > DATA.finalStage && n % 10 === 0);
@@ -468,9 +479,11 @@
       skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge + (KH.talentBoost ? KH.talentBoost(id, 'charge') : 0), k: 0.85 + 0.15 * skillScale(id) })),
       guard: 0, sunder: 0,
       windup: (foe.boss ? BT.boss.first : BT.windupFirst) === 1, // the coming round's blow is a wind-up
+      // foe traits: a sand-shell's rounds left, a frenzy's build-up, venom's ward rounds left
+      traits: foe.traits || [], shell: (foe.traits || []).includes('shell') ? DATA.traits.list.shell.rounds : 0, rage: 0, ward: 0,
     };
   }
-  const roundHit = (st) => dmgOf(st.team.atk, st.fdef * (st.sunder ? 1 - DATA.battle.skills.pierce.cut : 1));
+  const roundHit = (st) => dmgOf(st.team.atk, st.fdef * (st.sunder ? 1 - DATA.battle.skills.pierce.cut * (st.traits && st.traits.includes('armored') ? 2 : 1) : 1)) * (st.shell > 0 ? 1 - DATA.traits.list.shell.cut : 1);
   // acts: { breath: true, skills: [index, ...] } applied before the round's blows
   function battleStep(st, acts = {}) {
     if (st.over) return null;
@@ -481,7 +494,9 @@
       const broke = st.windup;
       st.eh = Math.max(0, st.eh - st.breath);
       if (broke) st.windup = false;
-      rec.acts.push({ kind: 'breath', dmg: st.breath, broke });
+      const cracked = st.shell > 0, calmed = st.rage > 0 && st.traits.includes('frenzy');
+      st.shell = 0; if (calmed) st.rage = 0;
+      rec.acts.push({ kind: 'breath', dmg: st.breath, broke, cracked, calmed });
     }
     for (const i of acts.skills || []) {
       const sk = st.skills[i];
@@ -489,8 +504,8 @@
       sk.charge = 0;
       const d = BT.skills[sk.kind];
       const a = { kind: sk.kind, id: sk.id };
-      if (d.hit) { a.dmg = roundHit(st) * d.hit * sk.k; st.eh = Math.max(0, st.eh - a.dmg); }
-      if (d.heal) { a.heal = Math.min(st.team.hp - st.th, st.team.hp * d.heal * sk.k); st.th += a.heal; }
+      if (d.hit) { a.dmg = roundHit(st) * d.hit * sk.k; st.eh = Math.max(0, st.eh - a.dmg); rec.struck = true; }
+      if (d.heal) { a.heal = Math.min(st.team.hp - st.th, st.team.hp * d.heal * sk.k); st.th += a.heal; if (st.traits.includes('venom')) { st.ward = DATA.traits.list.venom.ward; a.cured = true; } }
       if (sk.kind === 'dr') st.guard = d.rounds;
       if (sk.kind === 'pierce') st.sunder = d.rounds;
       rec.acts.push(a);
@@ -509,9 +524,17 @@
     const wind = st.windup ? (st.foe.boss ? BT.boss.windup : BT.windup) : 1;
     rec.windup = st.windup;
     rec.guarded = st.guard > 0;
-    rec.theirs = dmgOf(st.foe.atk, st.team.def) * (1 - st.team.fx.dr) * wind * (st.guard ? 1 - BT.skills.dr.cut : 1) * rand(0.92, 1.08);
+    const TL = DATA.traits.list, rage = st.traits.includes('frenzy') ? 1 + TL.frenzy.ramp * st.rage : 1;
+    rec.theirs = dmgOf(st.foe.atk, st.team.def) * (1 - st.team.fx.dr) * wind * rage * (st.guard ? 1 - BT.skills.dr.cut : 1) * rand(0.92, 1.08);
     st.th = Math.max(0, st.th - rec.theirs);
     if (st.th > 0) st.th = Math.min(st.team.hp, st.th + st.team.fx.heal * st.team.hp);
+    // foe traits at the end of the round
+    if (st.traits.length) {
+      if (st.traits.includes('regen') && !rec.struck && st.eh > 0) { rec.regen = Math.min(st.foe.hp - st.eh, st.foe.hp * TL.regen.heal); st.eh += rec.regen; }
+      if (st.traits.includes('venom') && st.th > 0) { if (st.ward > 0) st.ward--; else { rec.venom = st.team.hp * TL.venom.dot; st.th = Math.max(0, st.th - rec.venom); } }
+      if (st.shell > 0) st.shell--;
+      if (st.traits.includes('frenzy')) st.rage++;
+    }
     if (st.guard) st.guard--;
     if (st.sunder) st.sunder--;
     for (const sk of st.skills) sk.charge = Math.min(BT.charge, sk.charge + 1);
@@ -529,14 +552,16 @@
   function autoActs(st) {
     const BT = DATA.battle, acts = { skills: [] };
     if (st.breath > 0 && !st.breathUsed) {
-      // finish the foe, break a wind-up, or burn early against ordinary foes
-      if (st.eh <= st.breath || st.windup || (!st.foe.boss && st.r === 0)) acts.breath = true;
+      // finish the foe, break a wind-up, crack a sand-shell, calm a frenzy once it builds, or burn early against
+      // ordinary foes (but not into a shell that would be cracked anyway, nor before a frenzy has built)
+      const tr = st.traits || [], frenzy = tr.includes('frenzy');
+      if (st.eh <= st.breath || st.windup || (st.shell > 1) || (frenzy && st.rage >= 3) || (!st.foe.boss && st.r === 0 && !frenzy)) acts.breath = true;
     }
     const hpK = st.th / st.team.hp;
     st.skills.forEach((sk, i) => {
       if (sk.charge < BT.charge) return;
       if (sk.kind === 'dr') { if (st.windup || hpK < 0.4) acts.skills.push(i); }
-      else if (sk.kind === 'heal') { if (hpK < 0.6) acts.skills.push(i); }
+      else if (sk.kind === 'heal') { if (hpK < 0.6 || ((st.traits || []).includes('venom') && !st.ward && hpK < 0.9)) acts.skills.push(i); }
       else if (sk.kind === 'pierce') { if (!st.sunder) acts.skills.push(i); }
       else acts.skills.push(i);
     });
@@ -1333,7 +1358,7 @@
     coolOf, coolAt, drinkRate, marchCap, troopCap, outsideTemp, troopMult, protectOf, stewardVal, townTemp, comfortOf,
     workerRate, healRate, buildCost, buildTime, maxLevel, upgradeBlock, canAfford, pay, have, techCost, techTime, techMax,
     heroStats, heroCap, skillScale, skillText, stewardOf, statPower, heroPower, unitPower, counterMult, capTroops, marchTroops, squadHome,
-    teamStats, chapterOf, foeStats, stageLevel, enemyFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
+    teamStats, chapterOf, foeStats, stageLevel, enemyFor, traitsFor, stageRewards, simulateBattle, newBattle, battleStep, autoActs, skillKind, power, patrolPreview, passTier, addPassXp, passReward,
     grant, scaleReward, autoAssign, fixWorkers, addSurvivors, ensureWeather, isStorm, findJob, speedCost, cutJob,
     batchMax, trainTime, troopsAll, featured, addHero, canBuy, shopItem, heroAvailable, levelPath, levelPackOpen, levelPackGrants,
   });

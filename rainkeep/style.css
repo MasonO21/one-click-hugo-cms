@@ -1406,3 +1406,16 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .ch-charm.on { border-color: var(--gold); background: #ffd06a14; }
 .ch-charm.off { opacity: 0.5; cursor: default; }
 .ch-charm.off .ch-ic { filter: grayscale(1) brightness(0.5); }
+
+/* Foe traits */
+.traits { display: grid; gap: 4px; margin: 8px 0 2px; padding: 8px 10px; border-radius: 12px; background: #00000026; border: 1px solid #ffffff14; }
+.trait-row { gap: 8px; align-items: center; }
+.trait-row .small { opacity: 0.85; }
+.tr-ic { width: 28px; height: 28px; flex: none; }
+.tr-ok { color: var(--good); padding: 2px 6px; }
+.tr-ok .ic { width: 14px; height: 14px; }
+.tr-no { color: #2a1608; background: #f0a040; font-weight: 800; padding: 2px 9px; }
+.b-traits { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tr-chip { font-size: 12px; padding: 2px 9px 2px 4px; gap: 4px; }
+.tr-chip .ic { width: 18px; height: 18px; }
+.floaty.venom { color: #b4e05a; text-shadow: 0 0 10px #6a9a1a; }
