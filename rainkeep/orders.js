@@ -33,7 +33,7 @@
       let kind = pick(bag);
       for (let t = 0; t < 10 && used.has(kind); t++) kind = pick(bag);
       used.add(kind);
-      const n = Math.max(1, top() - O.back[0] - Math.floor(rnd() * (O.back[1] - O.back[0])));
+      const n = Math.max(1, top() + 1 - O.back[0] - Math.floor(rnd() * (O.back[1] - O.back[0] + 1)));
       const arg = kind === 'art' ? pick(arts) : kind === 'lead' ? pick(['guard', 'bow', 'lancer']) : null;
       out.push({ n, kind, arg, done: false });
     }
@@ -47,7 +47,7 @@
 
   ACT.orders = () => { if (!unlocked()) return KH.toast(`Field Orders begin after stage ${O.from}.`, 'warn'); UI.sheet = { kind: 'orders' }; };
   ACT.orderfight = (i) => {
-    const o = list()[+i];
+    const L0 = list(), o = L0[+i];
     if (!o || o.done) return;
     if (!KH.squadHome().length) return KH.toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const foe = KH.enemyFor(o.n);
@@ -63,14 +63,15 @@
       title: `Field order · stage ${o.n}`, foe, team, opts,
       onEnd: (result) => {
         const met = result.win && (o.kind !== 'swift' || result.rounds.length <= K.swift.rounds) && (o.kind !== 'hale' || result.th / Math.max(1, team.hp) >= K.hale.share);
-        KH.emit('battle', { kind: 'order', win: result.win, foe });
+        KH.emit('battle', { kind: 'order', win: result.win, foe, heroes: team.heroes });
         if (!met) { KH.save(); return { noTips: result.win, extra: result.win ? `Won, but the order wanted: ${esc(textOf(o))}. Try again.` : '' }; }
         o.done = true; S.stats.ordersDone++;
         const g = KH.scaleReward(O.reward);
-        if (!S.orders.all && list().every((x) => x.done)) { S.orders.all = true; Object.assign(g, O.all); }
+        // judged on the day's list the fight began with, even if midnight passed while it went on
+        if (S.orders.list === L0 && !S.orders.all && L0.every((x) => x.done)) { S.orders.all = true; Object.assign(g, O.all); }
         KH.grant(g);
         KH.save();
-        return { rewards: g, resultTitle: 'Order carried out', extra: S.orders.all && list().every((x) => x.done) && g.beacons ? 'All three of today\'s orders: a Beacon Token from Captain Hadi.' : '' };
+        return { rewards: g, resultTitle: 'Order carried out', extra: g.beacons ? 'All three of today\'s orders: a Beacon Token from Captain Hadi.' : '' };
       },
     });
   };
@@ -87,6 +88,7 @@
       title: 'Field Orders', lvl: `${L.length - left()}/${L.length}`,
       body: `<div class="card row od-hadi">${cast ? `<div class="od-face">${KH.art.portrait(cast)}</div>` : ''}<p class="grow small">"Three orders for today, warden. Win them the way I ask, not the easy way. The Dunes won't always let you choose."<br><span class="muted">Captain Hadi</span></p></div>
         <div class="card stack">${rows}</div>
+        ${(() => { const f = L.find((x) => !x.done); return f ? `<div class="card stack od-setup"><div class="muted small">For the orders that leave it to you:</div>${KH.formationRow ? KH.formationRow(KH.enemyFor(f.n)) : ''}${KH.artRow ? KH.artRow(KH.enemyFor(f.n)) : ''}</div>` : ''; })()}
         <div class="row muted small"><span class="grow">Each order:</span><div class="costs">${KH.rewardHTML(g)}</div></div>
         <div class="row muted small"><span class="grow">All three today:</span><div class="costs">${KH.rewardHTML(O.all)}</div></div>
         <p class="muted small">New orders each day. A failed order can be fought again.</p>`,

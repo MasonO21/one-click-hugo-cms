@@ -35,7 +35,7 @@
 
   // a squad fight with a kinship at work counts toward the achievement (not marches, raids or the gate)
   const SQUAD_FIGHTS = new Set(['stage', 'replay', 'heroic', 'order', 'crossing', 'leviathan', 'tale', 'duel', 'spire']);
-  KH.on('battle', (e) => { if (S && e && SQUAD_FIGHTS.has(e.kind) && activeIn(S.squad).length) S.stats.kinFought++; });
+  KH.on('battle', (e) => { if (S && e && SQUAD_FIGHTS.has(e.kind) && activeIn(e.heroes || S.squad).length) S.stats.kinFought++; });
   KH.hooks.tick.push(() => { if (S) S.stats.kinTop = Math.max(S.stats.kinTop || 0, ...K.pairs.map(level)); });
 
   const pairRow = (p) => {

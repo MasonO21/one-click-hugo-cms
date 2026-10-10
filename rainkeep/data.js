@@ -1369,11 +1369,11 @@ const DATA = {
   // ---------- Heroic Chapters ----------
   // A chapter whose thirty stars are all won opens its Heroic version: the same ten stages in order, each foe as strong
   // as a stage fifteen further on, with two traits (a boss three). Each Heroic chapter features one hero (Epics early,
-  // Legendaries from chapter 10): a first clear pays Starglass and that hero's shards (it brings the hero to the keep if
+  // Legendaries from chapter 9; each one available at the Beacon by the time the chapter can open): a first clear pays Starglass and that hero's shards (it brings the hero to the keep if
   // they aren't there yet), and a won stage can be raided for more shards, three raids a day across every chapter.
   heroic: {
     ahead: 15, raids: 3,
-    heroes: ['bashir', 'amira', 'kofi', 'yara', 'rashid', 'samira', 'tomas', 'sefa', 'noor', 'leila', 'tariq', 'zahra', 'nadia', 'soraya', 'idris'],
+    heroes: ['bashir', 'amira', 'kofi', 'yara', 'rashid', 'samira', 'tomas', 'sefa', 'imani', 'leila', 'tariq', 'zahra', 'nadia', 'soraya', 'idris'],
     first: { stage: { starglass: 20, shards: 3 }, boss: { starglass: 40, shards: 6 } },
     raid: { stage: { shards: 2, journals: 2 }, boss: { shards: 3, journals: 3 } },
   },
@@ -1900,7 +1900,7 @@ const DATA = {
       { icon: 'i-scroll', name: 'Field Orders', text: 'From stage 20, Captain Hadi posts three orders a day: fight a stage you have cleared under a condition, with the Mist Veil, a Lancer lead, no breath, only two heroes, or a swift win. Each pays Starglass and journals, and all three a Beacon Token.', act: 'orders', open: (S) => S.stage > 20, needs: 'Stage 20' },
     ] },
     { v: '4.41', items: [
-      { icon: 'i-star', name: 'Heroic Chapters', text: "Win all thirty stars in a chapter and its Heroic version opens: the same stages, far harder, each foe with two traits. Every Heroic chapter features one hero whose shards it pays, and won stages can be raided three times a day for more.", act: 'heroic', open: (S) => !!(S.heroic && Object.keys(S.heroic.won).length) || (S.stats.stageStars || 0) >= 30, needs: 'All 30 stars in a chapter' },
+      { icon: 'i-star', name: 'Heroic Chapters', text: "Win all thirty stars in a chapter and its Heroic version opens: the same stages, far harder, each foe with two traits. Every Heroic chapter features one hero whose shards it pays, and won stages can be raided three times a day for more.", act: 'heroic', open: (S) => !!(S.heroic && S.heroic.told && S.heroic.told.length), needs: 'All 30 stars in a chapter' },
     ] },
     { v: '4.40', items: [
       { icon: 'i-veil', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:expedition', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },

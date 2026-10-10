@@ -2,7 +2,7 @@
  * Rainkeep: Heroic Chapters. A chapter whose thirty stars are all won opens its Heroic version: the same ten stages,
  * fought in order, each foe as strong as a stage fifteen further on and carrying two traits (a boss three), so the
  * squad, the formation and the Breath Art all have to fit the foe. Each Heroic chapter features one hero (Epics early,
- * Legendaries from chapter 10). A first clear pays Starglass and that hero's shards, and brings the hero to the keep if
+ * Legendaries from chapter 9), never one the Beacon doesn't offer yet. A first clear pays Starglass and that hero's shards, and brings the hero to the keep if
  * they aren't there yet; a won stage can then be raided, at once and without a fight, for more of those shards, three
  * raids a day across every chapter, so the player chooses whose shards to gather. The Heroic strip sits under the
  * chapter's stars on the Expedition tab (KH.heroicStrip, from stars.js), and the Heroic sheet in the Play hub lists
@@ -21,7 +21,8 @@
   const CH = () => KH.stars.chapters();
   const chOf = (n) => CH().filter((c) => n >= c.from).pop();
   const heroOf = (c) => H.heroes[CH().indexOf(c)];
-  const isOpen = (c) => !!S && !!c && KH.stars.chStars(c) >= 3 * (c.to - c.from + 1);
+  // all thirty stars, and the featured hero is one the Beacon already offers (no Act III hero in Act II)
+  const isOpen = (c) => !!S && !!c && KH.stars.chStars(c) >= 3 * (c.to - c.from + 1) && KH.heroAvailable(HERO[heroOf(c)]);
   const won = (n) => !!S.heroic.won[n];
   const wonIn = (c) => { let k = 0; for (let n = c.from; n <= c.to; n++) if (won(n)) k++; return k; };
   const next = (c) => { for (let n = c.from; n <= c.to; n++) if (!won(n)) return n; return null; };
@@ -99,7 +100,8 @@
 
   const heroLine = (id) => {
     const h = S.heroes[id];
-    return h ? `${esc(HERO[id].name)} · ${h.stars}★ · ${fmt(h.shards)}/${10 * h.stars} shards` : `${esc(HERO[id].name)} · not yet in the keep`;
+    if (!h) return `${esc(HERO[id].name)} · not yet in the keep`;
+    return h.stars >= DATA.heroMaxStars ? `${esc(HERO[id].name)} · ${h.stars}★ · ${fmt(h.shards)} shards for Awakening` : `${esc(HERO[id].name)} · ${h.stars}★ · ${fmt(h.shards)}/${10 * h.stars} shards`;
   };
   const best = (c) => { let b = null; for (let n = c.from; n <= c.to; n++) if (won(n) && (!b || boss(n) >= boss(b))) b = n; return b; };
   // under the chapter's stars on the Expedition tab
@@ -126,7 +128,7 @@
       body: `<div class="card stack"><div class="row"><div class="grow"><b>${esc(f.name)}</b><div class="muted small">${esc(c.name)} · as strong as stage ${n + H.ahead}</div></div><span class="chip">${fmt(ours)} vs ${fmt(theirs)}</span></div>
           <div class="traits">${KH.traitRows ? KH.traitRows(f, home) : ''}</div>${KH.formationRow ? KH.formationRow(f) : ''}${KH.artRow ? KH.artRow(f) : ''}</div>
         <div class="card row hc-hero"><div class="hc-face">${KH.art.portrait(id)}</div><div class="grow"><b>${esc(HERO[id].name)}</b><div class="muted small">${heroLine(id)}</div>
-          <div class="small">${won(n) ? `A raid: ${r.shards} shards and Field Journals, at once.` : `First clear: ${g.starglass} Starglass and ${g.shards} shards${S.heroes[id] ? '' : ' (and the hero joins the keep)'}.`}</div></div></div>
+          <div class="small">${won(n) ? `A raid: ${r.shards} shards and Field Journals, at once.` : `First clear: ${g.starglass} Starglass and ${S.heroes[id] ? `${g.shards} shards` : `${esc(HERO[id].name.split(' ')[0])} joins the keep at 1★`}.`}</div></div></div>
         ${act}`,
     };
   };

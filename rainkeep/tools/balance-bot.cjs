@@ -470,7 +470,8 @@ const HOURS = Number(process.argv[3] || 8);
           }
           const chs = KH.stars.chapters().filter((c) => KH.heroic.isOpen(c)).reverse();
           for (const c of chs) {
-            let b = null; for (let n = c.from; n <= c.to; n++) if (KH.heroic.won(n)) b = n;
+            // the won stage that pays most (a boss), as the Heroic sheet's raid does
+            let b = null; for (let n = c.from; n <= c.to; n++) if (KH.heroic.won(n) && (!b || D.bosses[n] || !D.bosses[b])) b = n;
             while (b != null && KH.heroic.raidsLeft() > 0) { A.heroicraid(b); hc.raids++; }
           }
         }

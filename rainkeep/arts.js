@@ -15,7 +15,7 @@
   const AR = DATA.battle.arts;
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
-  KH.hooks.defaults.push((s) => { s.breathArt = 'torrent'; s.artTold = []; s.stats.artSwitches = 0; s.stats.artsOpen = 1; });
+  KH.hooks.defaults.push((s) => { s.breathArt = 'torrent'; s.artTold = null; s.stats.artSwitches = 0; s.stats.artsOpen = 1; });
   // a letter for each art as the wyrm learns it
   const LETTER = {
     veil: (W) => `${W} has learned the Mist Veil. Instead of a Torrent, its one breath a fight can wrap the squad in cool mist: it heals them, softens the next two blows and draws out venom. Choose the breath on the stage card, against the foe in front of you: the Veil is the answer to venomous foes, and the surest way to end a fight above half health.`,
@@ -24,6 +24,8 @@
   KH.hooks.tick.push(() => {
     if (!S) return;
     S.stats.artsOpen = AR.order.filter((a) => KH.artOpen(a)).length;
+    // the first look at a save: arts already learned (an older save) need no letter
+    if (!S.artTold) { S.artTold = ['veil', 'riptide'].filter((a) => KH.artOpen(a)); return; }
     for (const a of ['veil', 'riptide']) if (KH.artOpen(a) && !S.artTold.includes(a)) { S.artTold.push(a); KH.mail(`A new breath: the ${AR[a].name}`, LETTER[a](S.wyrm.name), null); }
   });
 
