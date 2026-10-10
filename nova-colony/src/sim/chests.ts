@@ -44,6 +44,8 @@ import {
   type ChestCardKind,
   type ChestLootTable,
 } from '../data/chestLoot';
+import { crateContents, installCrateTracking, isSmallCrate, normalizeCrateSave } from './meta/crates';
+import { describeReward } from './meta/util';
 
 export type { ChestCardKind } from '../data/chestLoot';
 
@@ -480,8 +482,13 @@ export function normalizeChestSave(raw: unknown): ChestSave {
 }
 
 export class ChestSystem extends System {
+  override init(): void {
+    installCrateTracking(this.game); // crafted bundles open at their recipe's contents (meta/crates)
+  }
+
   override onLoad(): void {
     this.save();
+    normalizeCrateSave(this.game);
   }
 
   /** The chest save, created / repaired on first use. */
@@ -578,10 +585,22 @@ export class ChestSystem extends System {
 
   /**
    * A fixed-reward crate from the inventory (player.useItem has already taken it out): granted here, exactly once
-   * (source 'crate', named after the crate), then the scene's quicker crate variant shows what was inside.
+   * (source 'crate', named after the crate), then the scene's quicker crate variant shows what was inside. Its
+   * contents grow with the colony tier, and a small one (next to storage) opens with a toast instead of the scene.
    */
-  openCrate(itemId: string, reward: Reward): ChestCard[] {
+  openCrate(itemId: string, base: Reward): ChestCard[] {
     const g = this.game;
+    // grown to the colony's tier (a crafted bundle keeps its recipe's contents), see meta/crates
+    const reward = crateContents(g, itemId, base);
+    // "storage" as the player reads it: the capacity, or what is held when rewards have filled past it
+    if (isSmallCrate(reward, (id) => Math.max(g.sys.economy.capacity(id), g.sys.economy.amount(id)))) {
+      // small next to storage: a toast and the resources flying to the bar instead of the full-screen scene
+      const def = g.data.item(itemId);
+      g.grant(reward, 'crate', undefined, undefined, itemId);
+      g.bus.emit('sfx', { id: 'crate_open' });
+      g.toast(`${def?.name ?? 'Crate'} opened: ${describeReward(reward, g.data)}`, 'reward', def?.icon ?? '📦');
+      return crateCards(g.data, reward);
+    }
     g.bus.emit('chest:opening', { chest: itemId, variant: 'crate' });
     const before = new Set(g.state.colonists.list.map((c) => c.id));
     g.grant(reward, 'crate', undefined, undefined, itemId);
