@@ -214,9 +214,14 @@ const SCENES = [
         const p = { x: 0, z: 0 };
         const has = g.sys.spirit.slotFor(0, p);
         const c = has ? p : g.sys.buildings.center(g.sys.buildings.core());
-        Object.assign(g.state.player, { x: c.x + 4, z: c.z + 6, rot: -2.4 });
-        Object.assign(g.view.camera, { mode: 'follow', yaw: 0.62, zoom: 0.5 });
-        window.renderer.setPitchBias(-0.2);
+        // look at the crowd from the side away from the core, so its tower does not stand in front of the fire
+        const core = g.sys.buildings.center(g.sys.buildings.core());
+        const ax = c.x - core.x;
+        const az = c.z - core.z;
+        const len = Math.hypot(ax, az) || 1;
+        Object.assign(g.state.player, { x: c.x + (ax / len) * 7, z: c.z + (az / len) * 7, rot: Math.atan2(-ax, -az) });
+        Object.assign(g.view.camera, { mode: 'follow', yaw: Math.atan2(ax, az), zoom: 0.36 });
+        window.renderer.setPitchBias(-0.15);
         g.state.time.dayTime = t;
         return { started, has, active: g.sys.spirit.active() };
       }, { t: 0.86 });
@@ -439,8 +444,10 @@ function naturalize() {
   s.settings.quality = 'high';
   try { window.renderer.applyQuality?.('high', true); } catch { /* the render loop picks the setting up on its next frame */ }
 
-  // no first-launch cards
+  // no first-launch cards (analytics, the What's new card, "The Frontier is open!")
   s.settings.analyticsAsked = true;
+  if (s.liveops) s.liveops.newsSeen = '2026-10-frontier-outfitters';
+  if (s.expeditions?.frontier) s.expeditions.frontier.announced = true;
   const now = new Date(g.now());
   s.liveops.daily.lastClaim = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   s.liveops.daily.streak = 12;
