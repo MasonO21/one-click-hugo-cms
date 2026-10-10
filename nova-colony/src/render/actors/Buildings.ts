@@ -962,7 +962,7 @@ export class Buildings {
               const wz = en.z - e.x * sy + e.z * cy;
               const wy = en.y + e.y;
               switch (e.kind) {
-                case 'smoke': ctx.particles.smoke(wx, wy, wz, 0.4, env.night > 0.5 ? '#2f2c33' : '#6b6b70'); break;
+                case 'smoke': ctx.particles.smoke(wx, wy, wz, 0.4, env.night > 0.5 ? '#4a4652' : '#aaa39a'); break; // light woodsmoke (dark grey read as floating rocks)
                 case 'steam': ctx.particles.steam(wx, wy, wz); break;
                 case 'fire': ctx.particles.fire(wx, wy, wz, 0.3); break;
                 case 'sparks': ctx.particles.sparks(wx, wy, wz, 2, e.color ?? '#ffd36b', 2.5); break;

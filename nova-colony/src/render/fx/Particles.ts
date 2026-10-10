@@ -1,6 +1,6 @@
 /**
  * Particles — three pooled InstancedMesh systems (3 draw calls total):
- *   soft  : lit cubes for dust, smoke, wood chips, goo, leaves (fade by shrinking)
+ *   soft  : lit round puffs (an 80-face icosphere; 20 faces on low) for dust, smoke, wood chips, goo, leaves (fade by shrinking)
  *   glow  : additive octahedra for sparks, fire, magic motes (fade by darkening)
  *   flash : additive spheres for explosion fireballs, muzzle flashes and shield ripples
  * Structure-of-arrays storage, swap-remove, zero allocations per frame.
@@ -63,7 +63,9 @@ export class Particles {
   constructor(scene: THREE.Scene, mats: Materials, quality: Quality) {
     scene.add(this.group);
     const caps = quality === 'low' ? [320, 320, 40] : quality === 'high' ? [1100, 1100, 120] : [720, 720, 90];
-    const softGeo = new THREE.BoxGeometry(1, 1, 1);
+    // round puffs, not cubes: smoke and dust read soft like the painted world (cubes looked like dark blocks floating);
+    // low quality keeps a 20-face puff (60 vertices, about the cost of a cube's 24 twice over)
+    const softGeo = new THREE.IcosahedronGeometry(quality === 'low' ? 0.62 : 0.6, quality === 'low' ? 0 : 1);
     const glowGeo = new THREE.OctahedronGeometry(0.6, 0);
     const flashGeo = new THREE.SphereGeometry(1, 10, 7);
     this.pools = {
