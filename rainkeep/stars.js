@@ -77,7 +77,7 @@
   ACT.starstage = (n) => { n = +n; if (!story(n) || n >= S.stage) return; UI.sheet = { kind: 'starstage', n }; };
   ACT.starfight = (n) => {
     n = +n;
-    if (!story(n) || n >= S.stage) return;
+    if (!story(n) || n >= S.stage || count(of(n)) === 3) return;
     if (!KH.squadHome().length) return KH.toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const foe = KH.enemyFor(n), team = KH.teamStats(foe.cls);
     UI.sheet = null;
@@ -110,6 +110,8 @@
     UI.starCh = CH[i].from;
   };
   ACT.stars = () => { UI.sheet = { kind: 'stars' }; };
+  // a new stage cleared: the stage list goes back to the chapter being fought
+  KH.on('stage', () => { UI.starCh = null; });
   ACT.starsgo = (from) => { UI.starCh = +from; UI.sheet = null; KH.UI.tab = 'world'; KH.UI.sub.world = 'expedition'; };
 
   const chests = (c) => {
