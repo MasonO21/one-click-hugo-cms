@@ -32,6 +32,14 @@ function masteryRow(m) {
   </div>`;
 }
 
+/** Feat tiers this run reached (meta/feats.js): claimed from the home screen's Feats button. */
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI'];
+function featRow(feats) {
+  if (!feats || !feats.length) return '';
+  const names = feats.slice(0, 3).map((f) => `<b>${f.name}${f.of > 1 ? ` ${ROMAN[f.tier]}` : ''}</b>`).join(', ');
+  return `<div class="res-tip res-feat">${icon('trophy')} Feat${feats.length > 1 ? 's' : ''} earned: ${names}${feats.length > 3 ? ` and ${feats.length - 3} more` : ''}. Claim ${feats.length > 1 ? 'them' : 'it'} from Feats on the home screen.</div>`;
+}
+
 /** A first Normal clear that ends an act opens the next one (and Chapter 5 the Endless Abyss): say so on the results. */
 function actTip(result, outcome) {
   const ch = +result.chapter;
@@ -389,6 +397,7 @@ export class RunUI {
         : outcome.ended ? '<div class="res-tip">Training ended. Replay it any time from Settings; finishing it pays 500 gold and 30 gems.</div>' : `<div class="res-sub">Rewards</div>
       <div class="rw-grid res-rw">${items.map((it, i) => rewardTile(it, i)).join('')}</div>`}
       ${masteryRow(outcome.mastery)}
+      ${featRow(outcome.feats)}
       ${rush ? (outcome.milestones && outcome.milestones.length ? `<div class="res-tip">Event reward${outcome.milestones.length > 1 ? 's' : ''} unlocked: ${outcome.milestones.map((i) => (i + 1 === nB ? 'the Court cleared' : `${i + 1} ${i ? 'bosses' : 'boss'} beaten`)).join(', ')}.</div>` : win ? '' : '<div class="res-tip">Each boss beaten in one attempt unlocks an event reward. Talents, relics and a stronger hero carry you further.</div>')
         : tut ? `<div class="res-tip">You are ready, Shepherd. Spend your gold on <b>Talents</b>, then take on Chapter 1: survive 6:00 and slay ${BOSSES[bossFor(CHAPTERS[0])].name}.</div>`
         : result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, all ten in turn, stronger each time. How deep can your legion go?</div>'

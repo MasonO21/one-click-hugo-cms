@@ -6,7 +6,7 @@ import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial
 import { Store } from './meta/store.js';
 import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
 import { activePage } from './meta/grimoire.js';
-import { haptic, setHapticsEnabled, isNative } from './engine/platform.js';
+import { haptic, setHapticsEnabled, isNative, submitScore } from './engine/platform.js';
 import { App as NativeApp } from '@capacitor/app';
 import { handleBack } from './ui/back.js';
 import * as clock from './meta/clock.js';
@@ -20,7 +20,7 @@ import { createMeta } from './ui/meta/index.js';
 import { CHAPTERS, CLOCK, ENDLESS_ID, ENDLESS_UNLOCK, chapterById, BOSS_RUSH } from './game/data.js';
 import { toast } from './ui/dom.js';
 import { analytics } from './meta/analytics.js';
-import { reportFeats } from './meta/feats.js';
+import { reportFeats, featsReached, newFeats } from './meta/feats.js';
 import { maybeAskReview } from './meta/review.js';
 import { needsGate, needsConsent, answerGate, setConsent } from './meta/privacy.js';
 import { openAgeGate, openConsent } from './ui/meta/privacy.js';
@@ -122,7 +122,9 @@ function beginRun(chapter, opts) {
   app.engine.setController(run);
   audio.playMusic('battle');
   run.onEnd = (result) => {
+    const feats0 = featsReached(profile);
     const outcome = applyRunResult(profile, result);
+    if (outcome) outcome.feats = newFeats(profile, feats0); // Feat tiers this run reached (the results screen names them)
     commit(profile);
     if (mode === 'tutorial') analytics.track('ftue_complete', { skipped: !!(outcome && outcome.ended), time: result.time });
     else analytics.track('run_end', { ...base, victory: !!result.victory, time: result.time, kills: result.kills, level: result.level, legion: result.bestLegion,
@@ -130,6 +132,8 @@ function beginRun(chapter, opts) {
     if (profile.chapter.unlocked > unlocked0) analytics.track('chapter_unlock', { chapter: profile.chapter.unlocked, act: actOf(profile.chapter.unlocked).n });
     runUI.showResults(result, outcome);
     reportFeats(profile); // Feat tiers reached in this run (Game Center / Play Games in the store build)
+    if (result.endless) submitScore('endless_time', result.time); // leaderboards (the store build's bridge)
+    else if (run.rush && outcome && outcome.cleared) submitScore(`rush_${run.courtId}`, result.time);
     if (mode !== 'tutorial' && maybeAskReview(profile, result, outcome)) commit(profile);
   };
   return true;

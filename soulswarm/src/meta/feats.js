@@ -53,6 +53,15 @@ export function featsProgress(p) {
   return { got, all };
 }
 
+/** Tiers reached per family (a snapshot to diff after a run). */
+export const featsReached = (p) => Object.fromEntries(FEATS.order.map((id) => { const v = featValue(p, id); return [id, FEATS.families[id].goals.filter((g) => v >= g).length]; }));
+/** The tiers reached since `before` (featsReached), for the results screen: [{ id, name, tier }]. */
+export function newFeats(p, before) {
+  const now = featsReached(p), out = [];
+  for (const id of FEATS.order) for (let t = (before[id] || 0) + 1; t <= now[id]; t++) out.push({ id, name: FEATS.families[id].name, tier: t, of: FEATS.families[id].goals.length });
+  return out;
+}
+
 /** Reports every reached tier to the platform (Game Center / Play Games in store builds), once per session each. */
 const reported = new Set();
 export function reportFeats(p) {

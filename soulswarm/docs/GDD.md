@@ -1335,7 +1335,9 @@ The groundwork a store release needs before any SDK starts (`MONETIZATION.md` §
 | Relic Keeper | best relic stars | 1 / 3 / 5 | 30 / 80 / 200 |
 | Ascendant | account level | 10 / 25 / 50 | 30 / 60 / 150 |
 
-The home screen's **Feats** button (right column) carries a dot while a tier waits, and the Battle tab counts it. The panel lists ready families first, then the ones under way, the finished ones last, each with its tier pips (claimed gold, reached green) and progress. Store builds report every reached tier to Game Center / Play Games as `<family>_<tier>` (`engine/platform.js` `setFeatBridge`; once per session, at boot and after each run, so a console that missed one catches up). `playtest.mjs` §55.
+The home screen's **Feats** button (right column) carries a dot while a tier waits, and the Battle tab counts it. The panel lists ready families first, then the ones under way, the finished ones last, each with its tier pips (claimed gold, reached green) and progress. A run that reaches a tier names it on the results ("Feat earned: Reaper II"). Store builds report every reached tier to Game Center / Play Games as `<family>_<tier>` (`engine/platform.js` `setFeatBridge`; once per session, at boot and after each run, so a console that missed one catches up). `playtest.mjs` §55.
+
+**Leaderboards** (store builds, `platform.setScoreBridge`): `endless_time` (seconds survived in the Endless Abyss) after every Endless run, and `rush_hollow` / `rush_fallen` (a full Boss Rush clear in seconds, lower is better). The web build has no boards.
 
 **The review prompt** (`src/meta/review.js`, `REVIEW` in `data.js`). The store's own review sheet, asked only at a high point: a first Normal clear of Chapter 3, 10, 20 or 30, or a full Boss Rush, 2.5 s after the results show. At most three times ever and 60 days apart, never to a child (restricted mode), and only where the store build registered its in-app review plugin (`setReviewBridge`); the stores cap it again. No pre-prompt asks "do you like the game?" first.
 

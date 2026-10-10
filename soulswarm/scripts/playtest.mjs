@@ -4243,6 +4243,13 @@ errs = await session(async (page) => {
     out.review.again = R.maybeAskReview(p, { victory: true, chapter: 10 }, { firstClear: true, difficulty: 'normal' }, 0);
     await wait(50); out.review.asked = asks.length; out.review.flag = JSON.stringify(p.flags.review && { n: p.flags.review.n });
     PL.setReviewBridge(null); PL.setFeatBridge(null); delete p.flags.review;
+    // a run that crosses a tier names it on the results; Endless sends its time to the leaderboard bridge
+    const scores = []; PL.setScoreBridge((b, v) => { scores.push(b + ':' + v); });
+    p.stats.kills = 995; p.energy = 30; app.startRun(1); let r = app.run; r.player.hurt = () => {}; r.counters.kills = 10; r.time = 400; r.end(true); await wait(1200);
+    out.result = { feat: q('.res-feat')?.textContent.replace(/\s+/g, ' ').trim() || '' };
+    app.exitRun(); document.querySelectorAll('.modal-back').forEach((x) => x.remove());
+    p.energy = 30; app.startRun(100); r = app.run; r.player.hurt = () => {}; r.time = 321.4; r.end(false); await wait(900);
+    out.result.scores = scores.join(); app.exitRun(); document.querySelectorAll('.modal-back').forEach((x) => x.remove()); PL.setScoreBridge(null);
     // Settings → About and licences
     q('.fab[data-act="settings"]').click(); await wait(200);
     q('.mm-settings [data-act="about"]')?.click(); await wait(250);
@@ -4263,6 +4270,8 @@ errs = await session(async (page) => {
   check('feats: a loaded save keeps claimed tiers within range and drops junk', s.junk === '{"claimed":{"reaper":4,"legion":2}}', s.junk);
   check('review: asked only after a high point (Chapter 3 first clear, a full Boss Rush), never to a child, 60 days apart, never on the web build',
     s.review.web === false && s.review.ch4 === false && s.review.hard === false && s.review.rush === true && s.review.child === false && s.review.ask === true && s.review.again === false && s.review.asked === 1, JSON.stringify(s.review));
+  check('feats: a run that reaches a tier names it on the results (Reaper I); the Endless time goes to the leaderboard bridge',
+    /Feat earned: Reaper I\b/.test(s.result.feat) && s.result.scores === 'endless_time:321', JSON.stringify(s.result));
   check('about: Settings → About shows the version, the player ID and the open-source notices',
     s.about.open && s.about.ver && s.about.ver !== 'dev' && s.about.notices === 5 && s.about.id, JSON.stringify(s.about));
 });

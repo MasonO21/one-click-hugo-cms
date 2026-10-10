@@ -37,3 +37,13 @@ export function askReview() {
   if (!reviewBridge) return false;
   try { Promise.resolve(reviewBridge()).catch(() => {}); return true; } catch (e) { return false; }
 }
+
+// Game Center / Play Games leaderboards: the store build registers setScoreBridge((board, value) => …). Boards:
+// endless_time (seconds survived in the Endless Abyss, higher is better), rush_hollow / rush_fallen (a full Boss Rush
+// clear in seconds, lower is better). The web build has none.
+let scoreBridge = null;
+export const setScoreBridge = (fn) => { scoreBridge = typeof fn === 'function' ? fn : null; };
+export function submitScore(board, value) {
+  if (!scoreBridge || !(value > 0)) return false;
+  try { Promise.resolve(scoreBridge(board, Math.round(value))).catch(() => {}); return true; } catch (e) { return false; }
+}
