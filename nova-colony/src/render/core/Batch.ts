@@ -14,6 +14,11 @@
  * the camera and the player. The batch then owns a thin geometry wrapper sharing the model's vertex
  * buffers, so the attribute never leaks into other users of the same geometry (ghost previews).
  * `depthMaterial` gives such a batch a matching shadow-pass material so its shadow dithers too.
+ *
+ * Uploads: only what changed goes to the GPU. end() queues the written instances' matrices (not the whole capacity:
+ * a particle pool of 720 with 40 live sparks sends 40 matrices), colours and fades only where a value changed, and
+ * an empty batch sends nothing. setMatrix / setColor / setFade queue just the touched instances. Each attribute has
+ * one persistent update range that grows until three.js uploads and clears it, so this allocates nothing per frame.
  */
 import * as THREE from 'three';
 
@@ -38,11 +43,44 @@ export interface BatchOpts {
   name?: string;
 }
 
+/** A pending GPU update range of one attribute, in array elements (BufferAttribute.updateRanges entry). */
+interface Range {
+  start: number;
+  count: number;
+}
+
+/**
+ * Queue elements [start, end) of `attr` for upload on its next render. `range` is the attribute's own persistent
+ * entry: still queued (three.js clears the list after each upload) it grows to cover both spans, else it is reset and
+ * queued again. A range never shrinks before it is uploaded, so writes made while the mesh is hidden or culled are
+ * still sent when it next draws.
+ */
+export function queueRange(attr: THREE.BufferAttribute, range: Range, start: number, end: number): void {
+  if (end <= start) return;
+  const rs = attr.updateRanges as Range[];
+  if (rs.includes(range)) {
+    const e = Math.max(range.start + range.count, end);
+    range.start = Math.min(range.start, start);
+    range.count = e - range.start;
+  } else {
+    range.start = start;
+    range.count = end - start;
+    rs.push(range);
+  }
+  attr.needsUpdate = true;
+}
+
 export class Batch {
   mesh!: THREE.InstancedMesh;
   private n = 0;
-  private dirtyColor = false;
-  private dirtyFade = false;
+  /** Instances whose colour / fade changed since the last end(): [lo, hi). */
+  private colorLo = Infinity;
+  private colorHi = 0;
+  private fadeLo = Infinity;
+  private fadeHi = 0;
+  private readonly matrixRange: Range = { start: 0, count: 0 };
+  private readonly colorRange: Range = { start: 0, count: 0 };
+  private readonly fadeRange: Range = { start: 0, count: 0 };
   private capacity: number;
   /** Geometry actually bound to the mesh (the model geometry, or a wrapper carrying aFade). */
   private bound!: THREE.BufferGeometry;
@@ -87,6 +125,10 @@ export class Batch {
     this.bound = this.wrap(this.geometry);
     const mesh = new THREE.InstancedMesh(this.bound, this.material, this.capacity);
     if (this.opts.name) mesh.name = this.opts.name;
+    // the instances carry the transforms; the mesh itself never moves: no matrix compose per frame (its world matrix
+    // is still taken from the parent once, on the next render)
+    mesh.matrixAutoUpdate = false;
+    mesh.matrixWorldNeedsUpdate = true;
     mesh.frustumCulled = false;
     mesh.castShadow = !!this.opts.castShadow;
     mesh.receiveShadow = !!this.opts.receiveShadow;
@@ -94,11 +136,12 @@ export class Batch {
     if (mesh.castShadow && this.opts.depthMaterial) mesh.customDepthMaterial = this.opts.depthMaterial;
     mesh.renderOrder = this.opts.renderOrder ?? 0;
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    if (this.opts.color) {
-      const colors = new Float32Array(this.capacity * 3).fill(1);
-      mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
-      mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
-    }
+    // every batch carries instance colours (white when it has no `color` option): batches with and without them
+    // share materials, and three.js re-resolves a material's program each time consecutive draws switch between the
+    // two (a getParameters + cache-key build, ~3 KB of garbage, several times a frame). White changes nothing on screen.
+    const colors = new Float32Array(this.capacity * 3).fill(1);
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(colors, 3);
+    mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.count = 0;
     this.mesh = mesh;
     this.parent.add(mesh);
@@ -138,6 +181,7 @@ export class Batch {
       (this.mesh.instanceColor.array as Float32Array).set((old.instanceColor.array as Float32Array).subarray(0, oldN * 3));
     }
     if (this.fadeAttr && oldFade) (this.fadeAttr.array as Float32Array).set((oldFade.array as Float32Array).subarray(0, oldN));
+    // the new attributes get fresh GPU buffers, uploaded whole on first use: nothing is pending against them
     old.dispose();
   }
 
@@ -155,34 +199,41 @@ export class Batch {
     if (i + 1 > this.capacity) this.ensure(i + 1);
     matrix.toArray(this.mesh.instanceMatrix.array, i * 16);
     const ic = this.mesh.instanceColor;
-    if (ic) {
-      const c = color ?? WHITE;
-      const a = ic.array as Float32Array;
-      a[i * 3] = c.r;
-      a[i * 3 + 1] = c.g;
-      a[i * 3 + 2] = c.b;
-      this.dirtyColor = true;
+    if (ic && this.writeColor(ic.array as Float32Array, i, this.opts.color ? color ?? WHITE : WHITE)) {
+      if (i < this.colorLo) this.colorLo = i;
+      if (i >= this.colorHi) this.colorHi = i + 1;
     }
     const fa = this.fadeAttr;
     if (fa) {
       const a = fa.array as Float32Array;
-      if (a[i] !== fade) {
-        a[i] = fade;
-        this.dirtyFade = true;
+      const f = Math.fround(fade);
+      if (a[i] !== f) {
+        a[i] = f;
+        if (i < this.fadeLo) this.fadeLo = i;
+        if (i >= this.fadeHi) this.fadeHi = i + 1;
       }
     }
     this.n = i + 1;
   }
 
+  /** Write one instance colour; true when it changed (compared as stored, in float32). */
+  private writeColor(a: Float32Array, i: number, c: THREE.Color): boolean {
+    const j = i * 3;
+    const r = Math.fround(c.r);
+    const g = Math.fround(c.g);
+    const b = Math.fround(c.b);
+    if (a[j] === r && a[j + 1] === g && a[j + 2] === b) return false;
+    a[j] = r;
+    a[j + 1] = g;
+    a[j + 2] = b;
+    return true;
+  }
+
   /** Overwrite one instance's color without touching matrices (hit flashes). */
   setColor(index: number, color: THREE.Color): void {
     const ic = this.mesh.instanceColor;
-    if (!ic || index < 0 || index >= this.n) return;
-    const a = ic.array as Float32Array;
-    a[index * 3] = color.r;
-    a[index * 3 + 1] = color.g;
-    a[index * 3 + 2] = color.b;
-    ic.needsUpdate = true;
+    if (!ic || !this.opts.color || index < 0 || index >= this.n) return;
+    if (this.writeColor(ic.array as Float32Array, index, color)) queueRange(ic, this.colorRange, index * 3, index * 3 + 3);
   }
 
   /** Overwrite one instance's fade (0 solid .. 1 fully dithered away). */
@@ -190,30 +241,29 @@ export class Batch {
     const fa = this.fadeAttr;
     if (!fa || index < 0 || index >= this.n) return;
     const a = fa.array as Float32Array;
-    if (a[index] === fade) return;
-    a[index] = fade;
-    fa.needsUpdate = true;
+    const f = Math.fround(fade);
+    if (a[index] === f) return;
+    a[index] = f;
+    queueRange(fa, this.fadeRange, index, index + 1);
   }
 
   /** Overwrite one instance's matrix (wobble animations on otherwise static batches). */
   setMatrix(index: number, matrix: THREE.Matrix4): void {
     if (index < 0 || index >= this.n) return;
     matrix.toArray(this.mesh.instanceMatrix.array, index * 16);
-    this.mesh.instanceMatrix.needsUpdate = true;
+    queueRange(this.mesh.instanceMatrix, this.matrixRange, index * 16, index * 16 + 16);
   }
 
   end(): void {
     const mesh = this.mesh;
-    mesh.count = this.n;
-    mesh.instanceMatrix.needsUpdate = true;
-    if (this.dirtyColor && mesh.instanceColor) {
-      mesh.instanceColor.needsUpdate = true;
-      this.dirtyColor = false;
-    }
-    if (this.dirtyFade && this.fadeAttr) {
-      this.fadeAttr.needsUpdate = true;
-      this.dirtyFade = false;
-    }
+    const n = this.n;
+    mesh.count = n;
+    // an empty batch draws nothing: its stale buffers can wait for the next write
+    if (n > 0) queueRange(mesh.instanceMatrix, this.matrixRange, 0, n * 16);
+    if (mesh.instanceColor && this.colorHi > this.colorLo) queueRange(mesh.instanceColor, this.colorRange, this.colorLo * 3, Math.min(this.colorHi, n) * 3);
+    if (this.fadeAttr && this.fadeHi > this.fadeLo) queueRange(this.fadeAttr, this.fadeRange, this.fadeLo, Math.min(this.fadeHi, n));
+    this.colorLo = this.fadeLo = Infinity;
+    this.colorHi = this.fadeHi = 0;
     if (this.opts.cull) {
       if (this.n > 0) {
         mesh.computeBoundingSphere();
