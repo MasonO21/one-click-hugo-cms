@@ -160,7 +160,7 @@
       ${chests(c)}<button class="btn small alt" data-act="starsgo" data-arg="${c.from}" aria-label="Go to ${esc(c.name)}">Go</button></div>`).join('');
     return {
       title: 'Stage Stars', lvl: `${fmt(S.stats.stars)}`,
-      body: `<p class="muted small">Every story stage holds three stars: the victory, ending with half the squad's health, and winning within ${T.swift} rounds (${T.swiftBoss} against a boss). Each chapter's stars fill three chests.</p><div class="card stack">${rows}</div>`,
+      body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'stars', '') : ''}<p class="muted small">Every story stage holds three stars: the victory, ending with half the squad's health, and winning within ${T.swift} rounds (${T.swiftBoss} against a boss). Each chapter's stars fill three chests.</p><div class="card stack">${rows}</div>`,
     };
   };
   KH.side.push({ id: 'stars', icon: 'i-star', label: 'Stars', act: 'stars', show: () => !!S && S.stage > 2, dot: anyReady, badge: () => (anyReady() ? `${readyCount()}` : `${S.stats.stars}`) });
