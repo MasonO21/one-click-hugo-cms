@@ -251,6 +251,7 @@ export class Renderer implements RendererApi {
     this.wishBubbles.update(dt);
     this.aliens.update(dt);
     this.projectiles.update(dt);
+    this.particles.setNight(this.env.night);
     this.particles.update(dt);
     this.themeFx.update(dt, this.renderer.getDrawingBufferSize(_buf).y);
     this.overlay.setSelection(this.selectionInfo(game.view.selection));

@@ -1,6 +1,8 @@
 /**
- * Particles — three pooled InstancedMesh systems (3 draw calls total):
- *   soft  : lit round puffs (an 80-face icosphere; 20 faces on low) for dust, smoke, wood chips, goo, leaves (fade by shrinking)
+ * Particles — four pooled InstancedMesh systems (4 draw calls total):
+ *   soft  : lit round pieces (an 80-face icosphere; 20 faces on low) for wood chips, goo, confetti (fade by shrinking)
+ *   wisp  : camera-facing soft sprites (2 triangles each) for smoke, steam and dust: a lumpy round puff that is
+ *           see-through at its edge and fades in and out, so chimneys trail wisps instead of stacked solid balls
  *   glow  : additive octahedra for sparks, fire, magic motes (fade by darkening)
  *   flash : additive spheres for explosion fireballs, muzzle flashes and shield ripples
  * Structure-of-arrays storage, swap-remove, zero allocations per frame.
@@ -10,7 +12,64 @@ import { Batch, composeEuler } from '../core/Batch';
 import type { Materials } from '../core/materials';
 import type { Quality } from '../core/context';
 
-export type PoolName = 'soft' | 'glow' | 'flash';
+export type PoolName = 'soft' | 'wisp' | 'glow' | 'flash';
+
+/**
+ * The wisp sprite: each instance's origin goes to view space and the quad spreads in view XY by the instance's scale,
+ * turned by its Z angle (both read back from the instance matrix), so it always faces the camera. The puff is a soft
+ * disc with a gently lumpy edge, shaded a little lighter on top; aFade (0 .. 1) is its fade-out, the night dims it.
+ */
+const WISP_VERT = /* glsl */ `
+  #include <common>
+  #include <fog_pars_vertex>
+  attribute float aFade;
+  varying vec2 vUv;
+  varying vec3 vColor;
+  varying float vAlpha;
+  varying float vShade;
+  void main() {
+    vUv = uv;
+    #ifdef USE_INSTANCING_COLOR
+      vColor = instanceColor;
+    #else
+      vColor = vec3(1.0);
+    #endif
+    vAlpha = 1.0 - aFade;
+    vec3 col0 = instanceMatrix[0].xyz;
+    float s = length(col0);
+    float ang = atan(col0.y, col0.x);
+    vec2 q = vec2(cos(ang) * position.x - sin(ang) * position.y, sin(ang) * position.x + cos(ang) * position.y);
+    vShade = q.y;
+    vec4 mvPosition = modelViewMatrix * vec4(instanceMatrix[3].xyz, 1.0);
+    mvPosition.xy += q * s;
+    gl_Position = projectionMatrix * mvPosition;
+    #include <fog_vertex>
+  }
+`;
+const WISP_FRAG = /* glsl */ `
+  #include <common>
+  #include <fog_pars_fragment>
+  uniform float uOpacity;
+  uniform float uLight;
+  varying vec2 vUv;
+  varying vec3 vColor;
+  varying float vAlpha;
+  varying float vShade;
+  void main() {
+    vec2 p = vUv - 0.5;
+    float r = length(p) * 2.0;
+    float a = atan(p.y, p.x);
+    float lump = 0.07 * sin(a * 3.0 + 0.6) + 0.045 * sin(a * 5.0 + 2.1);
+    float shape = 1.0 - smoothstep(0.3 + lump, 0.98 + lump * 0.5, r);
+    float alpha = shape * vAlpha * uOpacity;
+    if (alpha < 0.01) discard;
+    vec3 c = vColor * uLight * (0.9 + 0.22 * vShade);
+    gl_FragColor = vec4(c, alpha);
+    #include <tonemapping_fragment>
+    #include <colorspace_fragment>
+    #include <fog_fragment>
+  }
+`;
 
 /** Size curve kinds. */
 const CURVE_SHRINK = 0;
@@ -35,16 +94,19 @@ class Pool {
   readonly drag: Float32Array;
   readonly curve: Uint8Array;
   readonly spin: Float32Array;
+  /** Peak opacity (wisps). */
+  readonly alpha: Float32Array;
   constructor(public readonly cap: number, public readonly batch: Batch, public readonly additive: boolean) {
     const f = () => new Float32Array(cap);
     this.x = f(); this.y = f(); this.z = f(); this.vx = f(); this.vy = f(); this.vz = f();
     this.life = f(); this.max = f(); this.size = f(); this.r = f(); this.g = f(); this.b = f();
-    this.grav = f(); this.drag = f(); this.spin = f();
+    this.grav = f(); this.drag = f(); this.spin = f(); this.alpha = f();
     this.curve = new Uint8Array(cap);
   }
 }
 
 const _m = new THREE.Matrix4();
+const POOLS: PoolName[] = ['soft', 'wisp', 'glow', 'flash'];
 const _c = new THREE.Color();
 const _tmp = new THREE.Color();
 
@@ -53,25 +115,39 @@ export interface EmitOpts {
   drag?: number;
   curve?: 'shrink' | 'smoke' | 'grow';
   spin?: number;
+  /** Peak opacity of a wisp (default 0.8). */
+  alpha?: number;
 }
 
 export class Particles {
   private pools: Record<PoolName, Pool>;
   private group = new THREE.Group();
   private budget = 1;
+  private readonly wispMat: THREE.ShaderMaterial;
+  private readonly wispGeo: THREE.PlaneGeometry;
 
   constructor(scene: THREE.Scene, mats: Materials, quality: Quality) {
     scene.add(this.group);
-    const caps = quality === 'low' ? [320, 320, 40] : quality === 'high' ? [1100, 1100, 120] : [720, 720, 90];
-    // round puffs, not cubes: smoke and dust read soft like the painted world (cubes looked like dark blocks floating);
-    // low quality keeps a 20-face puff (60 vertices, about the cost of a cube's 24 twice over)
+    const caps = quality === 'low' ? [200, 320, 320, 40] : quality === 'high' ? [600, 900, 1100, 120] : [400, 640, 720, 90];
+    // round pieces, not cubes (cubes read as dark blocks); low quality keeps a 20-face piece
     const softGeo = new THREE.IcosahedronGeometry(quality === 'low' ? 0.62 : 0.6, quality === 'low' ? 0 : 1);
+    // a wisp's quad is wider than the old puff's sphere (0.6 radius): its edge is see-through
+    this.wispGeo = new THREE.PlaneGeometry(1.7, 1.7);
+    this.wispMat = new THREE.ShaderMaterial({
+      uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { uOpacity: { value: 1 }, uLight: { value: 1 } }]),
+      vertexShader: WISP_VERT,
+      fragmentShader: WISP_FRAG,
+      transparent: true,
+      depthWrite: false,
+      fog: true,
+    });
     const glowGeo = new THREE.OctahedronGeometry(0.6, 0);
     const flashGeo = new THREE.SphereGeometry(1, 10, 7);
     this.pools = {
       soft: new Pool(caps[0], new Batch(this.group, softGeo, mats.particleSoft, caps[0], { color: true }), false),
-      glow: new Pool(caps[1], new Batch(this.group, glowGeo, mats.particleGlow, caps[1], { color: true, renderOrder: 10 }), true),
-      flash: new Pool(caps[2], new Batch(this.group, flashGeo, mats.particleGlow, caps[2], { color: true, renderOrder: 11 }), true),
+      wisp: new Pool(caps[1], new Batch(this.group, this.wispGeo, this.wispMat, caps[1], { color: true, fade: true, renderOrder: 9, name: 'wisps' }), false),
+      glow: new Pool(caps[2], new Batch(this.group, glowGeo, mats.particleGlow, caps[2], { color: true, renderOrder: 10 }), true),
+      flash: new Pool(caps[3], new Batch(this.group, flashGeo, mats.particleGlow, caps[3], { color: true, renderOrder: 11 }), true),
     };
     this.budget = quality === 'low' ? 0.5 : 1;
   }
@@ -100,6 +176,7 @@ export class Particles {
     p.drag[i] = opts?.drag ?? 0;
     p.spin[i] = opts?.spin ?? 0;
     p.curve[i] = opts?.curve === 'smoke' ? CURVE_SMOKE : opts?.curve === 'grow' ? CURVE_GROW : CURVE_SHRINK;
+    p.alpha[i] = opts?.alpha ?? 0.8;
   }
 
   /** Number of particles for a request after quality scaling (at least 1 when n > 0). */
@@ -114,16 +191,21 @@ export class Particles {
     for (let i = 0, k = this.count(n); i < k; i++) {
       const a = Math.random() * Math.PI * 2;
       const r = Math.random() * radius;
-      this.emit('soft', x + Math.cos(a) * r, y + 0.1, z + Math.sin(a) * r, Math.cos(a) * 1.5, 1 + Math.random() * 1.5, Math.sin(a) * 1.5, 0.5 + Math.random() * 0.5, 0.25 + Math.random() * 0.3, color, { gravity: -2, drag: 2, curve: 'smoke' });
+      this.emit('wisp', x + Math.cos(a) * r, y + 0.1, z + Math.sin(a) * r, Math.cos(a) * 1.5, 1 + Math.random() * 1.5, Math.sin(a) * 1.5, 0.5 + Math.random() * 0.5, 0.25 + Math.random() * 0.3, color, { gravity: -2, drag: 2, curve: 'smoke', alpha: 0.7, spin: 0.6 });
     }
   }
 
-  smoke(x: number, y: number, z: number, size = 0.5, color: THREE.Color | string = '#6b6b70', life = 1.8): void {
-    this.emit('soft', x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.4, 0.9 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, life, size, color, { drag: 0.4, curve: 'smoke', spin: 1 });
+  smoke(x: number, y: number, z: number, size = 0.5, color: THREE.Color | string = '#6b6b70', life = 1.8, alpha = 0.78): void {
+    this.emit('wisp', x + (Math.random() - 0.5) * 0.3, y, z + (Math.random() - 0.5) * 0.3, (Math.random() - 0.5) * 0.4, 0.9 + Math.random() * 0.6, (Math.random() - 0.5) * 0.4, life, size, color, { drag: 0.4, curve: 'smoke', spin: 0.5, alpha });
   }
 
   steam(x: number, y: number, z: number): void {
-    this.smoke(x, y, z, 0.35, '#dfe8ef', 1.1);
+    this.smoke(x, y, z, 0.35, '#eef3f6', 1.1, 0.55);
+  }
+
+  /** Night dims the wisps (they are unlit: smoke and dust would otherwise glow in the dark). 0 = day, 1 = night. */
+  setNight(night: number): void {
+    this.wispMat.uniforms.uLight.value = 1 - night * 0.68;
   }
 
   fire(x: number, y: number, z: number, size = 0.35): void {
@@ -206,7 +288,8 @@ export class Particles {
   // ------------------------------------------------------------------ update
 
   update(dt: number): void {
-    for (const name of ['soft', 'glow', 'flash'] as PoolName[]) {
+    const wisp = this.pools.wisp;
+    for (const name of POOLS) {
       const p = this.pools[name];
       const batch = p.batch;
       batch.begin();
@@ -221,7 +304,7 @@ export class Particles {
             p.vx[i] = p.vx[l]; p.vy[i] = p.vy[l]; p.vz[i] = p.vz[l];
             p.life[i] = p.life[l]; p.max[i] = p.max[l]; p.size[i] = p.size[l];
             p.r[i] = p.r[l]; p.g[i] = p.g[l]; p.b[i] = p.b[l];
-            p.grav[i] = p.grav[l]; p.drag[i] = p.drag[l]; p.curve[i] = p.curve[l]; p.spin[i] = p.spin[l];
+            p.grav[i] = p.grav[l]; p.drag[i] = p.drag[l]; p.curve[i] = p.curve[l]; p.spin[i] = p.spin[l]; p.alpha[i] = p.alpha[l];
           }
           continue;
         }
@@ -248,8 +331,18 @@ export class Particles {
           _tmp.setRGB(p.r[i] * k, p.g[i] * k, p.b[i] * k);
         } else _tmp.setRGB(p.r[i], p.g[i], p.b[i]);
         const sp = p.spin[i] * (p.max[i] - p.life[i]);
-        composeEuler(_m, p.x[i], p.y[i], p.z[i], sp * 0.7 + i, sp + i * 1.3, sp * 0.4, s, s, s);
-        batch.push(_m, _tmp);
+        if (p === wisp) {
+          // a sprite: only its turn in the view plane matters (the shader reads it back from the matrix); it fades in
+          // over its first tenth and out with its life, instead of shrinking away
+          const age = 1 - f;
+          const a = p.alpha[i] * Math.min(1, age * 10) * Math.min(1, f * 2.2);
+          const sw = c === CURVE_SMOKE ? p.size[i] * (1 + age * 1.8) : s; // keeps swelling as it thins
+          composeEuler(_m, p.x[i], p.y[i], p.z[i], 0, 0, sp + i * 2.4, sw, 1, 1);
+          batch.push(_m, _tmp, 1 - a);
+        } else {
+          composeEuler(_m, p.x[i], p.y[i], p.z[i], sp * 0.7 + i, sp + i * 1.3, sp * 0.4, s, s, s);
+          batch.push(_m, _tmp);
+        }
         i++;
       }
       batch.end();
@@ -258,6 +351,8 @@ export class Particles {
 
   dispose(): void {
     for (const p of Object.values(this.pools)) p.batch.dispose();
+    this.wispMat.dispose();
+    this.wispGeo.dispose();
     this.group.removeFromParent();
   }
 }
