@@ -7,7 +7,7 @@ export class Input {
     this.ox = 0; this.oy = 0;         // joystick origin (css px)
     this.kx = 0; this.ky = 0;         // knob position
     this.pointerId = null;
-    this.radius = 58;
+    this.radius = 58; this.knob = 26; // setSize: Settings → Joystick size
     this.keys = new Set();
     this.moved = false;
     this.enabled = true;
@@ -64,6 +64,12 @@ export class Input {
     } else { this.x = this.tx; this.z = this.tz; }
   }
 
+  /** Joystick size (Settings → Accessibility): k × the default 58 px radius, 0.75–1.5. */
+  setSize(k) {
+    const f = Math.min(1.5, Math.max(0.75, +k || 1));
+    this.radius = 58 * f; this.knob = 26 * f;
+  }
+
   reset() { this.pointerId = null; this.active = false; this.tx = this.tz = this.x = this.z = 0; this.keys.clear(); }
 
   draw(ctx) {
@@ -73,10 +79,10 @@ export class Input {
     ctx.beginPath(); ctx.arc(this.ox, this.oy, this.radius, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(10,20,40,0.28)'; ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(126,226,255,0.45)'; ctx.stroke();
-    const g = ctx.createRadialGradient(this.kx, this.ky, 2, this.kx, this.ky, 26);
+    const g = ctx.createRadialGradient(this.kx, this.ky, 2, this.kx, this.ky, this.knob);
     g.addColorStop(0, 'rgba(230,255,255,0.95)'); g.addColorStop(0.5, 'rgba(78,242,255,0.65)'); g.addColorStop(1, 'rgba(78,242,255,0)');
     ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(this.kx, this.ky, 26, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(this.kx, this.ky, this.knob, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 

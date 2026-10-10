@@ -118,6 +118,7 @@ export class Run {
     this.rites = new Rites(this); // the hero's signature active ability (RITE button)
     this.bossEnemy = null;
     this.input = new Input(engine.canvas);
+    this.input.setSize(app.profile.settings.stick);
 
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;

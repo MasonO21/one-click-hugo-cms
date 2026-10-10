@@ -4329,7 +4329,7 @@ errs = await session(async (page) => {
 check('update 14 reminders: no runtime errors', !errs.length, errs[0] || '');
 
 // 57. Update 14: the gate preview (Settings → Accessibility, off by default): under each Soul Gate's label, the legion it
-//     would leave, kept current as the legion changes, and cleaned up with the gates.
+//     would leave, kept current as the legion changes, and cleaned up with the gates; and the joystick size.
 errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const app = window.__soulswarm, p = app.profile, out = {};
@@ -4350,12 +4350,23 @@ errs = await session(async (page) => {
     const pv = G[0].pv; r.gates.despawn(); out.on.gone = !r.scene.children.includes(pv);
     r.gates.spawnPair([{ type: 'sub', n: 25 }, { type: 'div', n: 2 }]); step(r, 0.7);
     out.bad = { L: r.legion.count, pv: r.gates.pair.gates.map((g) => g.pv.userData.n).join() };
-    p.settings.gatePreview = false; app.exitRun();
+    p.settings.gatePreview = false;
+    // the joystick size (Settings → Accessibility): the radius scales, clamped to 75–150%, and applies mid-run
+    out.stick = { r1: r.input.radius };
+    p.settings.stick = 1.5; app.applySettings(); out.stick.r15 = r.input.radius;
+    p.settings.stick = 9; app.applySettings(); out.stick.clamp = r.input.radius;
+    p.settings.stick = 0.75; r = start(); out.stick.next = r.input.radius;
+    p.settings.stick = 1; app.applySettings(); app.exitRun();
+    document.querySelector('.fab[data-act="settings"]')?.click(); await new Promise((f) => setTimeout(f, 200));
+    const rng = document.querySelector('.mm-settings [data-k="stick"]'); out.stick.ui = rng ? rng.nextElementSibling.textContent : null;
+    document.querySelectorAll('.modal-back').forEach((x) => x.remove());
     return out;
   });
   check('gate preview: off by default; switched on, each gate shows the legion it would leave and keeps it current',
     s.default === false && s.off === 'false,false' && s.on.pv === `${s.on.L + 15},${s.on.L * 2}` && s.on.after3 === `${s.on.L + 18},${(s.on.L + 3) * 2}` && s.on.gone
     && s.bad.pv === `${Math.max(0, s.bad.L - 25)},${s.bad.L - Math.floor(s.bad.L / 2)}`, JSON.stringify(s));
+  check('joystick size: 58 px by default, scaled 75–150% from Settings (mid-run too), out-of-range values clamped',
+    s.stick.r1 === 58 && s.stick.r15 === 87 && s.stick.clamp === 87 && s.stick.next === 43.5 && s.stick.ui === '100%', JSON.stringify(s.stick));
 });
 check('update 14 gate preview: no runtime errors', !errs.length, errs[0] || '');
 

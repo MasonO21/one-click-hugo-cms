@@ -210,6 +210,7 @@ export function openSettings(ctx) {
     <div class="st-row"><span class="st-l">${icon('wing')} Screen shake</span><input class="rng" type="range" min="0" max="1" step="0.05" data-k="shake"><b class="st-v tnum"></b></div>
     <div class="st-row"><span class="st-l">${icon('star')} Reduce flashes</span><button class="tgl" role="switch" data-t="reduceFlash"><i></i></button></div>
     <div class="st-row"><span class="st-l">${icon('nova')} Auto-Nova</span><button class="tgl" role="switch" data-t="autoNova"><i></i></button><small class="t-dim">at 100%, legion 50+</small></div>
+    <div class="st-row"><span class="st-l">${icon('pulse')} Joystick size</span><input class="rng" type="range" min="0.75" max="1.5" step="0.05" data-k="stick"><b class="st-v tnum"></b></div>
     <div class="st-row"><span class="st-l">${icon('left')} Left-handed</span><button class="tgl" role="switch" data-t="lefty"><i></i></button><small class="t-dim">NOVA on the left</small></div>
     <div class="st-row"><span class="st-l">${icon('banner')} Gate preview</span><button class="tgl" role="switch" data-t="gatePreview"><i></i></button><small class="t-dim">shows each gate's result</small></div>
     <div class="st-sep"></div>
@@ -233,8 +234,8 @@ export function openSettings(ctx) {
 
   const sync = () => {
     $$(body, '.rng').forEach((r) => {
-      const v = Number(st[r.dataset.k] ?? 0);
-      r.value = v; r.style.setProperty('--v', (v * 100) + '%');
+      const v = Number(st[r.dataset.k] ?? 0), lo = +r.min, hi = +r.max;
+      r.value = v; r.style.setProperty('--v', ((v - lo) / (hi - lo) * 100) + '%');
       r.nextElementSibling.textContent = Math.round(v * 100) + '%';
     });
     $$(body, '.tgl').forEach((t) => { const on = !!st[t.dataset.t]; t.classList.toggle('on', on); t.setAttribute('aria-checked', on); });

@@ -86,6 +86,7 @@ function applySettings() {
   setHapticsEnabled(s.haptics);
   if (app.engine) { app.engine.setQuality(s.quality); app.engine.reduceFlash = !!s.reduceFlash; app.engine.fpsCap = s.fps30 ? 30 : 60; }
   if (app.runUI) app.runUI.el.classList.toggle('lefty', !!s.lefty);
+  if (app.run && app.run.input) app.run.input.setSize(s.stick);
   saveProfile(profile);
 }
 
