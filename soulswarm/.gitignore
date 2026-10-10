@@ -4,3 +4,4 @@ ios/App/App/public/
 android/app/src/main/assets/public/
 node_modules
 __pycache__/
+scripts/.pt-*.mjs
