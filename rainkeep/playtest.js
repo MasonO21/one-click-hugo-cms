@@ -150,10 +150,13 @@
     if (!r || !net.isAdmin()) return;
     if (await net.removeMessage(r.ch, r.mid, r.rid)) { T.reports = T.reports.filter((x) => x.rid !== rid); KH.toast('Message removed.', 'good'); KH.renderAll(); }
   };
-  ACT.ptcopy = () => {
-    const txt = summaryText();
-    try { navigator.clipboard.writeText(txt).then(() => KH.toast('Summary copied.', 'good'), () => KH.toast('Copying was refused. Select the summary and copy it instead.', 'warn')); } catch (e) { KH.toast('Copying is not available here.', 'warn'); }
+  const copy = (txt, done) => {
+    try { navigator.clipboard.writeText(txt).then(() => KH.toast(done, 'good'), () => KH.toast('Copying was refused. Select the text and copy it instead.', 'warn')); } catch (e) { KH.toast('Copying is not available here.', 'warn'); }
   };
+  ACT.ptcopy = () => copy(summaryText(), 'Summary copied.');
+  // a ready invitation for testers (LAUNCH.md), to paste into a message with the game's link
+  const INVITE = 'You\'re invited to the Rainkeep closed test: a desert survival strategy game where you raise the last water dragon. It runs in the browser on your phone or computer: open the link and tap "Open the keep".\n\nFor the next two weeks:\n1. Play a few minutes every day, even on busy days. Coming back is what we\'re measuring.\n2. Anything confusing, slow or broken: Menu → Feedback. One line is plenty.\n3. Caravan tab → Online: found a Caravan or join one, and help each other\'s builds.\n\nThank you!';
+  ACT.ptinvite = () => copy(INVITE, 'Invitation copied. Paste it with the game\'s link.');
   async function load() {
     if (!net.isAdmin() || now() - T.at < 20000) return;
     T.at = now();
@@ -239,6 +242,7 @@
         ${(T.reports || []).length ? `<div class="section-label">Reported messages</div><div class="card stack">${T.reports.map((r) => `<div class="row pt-p"><div class="grow small"><b>${esc(T.names[r.by] || 'A player')}</b> in ${r.ch === 'world' ? 'the Square' : 'a Caravan'}: "${esc(r.text)}"</div><button class="btn small" data-act="ptremove" data-arg="${esc(r.rid)}">Remove</button></div>`).join('')}</div>` : ''}
         <div class="section-label">Errors</div><div class="card stack">${errs || '<p class="muted small">None reported.</p>'}</div>
         <div class="section-label">Testers</div><div class="card stack">${people || '<p class="muted small">No reports yet. Share the game\'s link (Contributor access) and they appear as people play.</p>'}</div>
+        <div class="section-label">Inviting testers</div><div class="card stack small"><p>Share this game's link (Share, top right on claude.ai) with each tester at <b>Contributor</b> access: Viewers and Commenters can play but not join the online side or send reports. Then send them the invitation.</p><button class="btn alt" data-act="ptinvite">Copy the invitation</button></div>
         <div class="row"><button class="btn alt grow" data-act="ptcopy">Copy summary</button><button class="btn alt grow" data-act="playtest">Refresh</button></div>`,
     };
   };
