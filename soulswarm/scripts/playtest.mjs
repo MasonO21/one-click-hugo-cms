@@ -4106,7 +4106,7 @@ errs = await session(async (page) => {
     p.chapter.unlocked = 30; p.flags.rushCourt = 'fallen'; p.rush.tries = 0;
     out.state = { name: eco.rushState(p).name, bosses: eco.rushState(p).bosses.join() };
     app.startRun(1, { rush: true }); const r = app.run; r.player.hurt = () => {};
-    out.run = { court: r.courtId, ch: r.chapter.id, boss: r.bossId, hud: q('.hud-timer small')?.textContent, intro: q('.ri-name')?.textContent };
+    out.run = { court: r.courtId, ch: r.chapter.id, boss: r.bossId, hud: q('.hud-timer small')?.textContent, intro: q('.ri-name')?.textContent, souls: r.legion.count, cap: r.stats.cap };
     r.draftLeft = 0; r.draftPicks = 0; r.nextBossAt = r.time + 0.1; for (let i = 0; i < 30 && !r.bossSpawned; i++) r.update(1 / 30);
     out.run.first = r.boss.id; out.run.lvl = r.lvl;
     const e = r.bossEnemy; e.hp = 1; r.enemies.damage(e, 50); for (let i = 0; i < 10; i++) r.update(1 / 30);
@@ -4121,8 +4121,8 @@ errs = await session(async (page) => {
   });
   check('fallen court: once Chapter 10 is cleared, the courts alternate week by week (the Hollow Court always before)',
     new Set(s.weeks).size === 2 && s.weeks[0] !== s.weeks[1] && s.weeks[0] === s.weeks[2] && s.weeks[1] === s.weeks[3] && s.early.join() === 'hollow,hollow,hollow,hollow', JSON.stringify({ w: s.weeks, e: s.early }));
-  check('fallen court: the act finales back to back, each at its chapter (Morwenna at Chapter 10, then Gorrath at 15), named on the panel, the HUD and the intro',
-    s.state.name === 'The Fallen Court' && s.state.bosses === 'morwenna,gorrath,mire,kaelthar,nihl' && s.run.court === 'fallen' && s.run.ch === 10 && s.run.first === 'morwenna' && s.run.lvl === 10
+  check('fallen court: the act finales back to back, each at its chapter (Morwenna at Chapter 10, then Gorrath at 15), named on the panel, the HUD and the intro; its 110 souls fit under the raised cap',
+    s.run.souls === 110 && s.run.cap >= 110 && s.state.name === 'The Fallen Court' && s.state.bosses === 'morwenna,gorrath,mire,kaelthar,nihl' && s.run.court === 'fallen' && s.run.ch === 10 && s.run.first === 'morwenna' && s.run.lvl === 10
     && s.run.next.kills === 1 && s.run.next.ch === 15 && s.run.next.boss === 'gorrath' && s.run.next.wm > 1 && s.run.hud === 'The Fallen Court' && s.run.intro === 'The Fallen Court'
     && s.panel.name === 'The Fallen Court' && s.panel.bosses === 'Morwenna,Gorrath,Mother Mire,Kaelthar,Nihl', JSON.stringify(s));
 });

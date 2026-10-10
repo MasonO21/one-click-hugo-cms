@@ -258,9 +258,9 @@ export const BOSS_RUSH = {
     hollow: { name: 'The Hollow Court', bosses: ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'], chapters: [1, 2, 3, 4, 5], unlockAt: 2,
       hp: [0.7, 0.85, 0.7, 0.6, 0.55] },
     // a stronger seasoned start for bosses at Chapters 10-30 (balance.mjs RUSH=1 COURT=fallen: with the shared start no
-    // player cleared it; with this, a player at Chapter 20-30 progression clears about half the time, one at 11 beats one)
+    // player cleared it; with this, a player at Chapter 20-30 progression clears about half the time, one at 11 beats one to three; its cap is raised to hold the 110 souls)
     fallen: { name: 'The Fallen Court', bosses: ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'], chapters: [10, 15, 20, 25, 30], unlockAt: 11,
-      start: { level: 30, auto: 22, legion: 110, draft: 5 } },
+      start: { level: 30, auto: 22, legion: 110, cap: 80, draft: 5 } },
   },
 };
 /** A court's seasoned start: BOSS_RUSH's level, auto picks, legion, draft and cap, with the court's own `start` over them. */

@@ -93,7 +93,7 @@ function applySettings() {
 /** opts.trial: today's Daily Trial (free; its chapter and mutators come from the date).
  *  opts.difficulty: 'normal' (default) | 'nightmare' | 'torment'; must be unlocked for the chapter. The trial always plays Normal.
  *  opts.tutorial: the beginner tutorial (game/tutorial.js): free, Chapter 1 on Normal, never under the Blood Moon.
- *  opts.rush: Boss Rush (BOSS_RUSH): free, one of today's tries while the event is open; it starts at Chapter 1's scaling. */
+ *  opts.rush: Boss Rush (BOSS_RUSH): free, one of today's tries while the event is open; it starts at its court's first chapter's scaling (Hollow: Chapter 1, Fallen: Chapter 10). */
 function startRun(chapterId, opts = {}) {
   if (opts.tutorial) return beginRun(CHAPTERS[0], { tutorial: true });
   if (opts.rush) { const court = eventCourt(profile); return beginRush(profile) ? beginRun(CHAPTERS[BOSS_RUSH.courts[court].chapters[0] - 1], { rush: true, court }) : false; } // this week's court
