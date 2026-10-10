@@ -1366,3 +1366,19 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .fw-mission:last-of-type { border-bottom: 0; }
 .fw-mission .bar { margin: 4px 0 2px; }
 .fw-mission.got { opacity: 0.6; }
+
+/* Hero Kinships */
+.kin-strip { width: 100%; gap: 8px; align-items: center; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.kin-strip .ic, .kin-hero .ic { width: 16px; height: 16px; vertical-align: -3px; margin-right: 4px; }
+.kin-strip.on, .kin-hero.on, .kin-card.on { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.kin-hero { display: block; width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; }
+.kin-card { display: grid; gap: 4px; }
+.kin-card.off { opacity: 0.72; }
+.kin-faces { gap: 6px; align-items: center; justify-content: center; }
+.kin-face { display: flex; flex-direction: column; align-items: center; gap: 2px; width: 74px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.kin-face svg, .kin-face img { width: 64px; height: 70px; border-radius: 12px; border: 1px solid var(--line); }
+.kin-face.missing svg, .kin-face.missing img { filter: grayscale(1) brightness(0.55); }
+.kin-face.sq svg, .kin-face.sq img { border-color: var(--gold); box-shadow: 0 0 8px #ffd06a88; }
+.kin-face small { font-size: 11px; }
+.kin-link .ic { width: 18px; height: 18px; color: #e0603a; }
+.kin-on { background: linear-gradient(#f3c55a, #c98a2a); color: #2a1608; }

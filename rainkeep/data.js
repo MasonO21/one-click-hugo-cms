@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.32.0',
+  version: '4.33.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1291,6 +1291,30 @@ const DATA = {
     warPts: 10,
   },
 
+  // ---------- Hero Kinships ----------
+  // Pairs of heroes whose stories are tied. A kinship forms once both are recruited and works whenever both march in
+  // the same squad: one bonus for the whole squad (attack, defense, health, the Torrent, or damage taken), bigger for
+  // pairs of humbler rarity and growing with the pair's stars (levels at 4, 6, 8 and 10 stars between them). No hero
+  // is in two kinships, so a squad of three has at most one at work.
+  kinships: {
+    grow: 0.25, // each level past the first adds a quarter of the base bonus
+    levelAt: [4, 6, 8, 10], // stars between the two heroes for levels 2 to 5
+    pairs: [
+      { id: 'glass', name: 'The Glasshands', heroes: ['nadia', 'haroun'], fx: { def: 0.06 }, text: 'Sister and brother of the Glass Sea: one knaps arrowheads from it, the other blows it into shields.' },
+      { id: 'road', name: 'The Long Road', heroes: ['tariq', 'kofi'], fx: { atk: 0.05 }, text: 'Rode the same caravan road for ten years and still argue over who leads.' },
+      { id: 'gate', name: 'Gatekeepers', heroes: ['rashid', 'imani'], fx: { hp: 0.06 }, text: 'One held the east gate against raiders, the other the wadi gate against the flood.' },
+      { id: 'storm', name: 'Eyes of the Storm', heroes: ['leila', 'kaveh'], fx: { atk: 0.05 }, text: 'One sees through sandstorms, the other flies kites into thunderclouds. Between them they map the weather.' },
+      { id: 'song', name: 'The Wyrm-Singers', heroes: ['idris', 'yusra'], fx: { torrent: 0.1 }, text: 'Raised on the old wyrm-songs, one by the keepers, one by her grandmother. The Rainwyrm answers both.' },
+      { id: 'rain', name: 'Heralds of Rain', heroes: ['soraya', 'sefa'], fx: { hp: 0.06 }, text: 'Each saw rain once when no one believed in it, and walked toward it.' },
+      { id: 'hunt', name: 'Dune Hunters', heroes: ['yara', 'nuri'], fx: { atk: 0.08 }, text: 'A tracker and a trapper: what one finds, the other catches.' },
+      { id: 'salt', name: 'Salt and Bone', heroes: ['tomas', 'noor'], fx: { def: 0.07 }, text: 'A ferryman of the dry salt marsh and a bonepicker of the dead coast, both waiting for the water to come back.' },
+      { id: 'kitchen', name: 'The Keep Kitchen', heroes: ['tamir', 'halima'], fx: { hp: 0.09 }, text: 'Stew and tonic: between them nobody in the keep goes hungry or stays sick for long.' },
+      { id: 'builders', name: 'Keep Builders', heroes: ['omar', 'mara'], fx: { def: 0.09 }, text: 'He cuts the stone, she raises the windcatchers. Every wall in the keep has both their marks.' },
+      { id: 'shade', name: 'Shield and Shade', heroes: ['zahra', 'amira'], fx: { dr: 0.04 }, text: 'Walked the Last Caravan out of the Glass Cities together, one with a shield and a lantern, one with shade sails.' },
+      { id: 'couriers', name: 'Swift Couriers', heroes: ['samira', 'lio'], fx: { atk: 0.07 }, text: 'One carries the letters, the other scouts the road ahead. Neither has ever been caught.' },
+    ],
+  },
+
   // ---------- The Founding Week ----------
   // A new keep's first seven days: from Rainwyrm Lv 2 (for a keep that is still young) five missions open each day,
   // each worth points; point chests along the way and, at the end, a Legendary hero of the player's choosing. A day
@@ -1767,6 +1791,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.33', items: [
+      { icon: 'i-heart', name: 'Hero Kinships', text: 'Twelve pairs of heroes whose stories are tied now fight better side by side: put both in the squad for a bonus to the whole squad, growing with the stars between them. See them on the Heroes tab.', act: 'kinships', open: (S) => Object.keys(S.heroes).length > 0, needs: 'a hero' },
+    ] },
     { v: '4.32', items: [
       { icon: 'i-fw', name: 'The Founding Week', text: "A new keep's first seven days now come with missions: five open each day, each worth points, with chests along the way and a Legendary hero of your choosing at the end.", act: 'founding', open: (S) => !!(S.founding && S.founding.state === 'open'), needs: 'a new keep' },
     ] },
@@ -2106,6 +2133,9 @@ const DATA = {
     { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
+    { id: 'kin1', text: 'Form a hero kinship', stat: 'kinTop', n: 1, reward: { beacons: 2 } },
+    { id: 'kin5', text: 'Raise a hero kinship to Lv 5', stat: 'kinTop', n: 5, reward: { shard_legendary: 1 } },
+    { id: 'kinfight', text: 'Fight 50 battles with a kinship in the squad', stat: 'kinFought', n: 50, reward: { starglass: 200 } },
     { id: 'relic1', text: 'Dig up a relic in the Buried City', stat: 'relics', n: 1, reward: { trowel: 5 } },
     { id: 'layer10', text: 'Reach layer 10 of the Buried City', stat: 'digLayer', n: 10, reward: { starglass: 200, charge: 2 } },
     { id: 'grand25', text: 'Dig up 25 grand relics', stat: 'grandRelics', n: 25, reward: { shard_legendary: 1 } },

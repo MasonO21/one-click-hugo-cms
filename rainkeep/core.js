@@ -393,9 +393,12 @@
     atk *= 1 + fx.atk + KH.bonus('teamAtk') + (opts.atkBonus || 0) + (gb ? gb.atk : 0);
     def *= 1 + (opts.defBonus || 0) + (gb ? gb.def : 0);
     hp *= 1 + (gb ? gb.hp : 0);
+    // hero kinships (kinships.js): two heroes whose stories are tied, fighting side by side
+    const kb = KH.kinTeam ? KH.kinTeam(heroes) : null;
+    if (kb) { atk *= 1 + kb.atk; def *= 1 + kb.def; hp *= 1 + kb.hp; fx.dr += kb.dr; }
     fx.dr = Math.min(fx.dr, 0.4);
     fx.pierce = Math.min(fx.pierce, 0.5);
-    fx.torrent = tt.torrent;
+    fx.torrent = tt.torrent + (kb ? kb.torrent : 0);
     return { atk, def, hp, fx, troops: m, heroes };
   }
   const chapterOf = (n) => DATA.chapters.filter((c) => n >= c.from).pop();
