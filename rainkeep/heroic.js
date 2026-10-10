@@ -16,7 +16,7 @@
   const H = DATA.heroic, HERO = Object.fromEntries(DATA.heroes.map((h) => [h.id, h]));
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
-  KH.hooks.defaults.push((s) => { s.heroic = { won: {}, day: 0, raids: 0 }; s.stats.heroicWins = 0; s.stats.heroicRaids = 0; });
+  KH.hooks.defaults.push((s) => { s.heroic = { won: {}, day: 0, raids: 0, told: [] }; s.stats.heroicWins = 0; s.stats.heroicRaids = 0; });
 
   const CH = () => KH.stars.chapters();
   const chOf = (n) => CH().filter((c) => n >= c.from).pop();
@@ -49,6 +49,17 @@
     return isNew;
   }
 
+  // a letter when a chapter's Heroic version opens (one letter for several at once, as on an old save)
+  KH.hooks.tick.push(() => {
+    if (!S || !KH.stars) return;
+    const fresh = CH().filter((c) => isOpen(c) && !S.heroic.told.includes(c.from));
+    if (!fresh.length) return;
+    fresh.forEach((c) => S.heroic.told.push(c.from));
+    if (fresh.length === 1) {
+      const c = fresh[0], id = heroOf(c);
+      KH.mail(`Heroic ${c.name} opens`, `Every star in ${c.name} is yours, and the chapter has a Heroic version now: the same ten stages in order, each foe as strong as one ${H.ahead} stages further on, with two traits. It features ${HERO[id].name}: a first clear pays Starglass and their shards${S.heroes[id] ? '' : ', and brings them to the keep'}, and a won stage can be raided for more, ${H.raids} raids a day. Find it under the chapter's stars on the Expedition tab.`, null);
+    } else KH.mail(`${fresh.length} Heroic chapters open`, `Every chapter whose thirty stars are all yours now has a Heroic version: the same stages in order, far harder, each featuring one hero whose shards it pays. ${fresh.map((c) => `${c.name}: ${HERO[heroOf(c)].name}`).join('; ')}. Find them in the Heroic sheet of the Play hub.`, null);
+  });
   ACT.heroicstage = (n) => { n = +n; const c = chOf(n); if (!isOpen(c) || (n !== next(c) && !won(n))) return; UI.sheet = { kind: 'heroicstage', n }; };
   ACT.heroicfight = (n) => {
     n = +n;
