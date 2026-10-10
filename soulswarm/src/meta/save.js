@@ -6,6 +6,7 @@ import { BESTIARY, GRIMOIRE } from '../game/data.js';
 import { bestiaryGoals } from './bestiary.js';
 import { sanitizeMastery } from './mastery.js';
 import { blankPrivacy, sanitizePrivacy } from './privacy.js';
+import { sanitizeFeats } from './feats.js';
 import { now as clockNow, today, dateKey, snapshot, restore } from './clock.js';
 
 const KEY = 'soulswarm.save.v1';
@@ -49,6 +50,7 @@ export function newProfile() {
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
     grimoire: { selected: '', seen: [] }, // meta/grimoire.js: the inscribed page and the unlocked pages already shown
     mastery: {}, // meta/mastery.js: per hero { xp: lifetime mastery XP, paid: the highest rank whose reward was paid }
+    feats: { claimed: {} }, // meta/feats.js: tiers claimed per Feat family (Update 14)
     bestiary: { kills: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])), claimed: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])) }, // meta/bestiary.js
     settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false },
     privacy: blankPrivacy(), // meta/privacy.js: the age gate's band, consent and the player ID (Update 14)
@@ -107,8 +109,10 @@ function migrate(p) {
   { const T = out.trial; for (const k of ['ads', 'failPaid', 'clears']) T[k] = int(T[k], 0); T.won = !!T.won; T.done = !!T.done; }
   { const R = out.rush; for (const k of ['tries', 'ads', 'best', 'allBest', 'clears']) R[k] = int(R[k], 0); R.claimed = int(R.claimed, 0, 0, 5); R.bestKills = int(R.bestKills, 0, 0, 5); R.court = R.court === 'hollow' || R.court === 'fallen' ? R.court : ''; }
   if (!(p && p.flags && 'tutorialPaid' in p.flags)) out.flags.tutorialPaid = !!out.flags.tutorialDone; // saves from before the tutorial: their first run was it
+  { const R = out.flags.review; if (R !== undefined) out.flags.review = { n: int(R && R.n, 0, 0, 99), at: Math.max(0, +(R && R.at) || 0) }; } // meta/review.js
   { const G = out.grimoire; if (!GRIMOIRE.pages[G.selected]) G.selected = ''; G.seen = [...new Set(G.seen.filter((id) => GRIMOIRE.pages[id]))]; }
   out.mastery = sanitizeMastery(out.mastery);
+  out.feats = sanitizeFeats(out.feats);
   out.privacy = sanitizePrivacy(p && p.privacy); // a save from before Update 14 gets a player ID and meets the age gate once
   return out;
 }

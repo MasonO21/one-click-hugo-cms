@@ -20,6 +20,8 @@ import { createMeta } from './ui/meta/index.js';
 import { CHAPTERS, CLOCK, ENDLESS_ID, ENDLESS_UNLOCK, chapterById, BOSS_RUSH } from './game/data.js';
 import { toast } from './ui/dom.js';
 import { analytics } from './meta/analytics.js';
+import { reportFeats } from './meta/feats.js';
+import { maybeAskReview } from './meta/review.js';
 import { needsGate, needsConsent, answerGate, setConsent } from './meta/privacy.js';
 import { openAgeGate, openConsent } from './ui/meta/privacy.js';
 import { actOf } from './game/data.js';
@@ -127,6 +129,8 @@ function beginRun(chapter, opts) {
       bossKills: result.bossKills, boss: run.bossId, deathMinute: result.victory ? undefined : Math.floor((result.time || 0) / 60), firstClear: !!(outcome && outcome.firstClear) });
     if (profile.chapter.unlocked > unlocked0) analytics.track('chapter_unlock', { chapter: profile.chapter.unlocked, act: actOf(profile.chapter.unlocked).n });
     runUI.showResults(result, outcome);
+    reportFeats(profile); // Feat tiers reached in this run (Game Center / Play Games in the store build)
+    if (mode !== 'tutorial' && maybeAskReview(profile, result, outcome)) commit(profile);
   };
   return true;
 }
@@ -160,6 +164,7 @@ function boot() {
   // Update 14: the neutral age gate (once), then the consent sheet when the policy is new to this player; nothing is
   // measured before. Automated test browsers (navigator.webdriver) answer as an adult who chose "Necessary only".
   analytics.init(profile);
+  reportFeats(profile);
   const sessionStart = () => analytics.track('session_start', { returning: profile.stats.runs > 0, days: Math.floor((clock.now() - profile.createdAt) / 864e5), level: profile.level, chapter: profile.chapter.unlocked });
   if (navigator.webdriver && needsGate(profile)) { answerGate(profile, new Date(clock.now()).getFullYear() - 30, false); setConsent(profile, { analytics: false, ads: false }); commit(profile); }
   if (needsGate(profile)) openAgeGate(app, sessionStart);

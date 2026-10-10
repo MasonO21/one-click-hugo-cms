@@ -15,7 +15,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 7 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, Grave Wraith dives and Corpse Priest raisings, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with rerolls for 50 gems or an ad and 2 banishes (§4.6), **Soul Urns** with five new offerings (§4.10), **the Grimoire**: 8 run-start pages unlocked by account goals (§4.9), 9 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), each **ascending** at Hero Mastery rank 5 (§11.2), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | **30 chapters in six acts** (§8.4: six realms with their own hazards and foes, ten bosses, earlier bosses returning stronger; Update 13, 2026-10-10), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 12 enemy types plus elites (the Grave Wraith and the Corpse Priest joined on 2026-10-09, §5; the five act foes on 2026-10-10, §8.4), 9 weapons, 10 passives, 9 evolutions (Gravefall, Soul Leech, Grave Ward and Dread Reach joined on 2026-10-10, §7), **4 Soul Unions** (§7.4), 8 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, Isolde the Crimson Countess on 2026-10-10, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
-| Meta and economy | **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **Relic Ascension** (§12.1: Lv10 relics ascend ★1–★5 for gold and spare duplicates), **The Bestiary** (§5.2: 23 painted entries, kills per foe and boss, 69 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Meta and economy | **Feats** (§20: 17 families, 63 tiers of lifetime goals paid in gems, credited from what a save already holds; Update 14), **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **Relic Ascension** (§12.1: Lv10 relics ascend ★1–★5 for gold and spare duplicates), **The Bestiary** (§5.2: 23 painted entries, kills per foe and boss, 69 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Privacy and analytics | **The age gate, the consent sheet, restricted mode for children, Settings → Privacy (player ID, choices, export, delete) and a consented gameplay event queue** (§19, Update 14) | The analytics SDK and its transport, the ATT prompt, server-side deletion |
 | Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3), the **share card** (§10.1) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, replay clips, a store link on the share card |
 
@@ -1308,3 +1308,38 @@ The groundwork a store release needs before any SDK starts (`MONETIZATION.md` §
 **Test browsers.** An automated browser (`navigator.webdriver`) answers the gate as an adult who chose "Necessary only", so the test suites run as before; `scripts/playtest.mjs` §50 drives the gate and the sheet itself.
 
 ---
+
+---
+
+## 20. Feats, the review prompt and About (Update 14, in the build)
+
+**Feats** (`FEATS` in `data.js`, `src/meta/feats.js`, the panel in `src/ui/meta/feats.js`) are lifetime goals in tiers: 17 families, 63 tiers, about 5,900 gems in all. Each family measures something the profile already keeps (stats, chapter and difficulty records, the Bestiary, mastery, relic stars, Boss Rush and Daily Trial clears, account level), so nothing new is tracked in a run and a player who updates is credited at once. Tiers are claimed in order for their gems (`economy.claimFeat`); "Claim all" takes every tier reached.
+
+| Family | Measures | Goals | Gems |
+|---|---|---|---|
+| The Long Night | chapters cleared (Normal) | 5 / 10 / 15 / 20 / 25 / 30 | 40 / 60 / 80 / 100 / 120 / 250 |
+| Nightmare Walker | chapters cleared on Nightmare | 1 / 10 / 30 | 40 / 100 / 250 |
+| Bringer of Torment | chapters cleared on Torment | 1 / 10 / 30 | 60 / 150 / 400 |
+| Bane of Kings | bosses slain (Bestiary kills of all ten) | 10 / 50 / 200 | 30 / 80 / 200 |
+| Reaper | foes slain | 1k / 10k / 100k / 1M | 20 / 40 / 80 / 160 |
+| Shepherd of Souls | souls raised | 500 / 5k / 50k / 250k | 20 / 40 / 80 / 160 |
+| The Endless Host | best legion | 75 / 150 / 250 / 350 | 20 / 40 / 80 / 150 |
+| Apocalypse | best kill streak (the streak tiers, §4.7) | 75 / 150 / 300 / 500 | 20 / 40 / 80 / 150 |
+| Veteran | runs | 10 / 50 / 200 / 500 | 20 / 40 / 80 / 150 |
+| The Gathering | heroes owned | 2 / 4 / 6 / 8 | 30 / 50 / 80 / 150 |
+| Soulbound | best Mastery rank | 3 / 5 / 8 / 10 | 20 / 40 / 80 / 150 |
+| Chronicler | Bestiary entries unlocked | 5 / 12 / 18 / 23 | 20 / 40 / 80 / 150 |
+| Abyss Diver | deepest Endless depth | 2 / 4 / 7 / 10 | 30 / 60 / 120 / 250 |
+| Court Breaker | Boss Rush full clears | 1 / 5 / 20 | 50 / 100 / 200 |
+| Trialborn | Daily Trials won | 1 / 10 / 50 | 30 / 60 / 150 |
+| Relic Keeper | best relic stars | 1 / 3 / 5 | 30 / 80 / 200 |
+| Ascendant | account level | 10 / 25 / 50 | 30 / 60 / 150 |
+
+The home screen's **Feats** button (right column) carries a dot while a tier waits, and the Battle tab counts it. The panel lists ready families first, then the ones under way, the finished ones last, each with its tier pips (claimed gold, reached green) and progress. Store builds report every reached tier to Game Center / Play Games as `<family>_<tier>` (`engine/platform.js` `setFeatBridge`; once per session, at boot and after each run, so a console that missed one catches up). `playtest.mjs` §55.
+
+**The review prompt** (`src/meta/review.js`, `REVIEW` in `data.js`). The store's own review sheet, asked only at a high point: a first Normal clear of Chapter 3, 10, 20 or 30, or a full Boss Rush, 2.5 s after the results show. At most three times ever and 60 days apart, never to a child (restricted mode), and only where the store build registered its in-app review plugin (`setReviewBridge`); the stores cap it again. No pre-prompt asks "do you like the game?" first.
+
+**About** (Settings → About and licences, `src/ui/meta/about.js`): the version (`package.json`, injected by `vite.config.js`), the player ID to quote to support, the privacy policy, and the open-source notices the game must ship with (three.js and Capacitor under MIT, Cinzel and Oxanium under the SIL Open Font License 1.1).
+
+**Home layout.** The side buttons stay above the chapter card on every screen: when a column does not fit (every offer and event showing, or a short phone) its buttons tighten, then drop their labels, and only then wrap into a second column (`home.js fitSides`).
+

@@ -13,6 +13,7 @@ import { hex, cd, nextMidnight, popRewards, tap, delegate } from './util.js';
 import { now as clockNow } from '../../meta/clock.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
 import { openRush } from './rush.js';
+import { openFeats } from './feats.js';
 import { grimoireChip, openGrimoire } from './grimoire.js';
 import { chapterArt } from '../art.js';
 import { openChapterMap, chapterStops, selectedStop, actRoman } from './chapters.js';
@@ -56,6 +57,7 @@ export function createHome(ctx) {
     else if (store || pactActive(p)) right.push(fab('pact', icon('gems'), pactActive(p) ? 'Pact' : 'Soul Pact', '', 'fab-gem'));
     if (freeChestAvailable(p)) right.push(fab('chest', icon('chest'), 'Free', `<span class="fab-tag">${icon('ad')}</span><i class="badge-dot"></i>`, 'fab-ad fab-offer'));
     else right.push(fab('chestDone', icon('chest'), 'Free', `<span class="fab-cd">${cd(nextMidnight())}</span>`, 'fab-ad fab-spent'));
+    right.push(fab('feats', icon('trophy'), 'Feats', n.feats ? '<i class="badge-dot"></i>' : ''));
 
     // Chapter status line
     let status;
@@ -128,7 +130,23 @@ export function createHome(ctx) {
           ${ftue ? '<span class="ftue-ring"></span><span class="ftue-ring r2"></span>' : ''}
         </div>
       </div>`;
+    requestAnimationFrame(fitSides);
   }
+
+  /** The side buttons must stay above the chapter card: on a short screen (or with every offer and event showing) they
+   *  tighten, then drop their labels, and only if they still do not fit wrap into a second column (inward). */
+  function fitSides() {
+    const bottom = $(root, '.hm-bottom');
+    if (!bottom || !el.offsetParent) return; // hidden: fitted again on show
+    const limit = bottom.getBoundingClientRect().top - 6;
+    for (const s of root.querySelectorAll('.hm-side')) {
+      s.classList.remove('tight', 'bare'); s.style.maxHeight = '';
+      const room = limit - s.getBoundingClientRect().top;
+      for (const c of ['tight', 'bare']) if (s.offsetHeight > room) s.classList.add(c);
+      s.style.maxHeight = Math.max(120, Math.floor(room)) + 'px';
+    }
+  }
+  window.addEventListener('resize', () => requestAnimationFrame(fitSides));
 
   function setChapter(d) {
     const p = app.profile;
@@ -144,6 +162,7 @@ export function createHome(ctx) {
   delegate(root, {
     hero: () => { tap(app); ctx.go('heroes'); },
     quests: () => { tap(app); openQuests(ctx); },
+    feats: () => { tap(app); openFeats(ctx); },
     login: () => { tap(app); openLogin(ctx); },
     trial: () => { tap(app); openTrial(ctx); },
     rush: () => { tap(app); openRush(ctx); },
@@ -196,5 +215,5 @@ export function createHome(ctx) {
     if (Math.abs(dx) > 40) setChapter(dx < 0 ? 1 : -1);
   });
 
-  return { el, render };
+  return { el, render, onShow: () => requestAnimationFrame(fitSides) };
 }

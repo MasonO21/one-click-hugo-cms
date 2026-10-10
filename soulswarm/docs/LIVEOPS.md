@@ -177,7 +177,7 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | `purchase` · `purchase_blocked` | sku, USD, first · sku, reason (age, cap) | ARPDAU (IAP), conversion; restricted-mode and spend-cap hits |
 | `ad_reward` | placement, completed, personalised | ARPDAU (ads), ad engagement |
 | `altar_pull` · `hero_upgrade` · `talent_up` · `relic_ascend` | count, pay with, Epics, Legendaries · hero, stars, unlocked · talent, level · type, rarity, stars | economy sinks (`MONETIZATION.md` §12) |
-| `quest_claim` · `bestiary_claim` · `screen_view` | quest · id, tier · screen | retention loops, navigation |
+| `quest_claim` · `bestiary_claim` · `feat_claim` · `screen_view` | quest · id, tier · id, tier · screen | retention loops, long-term goals, navigation |
 | `save_transfer` | direction (export, import) | how often players move devices (cloud-save priority) |
 
 | Area | Metric | Definition | Target | Alert if |

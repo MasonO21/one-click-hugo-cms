@@ -11,6 +11,7 @@ import {
 import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portrait, delegate, energyFullIn } from './util.js';
 import { LOGO_ART } from '../art.js';
 import { privacySection, privacyActions } from './privacy.js';
+import { openAbout, APP_VERSION } from './about.js';
 
 const ENERGY_AD = 10, ENERGY_BANK = 99; // a video gives +10 as often as wanted (ads are never capped); energy banks up to 99 (economy.grant)
 const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords', chest: 'chest', elite: 'crown', legion: 'helm', evolve: 'star', boss: 'trophy', trial: 'star' };
@@ -221,8 +222,8 @@ export function openSettings(ctx) {
     </div>
     <div class="st-cred">
       <img class="st-logo" src="${LOGO_ART}" alt="SOULSWARM: Raise the Legion" draggable="false">
-      <div>v0.1.0</div>
-      <div class="t-dim">Built with Three.js and Capacitor. Fonts: Cinzel, Oxanium.</div>
+      <div>v${APP_VERSION}</div>
+      <button class="btn btn-ghost btn-sm" data-act="about">About and licences</button>
     </div>
   </div>`);
 
@@ -250,6 +251,7 @@ export function openSettings(ctx) {
   let sheet = null;
   delegate(body, {
     ...privacyActions(app, () => sheet && sheet.close()),
+    about: () => { tap(app); sheet && sheet.close(); openAbout(app); },
     tutorial: () => { // the free beginner tutorial (game/tutorial.js), from the home screen only
       if (app.run) return;
       tap(app); document.querySelectorAll('.modal-back').forEach((n) => n.remove());

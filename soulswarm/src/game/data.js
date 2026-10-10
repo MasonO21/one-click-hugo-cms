@@ -1179,6 +1179,37 @@ export const PRIVACY = { version: 1, minAge: 13, euConsentAge: 16, adultAge: 18,
   // monthly spending limits for teens (MONETIZATION.md §11), in USD of list prices this calendar month: [under this age, cap]
   spendCaps: [[16, 50], [18, 100]] };
 
+// ---------------------------------------------------------------- Feats (Update 14, GDD §20)
+// Lifetime goals in tiers. Each family measures something the profile already keeps (meta/feats.js featValue), so a
+// returning player is credited at once; tiers are claimed in order for gems (economy.claimFeat). `text` takes the tier's
+// goal for {n} ({s} and {es} pluralise it). Store builds report each reached tier to Game Center / Play Games as
+// `${id}_${tier}` (engine/platform.js).
+export const FEATS = {
+  order: ['campaign', 'nightmare', 'torment', 'bane', 'reaper', 'souls', 'legion', 'streak', 'runs', 'heroes', 'mastery', 'bestiary', 'abyss', 'rush', 'trial', 'relics', 'level'],
+  families: {
+    campaign:  { name: 'The Long Night',     icon: 'map',       text: 'Clear {n} chapters',                          goals: [5, 10, 15, 20, 25, 30],     gems: [40, 60, 80, 100, 120, 250] },
+    nightmare: { name: 'Nightmare Walker',   icon: 'eye',       text: 'Clear {n} chapter{s} on Nightmare',             goals: [1, 10, 30],                 gems: [40, 100, 250] },
+    torment:   { name: 'Bringer of Torment', icon: 'skull',     text: 'Clear {n} chapter{s} on Torment',               goals: [1, 10, 30],                 gems: [60, 150, 400] },
+    bane:      { name: 'Bane of Kings',      icon: 'crown',     text: 'Slay {n} bosses',                             goals: [10, 50, 200],               gems: [30, 80, 200] },
+    reaper:    { name: 'Reaper',             icon: 'scythe',    text: 'Slay {n} foes',                               goals: [1000, 10000, 100000, 1e6],  gems: [20, 40, 80, 160] },
+    souls:     { name: 'Shepherd of Souls',  icon: 'raise',     text: 'Raise {n} souls',                             goals: [500, 5000, 50000, 250000],  gems: [20, 40, 80, 160] },
+    legion:    { name: 'The Endless Host',   icon: 'banner',    text: 'Lead a legion of {n}',                        goals: [75, 150, 250, 350],         gems: [20, 40, 80, 150] },
+    streak:    { name: 'Apocalypse',         icon: 'bolt',      text: 'Chain a kill streak of {n}',                  goals: [75, 150, 300, 500],         gems: [20, 40, 80, 150] },
+    runs:      { name: 'Veteran',            icon: 'swords',    text: 'Fight {n} runs',                              goals: [10, 50, 200, 500],          gems: [20, 40, 80, 150] },
+    heroes:    { name: 'The Gathering',      icon: 'helm',      text: 'Command {n} heroes',                          goals: [2, 4, 6, 8],                gems: [30, 50, 80, 150] },
+    mastery:   { name: 'Soulbound',          icon: 'star',      text: 'Raise a hero to Mastery rank {n}',            goals: [3, 5, 8, 10],               gems: [20, 40, 80, 150] },
+    bestiary:  { name: 'Chronicler',         icon: 'book',      text: 'Unlock {n} Bestiary entries',                 goals: [5, 12, 18, 23],             gems: [20, 40, 80, 150] },
+    abyss:     { name: 'Abyss Diver',        icon: 'nova',      text: 'Reach depth {n} in the Endless Abyss',        goals: [2, 4, 7, 10],               gems: [30, 60, 120, 250] },
+    rush:      { name: 'Court Breaker',      icon: 'trophy',    text: 'Win {n} Boss Rush{es}',                         goals: [1, 5, 20],                  gems: [50, 100, 200] },
+    trial:     { name: 'Trialborn',          icon: 'hourglass', text: 'Win {n} Daily Trial{s}',                        goals: [1, 10, 50],                 gems: [30, 60, 150] },
+    relics:    { name: 'Relic Keeper',       icon: 'shard',     text: 'Ascend a relic to {n} star{s}',                 goals: [1, 3, 5],                   gems: [30, 80, 200] },
+    level:     { name: 'Ascendant',          icon: 'idol',      text: 'Reach account level {n}',                     goals: [10, 25, 50],                gems: [30, 60, 150] },
+  },
+};
+
+// The store review prompt (meta/review.js): only after a high point, a few times ever, never to a child.
+export const REVIEW = { chapters: [3, 10, 20, 30], max: 3, gapDays: 60, delayMs: 2500 };
+
 // Gameplay analytics (meta/analytics.js, LIVEOPS.md §5): events queue on the device, at most queueMax, and only with
 // consent. There is no analytics service in this build (`endpoint` empty), so nothing leaves the device; the store build
 // plugs its SDK in with analytics.setTransport. Each event lists the properties it may carry (anything else is dropped,
@@ -1204,6 +1235,7 @@ export const ANALYTICS = {
     relic_ascend: ['type', 'rarity', 'stars'],
     quest_claim: ['quest'],
     bestiary_claim: ['id', 'tier'],
+    feat_claim: ['id', 'tier'],
     screen_view: ['screen'],
     save_transfer: ['direction'],
   },

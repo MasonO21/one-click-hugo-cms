@@ -4196,6 +4196,78 @@ errs = await session(async (page) => {
 });
 check('update 14 review regressions: no runtime errors', !errs.length, errs[0] || '');
 
+// 55. Update 14: Feats, the store review prompt, About. Feats measure what the profile already keeps (a returning player
+//     is credited at once) and pay gems per tier, in order; reached tiers go to the platform once per session. The review
+//     sheet is asked only after a high point, a few times ever, never to a child. About lists the version and notices.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), F = await import('/src/meta/feats.js');
+    const R = await import('/src/meta/review.js'), PL = await import('/src/engine/platform.js');
+    const app = window.__soulswarm, p = app.profile, out = {};
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), q = (sel) => document.querySelector(sel);
+    p.flags.tutorialDone = true; p.flags.coach = '';
+    out.fresh = F.featsProgress(p);
+    // a returning player: six chapters cleared, 12,000 foes slain, a legion of 160
+    for (let c = 1; c <= 6; c++) p.chapter.best[c] = { time: 400, cleared: true, kills: 100 };
+    Object.assign(p.stats, { kills: 12000, raised: 600, runs: 12, bestLegion: 160 }); p.chapter.unlocked = 7;
+    out.values = { campaign: F.featValue(p, 'campaign'), reaper: F.featValue(p, 'reaper'), legion: F.featValue(p, 'legion'), heroes: F.featValue(p, 'heroes') };
+    out.ready = eco.notifications(p).feats;
+    const ids = []; PL.setFeatBridge((id) => { ids.push(id); });
+    F.reportFeats(p); F.reportFeats(p);
+    out.reported = ids.slice().sort().join();
+    const g0 = p.gems;
+    const a = eco.claimFeat(p, 'reaper'), b = eco.claimFeat(p, 'reaper'), c = eco.claimFeat(p, 'reaper'), n = eco.claimFeat(p, 'nightmare');
+    out.claims = { a: a && a[0].amount, b: b && b[0].amount, c, n, gems: p.gems - g0, tiers: p.feats.claimed.reaper };
+    // the home screen's Feats button (with its dot) opens the panel; "Claim all" takes every tier reached
+    app.meta.refresh(); app.meta.show('battle'); await wait(150);
+    out.dot = !!q('.fab[data-act="feats"] .badge-dot');
+    q('.fab[data-act="feats"]').click(); await wait(250);
+    out.panel = { rows: document.querySelectorAll('.mm-feats .ft').length, ready: document.querySelectorAll('.mm-feats .ft.is-ready').length, head: q('.mm-feats .ft-head')?.textContent.replace(/\s+/g, ' ').trim() };
+    const g1 = p.gems; q('.mm-feats [data-claim="*"]')?.click(); await wait(250);
+    out.panel.all = { gems: p.gems - g1, left: eco.notifications(p).feats, campaign: p.feats.claimed.campaign, legion: p.feats.claimed.legion, pop: q('.modal-back .rw-title, .modal-back h2')?.textContent || '' };
+    document.querySelectorAll('.modal-back').forEach((x) => x.remove()); app.meta.refresh(); await wait(100);
+    out.dotAfter = !!q('.fab[data-act="feats"] .badge-dot');
+    // a save keeps the claimed tiers (and coerces junk)
+    const SV = await import('/src/meta/save.js');
+    out.junk = JSON.stringify(F.sanitizeFeats({ claimed: { reaper: 99, bogus: 3, campaign: -1, legion: '2' } }));
+    // the review sheet: a first Normal clear of Chapter 3 (not 4), a full Boss Rush; never a child; 60 days apart; never on the web build
+    const asks = []; PL.setReviewBridge(null);
+    out.review = { web: R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, 0) };
+    PL.setReviewBridge(() => { asks.push(1); });
+    delete p.flags.review;
+    out.review.ch4 = R.reviewMoment(p, { victory: true, chapter: 4 }, { firstClear: true, difficulty: 'normal' });
+    out.review.hard = R.reviewMoment(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'nightmare' });
+    out.review.rush = R.reviewMoment(p, { victory: true, chapter: 1 }, { rush: true, cleared: true });
+    const band = p.privacy.band; p.privacy.band = 'child'; out.review.child = R.reviewMoment(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }); p.privacy.band = band;
+    out.review.ask = R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, 0);
+    out.review.again = R.maybeAskReview(p, { victory: true, chapter: 10 }, { firstClear: true, difficulty: 'normal' }, 0);
+    await wait(50); out.review.asked = asks.length; out.review.flag = JSON.stringify(p.flags.review && { n: p.flags.review.n });
+    PL.setReviewBridge(null); PL.setFeatBridge(null); delete p.flags.review;
+    // Settings → About and licences
+    q('.fab[data-act="settings"]').click(); await wait(200);
+    q('.mm-settings [data-act="about"]')?.click(); await wait(250);
+    out.about = { open: !!q('.mm-about'), ver: q('.mm-about .ab-ver b')?.textContent, notices: document.querySelectorAll('.mm-about .ab-list li').length, id: q('.mm-about .ab-id code')?.textContent === p.privacy.id };
+    document.querySelectorAll('.modal-back').forEach((x) => x.remove());
+    return out;
+  });
+  check('feats: a fresh profile has none; a returning player is credited from what the profile already keeps',
+    s.fresh.got === 0 && s.fresh.all >= 60 && s.values.campaign === 6 && s.values.reaper === 12000 && s.values.legion === 160 && s.values.heroes === 1 && s.ready >= 3, JSON.stringify({ f: s.fresh, v: s.values, r: s.ready }));
+  check('feats: tiers are claimed in order for their gems (Reaper I 20, II 40, not III yet); an unreached family pays nothing',
+    s.claims.a === 20 && s.claims.b === 40 && s.claims.c === null && s.claims.n === null && s.claims.gems === 60 && s.claims.tiers === 2, JSON.stringify(s.claims));
+  check('feats: reached tiers are reported to the platform once per session',
+    s.reported.includes('reaper_1') && s.reported.includes('reaper_2') && s.reported.includes('campaign_1') && s.reported.includes('legion_2') && !s.reported.includes('reaper_3')
+    && s.reported.split(',').length === new Set(s.reported.split(',')).size, s.reported);
+  check('feats: the home button shows a dot, the panel lists all 17 families, and "Claim all" takes every tier reached',
+    s.dot && s.panel.rows === 17 && s.panel.ready >= 2 && /Earned/.test(s.panel.head) && s.panel.all.gems >= 40 + 20 + 40 && s.panel.all.left === 0 && s.panel.all.campaign === 1 && s.panel.all.legion === 2 && !s.dotAfter,
+    JSON.stringify({ dot: s.dot, p: s.panel, after: s.dotAfter }));
+  check('feats: a loaded save keeps claimed tiers within range and drops junk', s.junk === '{"claimed":{"reaper":4,"legion":2}}', s.junk);
+  check('review: asked only after a high point (Chapter 3 first clear, a full Boss Rush), never to a child, 60 days apart, never on the web build',
+    s.review.web === false && s.review.ch4 === false && s.review.hard === false && s.review.rush === true && s.review.child === false && s.review.ask === true && s.review.again === false && s.review.asked === 1, JSON.stringify(s.review));
+  check('about: Settings → About shows the version, the player ID and the open-source notices',
+    s.about.open && s.about.ver && s.about.ver !== 'dev' && s.about.notices === 5 && s.about.id, JSON.stringify(s.about));
+});
+check('update 14 feats, review and about: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

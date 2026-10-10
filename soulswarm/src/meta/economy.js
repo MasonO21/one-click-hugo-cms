@@ -11,9 +11,10 @@ import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
 import { resultDifficulty, clearedOn, recordDifficulty, rollHoard, hoardOdds } from './difficulty.js';
 import { analytics } from './analytics.js';
-import { BESTIARY, TUTORIAL, BOSS_RUSH } from '../game/data.js';
+import { BESTIARY, TUTORIAL, BOSS_RUSH, FEATS } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 import { newPages } from './grimoire.js';
+import { featEntry, featsClaimable, reportFeats } from './feats.js';
 import { heroMastery, masteryPerks, gainMastery, resultHero } from './mastery.js';
 
 // ---------------------------------------------------------------- change notification
@@ -624,6 +625,16 @@ export function claimBestiary(p, id) {
   return grant(p, t.rewards);
 }
 
+/** Claims a Feat family's next tier (meta/feats.js): its gems, once, in order. */
+export function claimFeat(p, id) {
+  const e = FEATS.order.includes(id) ? featEntry(p, id) : null;
+  if (!e || !e.ready) return null;
+  p.feats.claimed[id] = e.claimed + 1;
+  analytics.track('feat_claim', { id, tier: e.tier });
+  reportFeats(p);
+  return grant(p, { gems: e.reward });
+}
+
 export function notifications(p) {
   return {
     quests: questsClaimable(p) + (weeklyState(p).ready ? 1 : 0),
@@ -635,5 +646,6 @@ export function notifications(p) {
     bestiary: bestiaryClaimable(p), // milestones ready (the Heroes tab dot)
     grimoire: newPages(p).length, // pages unlocked since the Grimoire was last opened (the chip's dot)
     relics: p.relics.filter((r) => p.equipped.includes(r.uid) && canAscend(p, r)).length, // equipped relics ready to ascend (the Relics sub-tab dot)
+    feats: featsClaimable(p), // Feat tiers ready to claim (the Feats button's dot)
   };
 }
