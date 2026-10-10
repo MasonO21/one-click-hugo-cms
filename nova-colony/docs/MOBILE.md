@@ -240,7 +240,7 @@ A few useful reminders while the player is away, never spam. Code: `src/platform
 
 | Reminder | When | Copy |
 |---|---|---|
-| Storage full | the first resource stops filling while away, i.e. reaches what Welcome Back credits up to (capacity × `offlineStorageMult`), timed with the economy's own offline model (80% efficiency, converters, upkeep). Only if ≥ 30 min away and before the offline cap | "Your storehouses are bursting! 📦" / "Come spend your wood and stone. There's no room left for more!" |
+| Storage full | the first resource stops filling while away, i.e. reaches what Welcome Back credits up to (capacity × `offlineStorageMult`), timed with the economy's own offline model (the first 10 minutes at full speed then 10%, converters, upkeep). Only if ≥ 30 min away and before the offline cap | "Your storehouses are bursting! 📦" / "Come spend your wood and stone. There's no room left for more!" |
 | Offline cap | `offlineHours` (8 h, + research / Colony Pass) after leaving: production stops. Only while something is still being made then | "Time to collect! 🧺" / "Your colonists have been busy for 8 hours. Come collect!" |
 | Daily gift | the next local midnight, only when today's gift is already claimed and gifts are offered. Tapping it opens the gift panel | "Your daily supplies are in 📦" / "Your day 4 supply drop is waiting in New Hope. Come and collect it!" |
 | Explorers home | when the first expedition squad still out is back (any squad back within the hour after it is told in the same one). Tapping it opens Expeditions | "Your explorers are home! 🧭" / "Your squad is back from Hidden Stash Hunt with a haul. Come and collect it!" (2+: "2 squads are back with their hauls…") |
@@ -359,7 +359,7 @@ special, `play_time_s`) and one aggregate `achievements_retro` (`count`) when a 
 - **Recovery codes**: `game.saves.exportRecoveryCode()` → text the player can store anywhere; `game.saves.importRecoveryCode(code)` validates (checksum, structure), backs up the current save, writes the import, suspends saving (so the running game cannot overwrite it) and **reloads the app ~1.5 s later** so the restored colony loads (`new SaveManager(services, { autoRestart: false })` to do it yourself with `restart()`). Failures return `false` and set `game.saves.lastError` (readable text). `listBackups()` / `restoreBackup(slot)` power a "Restore from backup" list. The attached manager is available as `game.saves`, `window.saves` (used by the Settings panel) and `activeSaveManager()`.
 - **A background stay counts like a closed app**: when the phone kept the game in memory, coming back credits the time
   away exactly like a launch does (`Game.creditAbsence`, wired by `installResumeCredit` in `src/platform/hooks.ts`):
-  quietly under 5 minutes, the Welcome Back card after that, 80% efficiency and the 8 h cap included.
+  quietly under 5 minutes, the Welcome Back card after that, the offline curve (10 min at full speed, then 10%) and the 8 h cap included.
 - **Unclaimed "Welcome back" earnings** are kept in the save until claimed (`liveops.pendingOffline`), because `Game.start()` resets the offline clock: quitting at that screen never loses them, and leftovers are merged into the next summary.
 - **Cloud save** (optional): set `VITE_CLOUD_SAVE_URL`. The device gets a random **recovery id** (`NOVA-XXXX-XXXX-XXXX`, shown via `game.saves.cloudRecoveryId()`; enter it on another device with `setCloudRecoveryId`). Protocol:
   - `GET  {base}/{id}` → `200` + body (a recovery code) or `404`
