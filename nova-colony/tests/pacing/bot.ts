@@ -15,6 +15,10 @@
  *     resource that binds the next goal, then level-ups from surplus;
  *  6. move: discover/loot/rescue/chat for the mission or a wish, else hand-gather what the next goal lacks, else
  *     explore points of interest, else top up basic materials.
+ *  7. walk out now and then (sim/survey.ts): about 15% of online time goes into excursions, taken when the next goal
+ *     is minutes away or when a session opens (caches restock while the app is closed). An excursion follows the
+ *     survey suggestions (restocked caches, unopened POIs, signals, uncharted ground), fast travels to a beacon when
+ *     one is much closer, and ends with a hop home. Survey milestones are claimed from the Map like other rewards.
  */
 import type { Game } from '../../src/core/Game';
 import type { BuildingDef, MissionDef, RecipeDef, ResourceBag } from '../../src/data/schema';
@@ -42,7 +46,7 @@ export type Activity = 'act' | 'gather_goal' | 'gather_filler' | 'travel' | 'exp
 
 type Task =
   | { kind: 'gather'; res: string; node: number; goal: boolean }
-  | { kind: 'goto'; x: number; z: number; why: 'discover' | 'deposit' | 'defend' | 'home' }
+  | { kind: 'goto'; x: number; z: number; why: 'discover' | 'deposit' | 'defend' | 'home' | 'survey' }
   | { kind: 'poi'; id: string; why: 'mission' | 'explore' }
   | { kind: 'event'; id: number }
   | { kind: 'chat'; colonist: number };
@@ -57,6 +61,13 @@ export interface GoalInfo {
 }
 
 const DEFENSE_COUNT = [1, 3, 5, 7, 9, 11, 13];
+/** Share of online time the player is happy to spend walking out (seconds of excursion per second played). */
+const EXPLORE_SHARE = 0.15;
+/** Most excursion time saved up (seconds), and what it takes to set out. */
+const EXPLORE_CAP = 240;
+const EXPLORE_START = 100;
+/** How far an excursion looks for something to survey (world units). */
+const EXPLORE_RANGE = 420;
 const SLOTS = ['tool', 'backpack', 'armor', 'weapon', 'utility'] as const;
 
 export class PacingBot {
@@ -69,7 +80,13 @@ export class PacingBot {
   /** What production planning aims at: the mission when it is resource-bound, else the next tier's bill. */
   prodGoal: GoalInfo = { label: '', binding: 'none', eta: 0 };
   /** Counters for the report. */
-  stats = { builds: 0, upgrades: 0, research: 0, mastery: 0, crafts: 0, recruits: 0, wishes: 0, expeditions: 0, novaSpent: 0, paths: 0, stuck: 0 };
+  stats = { builds: 0, upgrades: 0, research: 0, mastery: 0, crafts: 0, recruits: 0, wishes: 0, expeditions: 0, novaSpent: 0, paths: 0, stuck: 0, excursions: 0, surveyClaims: 0 };
+  /** Seconds of walking out saved up (EXPLORE_SHARE of online play, capped). */
+  exploreBudget = 0;
+  /** On an excursion right now. */
+  excursion = false;
+  private sessionStartT = 0;
+  private excursionCooldown = 0;
   /** Seconds remaining in the current session (set by the runner; used for expedition sizing). */
   sessionLeft = Infinity;
   nextGap = 0;
@@ -98,6 +115,8 @@ export class PacingBot {
     this.mover = new Mover(game, this.nav);
     this.task = null;
     this.decideT = 0;
+    this.excursion = false;
+    this.sessionStartT = game.state.playTime;
     game.state.settings.autoGather = true;
     game.bus.on('combat:started', () => {
       this.raidStart = game.state.playTime;
@@ -134,6 +153,8 @@ export class PacingBot {
   frame(dt: number): void {
     const g = this.game;
     this.decideT -= dt;
+    this.exploreBudget = Math.max(0, Math.min(EXPLORE_CAP, this.exploreBudget + dt * EXPLORE_SHARE - (this.excursion ? dt : 0)));
+    if (this.excursion && this.exploreBudget <= 0) this.endExcursion();
     if (this.busy > 0) {
       this.busy -= dt;
       this.mover.release();
@@ -157,7 +178,7 @@ export class PacingBot {
     if (st.combat.phase === 'attack' || (st.combat.phase === 'warning' && st.combat.nextAt - st.playTime < 40)) this.activity = 'defend';
     else if (this.now() - this.actedAt < 2) this.activity = 'act';
     else if (this.task?.kind === 'gather') this.activity = this.task.goal ? 'gather_goal' : 'gather_filler';
-    else if (this.task?.kind === 'poi' && this.task.why === 'explore') this.activity = 'explore';
+    else if ((this.task?.kind === 'poi' && this.task.why === 'explore') || (this.task?.kind === 'goto' && this.task.why === 'survey') || this.excursion) this.activity = 'explore';
     else if (this.task) this.activity = 'travel';
     else this.activity = 'wait';
   }
@@ -184,6 +205,12 @@ export class PacingBot {
     const inFight = st.combat.phase === 'attack' || (st.combat.phase === 'warning' && st.combat.nextAt - st.playTime < 30);
     // the tracker says "go there": a player heads out first and taps menus later
     if (!inFight && mission && this.travelMission(mission)) {
+      this.doMovement();
+      return;
+    }
+    // out on an excursion: the menus wait until the walk is over (claims above still happen)
+    if (!inFight && !this.excursion) this.maybeSetOut();
+    if (!inFight && this.excursion) {
       this.doMovement();
       return;
     }
@@ -249,6 +276,16 @@ export class PacingBot {
       s.expeditions.claimMilestone(m.count);
       this.acted('star chart milestone', tap);
       return true;
+    }
+    // region survey milestones: open the Map, tap the region, Claim, read the card
+    for (const p of s.survey.all()) {
+      if (!p.unlocked || p.claimed >= p.reached) continue;
+      const c = s.survey.claim(p.region);
+      if (c) {
+        this.stats.surveyClaims++;
+        this.acted(`survey ${p.region} ${c.pct}%`, tap * 3);
+        return true;
+      }
     }
     if (s.liveops.offersUnlocked()) {
       if (s.liveops.dailyAvailable() && s.liveops.claimDaily()) {
@@ -1338,6 +1375,8 @@ export class PacingBot {
       this.setTask({ kind: 'event', id: ev.id }, 4);
       return;
     }
+    // walk out now and then: restocked caches, unopened ruins, uncharted ground
+    if (this.doExcursion()) return;
     // gather what the goal lacks
     const goalRes = this.gatherTarget();
     if (goalRes) {
@@ -1361,6 +1400,76 @@ export class PacingBot {
     // top up basics
     const filler = this.fillerResource();
     if (filler) this.startGather(filler, false);
+  }
+
+  /**
+   * An excursion (see the class comment, step 7). Returns true while it has the hero walking somewhere.
+   */
+  private doExcursion(): boolean {
+    const g = this.game;
+    const st = g.state;
+    const P = g.sys.player;
+    if (!this.excursion) return false;
+    const end = () => {
+      this.endExcursion();
+      return false;
+    };
+    if (this.exploreBudget <= 0) return end();
+    const t0 = this.task;
+    if (t0 && ((t0.kind === 'poi' && t0.why === 'explore') || (t0.kind === 'goto' && t0.why === 'survey')) && this.mover.active) return true;
+    const p = st.player;
+    const key = (t: { poi?: string; x: number; z: number }) => t.poi ?? `goto:${t.x | 0},${t.z | 0}`;
+    const t = g.sys.survey.suggest(p.x, p.z, EXPLORE_RANGE, undefined, (c) => (this.banned.get(key(c)) ?? 0) > this.now() || (c.kind === 'signal' && !!c.poi && g.data.poi(g.sys.world.poi(c.poi)?.def ?? '')?.kind === 'nest' && st.colony.tier < 3));
+    if (!t) return end();
+    // a beacon much closer to the target: hop there first
+    if (t.dist > 150) {
+      let best: { id: string; d: number } | null = null;
+      for (const f of g.sys.world.fastTravelTargets()) {
+        const d = Math.hypot(f.x - t.x, f.z - t.z);
+        if (d < t.dist - 90 && (!best || d < best.d)) best = { id: f.id, d };
+      }
+      if (best && P.fastTravel(best.id)) {
+        this.acted(`fast travel ${best.id}`, 3);
+        return true;
+      }
+    }
+    if (t.poi) this.setTask({ kind: 'poi', id: t.poi, why: 'explore' }, 3.5);
+    else this.setTask({ kind: 'goto', x: t.x, z: t.z, why: 'survey' }, 4);
+    if (!this.task) {
+      // unreachable: try something else next time
+      this.banned.set(key(t), this.now() + 600);
+      return false;
+    }
+    return true;
+  }
+
+  /** Set out on an excursion when enough walking time is saved up, or right after opening the app (caches restock). */
+  private maybeSetOut(): void {
+    if (this.guided() || this.now() < this.excursionCooldown) return;
+    const opening = this.now() - this.sessionStartT < 90 && this.exploreBudget >= 40;
+    if (!opening && this.exploreBudget < EXPLORE_START) return;
+    const p = this.game.state.player;
+    if (!this.game.sys.survey.suggest(p.x, p.z, EXPLORE_RANGE)) {
+      this.excursionCooldown = this.now() + 120;
+      return;
+    }
+    this.excursion = true;
+    this.stats.excursions++;
+    if (this.log.length < 4000) this.log.push(`${(this.now() / 60).toFixed(1)}m excursion (${Math.round(this.exploreBudget)} s)`);
+  }
+
+  /** Back from an excursion: hop home when far out (the menus are waiting). */
+  private endExcursion(): void {
+    const g = this.game;
+    this.excursion = false;
+    this.excursionCooldown = this.now() + 30;
+    if (this.task && ((this.task.kind === 'poi' && this.task.why === 'explore') || (this.task.kind === 'goto' && this.task.why === 'survey'))) {
+      this.task = null;
+      this.mover.clear();
+    }
+    const p = g.state.player;
+    const core = g.sys.world.coreCenter();
+    if (Math.hypot(p.x - core.x, p.z - core.z) > 120 && !g.sys.player.isDown() && g.sys.player.fastTravel('base')) this.acted('fast travel home');
   }
 
   /** How much of the backpack colony storage could take right now (a full colony can't be "unloaded" into). */
@@ -1588,7 +1697,8 @@ export class PacingBot {
       case 'poi': {
         if (it && (it.kind === 'loot' || it.kind === 'rescue' || it.kind === 'beacon') && it.target === t.id) {
           g.input.interact = true;
-          this.acted(`poi ${t.id}`);
+          // tap Open and watch the haul fly home
+          this.acted(`poi ${t.id}`, PacingBot.MENU.claim);
           // a guarded nest needs its guards beaten first: linger, the gun does the work
           const def = g.data.poi(g.sys.world.poi(t.id)?.def ?? '');
           if (def?.kind === 'nest' && g.sys.world.nestGuarded(t.id)) return;

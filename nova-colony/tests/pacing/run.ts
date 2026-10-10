@@ -73,6 +73,9 @@ export interface Sample {
   dailyOpen: number;
   explored: number;
   regions: number;
+  /** Mean survey meter (percent) over the unlocked regions, and survey milestones claimed so far. */
+  survey: number;
+  surveyClaimed: number;
   defense: number;
   turrets: number;
   buildings: number;
@@ -151,8 +154,9 @@ export interface RunResult {
   wallMs: number;
 }
 
-// a festival counts; Mastery levels are reported on their own (several quick taps per visit would flatter the gaps)
-const ACCOMPLISHMENT = new Set(['build', 'research', 'recruit', 'mission', 'tier', 'raid', 'expedition', 'wish', 'discover', 'festival']);
+// a festival and a claimed survey milestone count; Mastery levels are reported on their own (several quick taps per
+// visit would flatter the gaps)
+const ACCOMPLISHMENT = new Set(['build', 'research', 'recruit', 'mission', 'tier', 'raid', 'expedition', 'wish', 'discover', 'festival', 'survey']);
 
 export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
   const opts: RunOptions = { ...DEFAULTS, ...partial };
@@ -228,6 +232,7 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     });
     bus.on('world:regionDiscovered', (e) => ev('discover', e.id));
     bus.on('world:poiLooted', (e) => ev('loot', e.poi));
+    bus.on('survey:claimed', (e) => ev('survey', `${e.region} ${(e.step + 1) * 25}%`));
     bus.on('expedition:launched', (e) => ev('expedition_out', `${e.dest} ${Math.round(e.seconds / 60)}m`));
     bus.on('expedition:collected', (e) => {
       ev('expedition', `${e.dest}`);
@@ -342,6 +347,10 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       dailyOpen: g.sys.missions.activeByChain('daily').length,
       explored: g.sys.world.explored(),
       regions: st.world.regionsDiscovered.length,
+      ...(() => {
+        const open = g.sys.survey.all().filter((p) => p.unlocked);
+        return { survey: open.length ? open.reduce((a, p) => a + p.pct, 0) / open.length : 0, surveyClaimed: open.reduce((a, p) => a + p.claimed, 0) };
+      })(),
       defense: g.derived.defense.rating,
       turrets: g.derived.defense.turrets,
       buildings: st.buildings.list.filter((b) => !g.data.building(b.def)?.piece).length,

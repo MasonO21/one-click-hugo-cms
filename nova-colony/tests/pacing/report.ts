@@ -92,20 +92,20 @@ export function activityTable(r: RunResult): string {
 }
 
 export function incomeTable(r: RunResult): string {
-  const rows = ['| Tier | total value | production | gather | RP (x3) | missions | crates/chests | season | invasions | achievements | daily+spin | expeditions | other |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
+  const rows = ['| Tier | total value | production | gather | RP (x3) | missions | crates/chests | season | invasions | achievements | daily+spin | expeditions | exploration | other |', '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|'];
   for (const [tier, row] of Object.entries(r.income)) {
     const tot = Object.values(row).reduce((a, b) => a + b, 0);
     const g = (...ks: string[]) => ks.reduce((s, k) => s + (row[k] ?? 0), 0);
-    const known = ['production', 'gather', 'drop', 'rp', 'reward:mission', 'reward:tutorial', 'reward:crate', 'reward:chest', 'reward:season', 'reward:invasion', 'reward:achievement', 'reward:daily', 'reward:spin', 'reward:expedition', 'offline'];
+    const known = ['production', 'gather', 'drop', 'rp', 'reward:mission', 'reward:tutorial', 'reward:crate', 'reward:chest', 'reward:season', 'reward:invasion', 'reward:achievement', 'reward:daily', 'reward:spin', 'reward:expedition', 'reward:poi', 'reward:survey', 'offline'];
     const other = Object.entries(row).filter(([k]) => !known.includes(k)).reduce((s, [, v]) => s + v, 0);
     rows.push(
-      `| ${tier} | ${Math.round(tot).toLocaleString('en-US')} | ${pct(g('production'), tot)} | ${pct(g('gather', 'drop'), tot)} | ${pct(g('rp'), tot)} | ${pct(g('reward:mission', 'reward:tutorial'), tot)} | ${pct(g('reward:crate', 'reward:chest'), tot)} | ${pct(g('reward:season'), tot)} | ${pct(g('reward:invasion'), tot)} | ${pct(g('reward:achievement'), tot)} | ${pct(g('reward:daily', 'reward:spin'), tot)} | ${pct(g('reward:expedition'), tot)} | ${pct(other + g('offline'), tot)} |`,
+      `| ${tier} | ${Math.round(tot).toLocaleString('en-US')} | ${pct(g('production'), tot)} | ${pct(g('gather', 'drop'), tot)} | ${pct(g('rp'), tot)} | ${pct(g('reward:mission', 'reward:tutorial'), tot)} | ${pct(g('reward:crate', 'reward:chest'), tot)} | ${pct(g('reward:season'), tot)} | ${pct(g('reward:invasion'), tot)} | ${pct(g('reward:achievement'), tot)} | ${pct(g('reward:daily', 'reward:spin'), tot)} | ${pct(g('reward:expedition'), tot)} | ${pct(g('reward:poi', 'reward:survey'), tot)} | ${pct(other + g('offline'), tot)} |`,
     );
   }
   rows.push('');
   rows.push('Reward resources announced vs received (the rest did not fit in storage):');
   for (const [tier, w] of Object.entries(r.rewards ?? {})) rows.push(`- tier ${tier}: ${Math.round(w.received).toLocaleString('en-US')} of ${Math.round(w.announced).toLocaleString('en-US')} (${pct(w.received, w.announced)})`);
-  return rows.join('\n') + '\n\nValue in wood-equivalents (data/expeditions.ts VALUE), RP counted x3. "offline" (Welcome Back) is in "other".';
+  return rows.join('\n') + '\n\nValue in wood-equivalents (data/expeditions.ts VALUE), RP counted x3 (POI research points land in "RP"). "exploration" is POI loot and region survey rewards; "offline" (Welcome Back) is in "other".';
 }
 
 export function capTable(r: RunResult): string {
@@ -200,12 +200,12 @@ export function missionTable(r: RunResult): string {
 }
 
 export function exploreTable(r: RunResult): string {
-  const rows = ['| Tier | fog revealed at end | regions discovered | POIs looted | world events | expeditions sent / home | wishes granted / lapsed |', '|---|---|---|---|---|---|---|'];
+  const rows = ['| Tier | fog revealed at end | regions discovered | POIs looted | survey (mean of open regions) | survey milestones claimed | world events | expeditions sent / home | wishes granted / lapsed |', '|---|---|---|---|---|---|---|---|---|'];
   for (const sp of tierSpans(r)) {
     const ss = r.samples.filter((s) => s.t < sp.t1).at(-1);
     const ev = r.events.filter((e) => e.t >= sp.t0 && e.t < sp.t1);
     const n = (k: string) => ev.filter((e) => e.kind === k).length;
-    rows.push(`| ${sp.tier} | ${ss ? pct(ss.explored, 1) : '-'} | ${ss?.regions ?? '-'} | ${n('loot')} | ${n('world_event')} | ${n('expedition_out')} / ${n('expedition')} | ${n('wish')} / ${n('wish_expired')} |`);
+    rows.push(`| ${sp.tier} | ${ss ? pct(ss.explored, 1) : '-'} | ${ss?.regions ?? '-'} | ${n('loot')} | ${ss?.survey != null ? `${Math.round(ss.survey)}%` : '-'} | ${n('survey')} | ${n('world_event')} | ${n('expedition_out')} / ${n('expedition')} | ${n('wish')} / ${n('wish_expired')} |`);
   }
   return rows.join('\n');
 }
