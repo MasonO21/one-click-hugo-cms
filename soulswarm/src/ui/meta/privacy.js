@@ -7,6 +7,7 @@ import { gateYears, answerGate, needsConsent, setConsent, canAskAnalytics, canAs
 import { analytics } from '../../meta/analytics.js';
 import { commit } from '../../meta/economy.js';
 import { tap } from './util.js';
+import { exportCode, importCode } from '../../meta/transfer.js';
 
 const BAND_TEXT = {
   child: 'Purchases are switched off, and nothing is measured. Rewarded videos are never personalised.',
@@ -77,7 +78,8 @@ export function privacySection(app) {
     <div class="st-row"><span class="st-l">${icon('helm')} Player ID</span><code class="pv-id" data-act="copyId">${P.id}</code></div>
     <div class="st-row st-col pv-state"><small class="t-dim">${P.band === 'child' ? BAND_TEXT.child : `Gameplay analytics: <b>${P.consent.analytics ? 'on' : 'off'}</b> · Personalised ads: <b>${P.consent.ads ? 'on' : 'off'}</b>${P.consent.analytics ? ` · ${n} event${n === 1 ? '' : 's'} on this device (this build sends none)` : ''}`}</small></div>
     ${P.band === 'child' ? '' : '<button class="btn btn-ghost btn-block" data-act="consent">Privacy choices</button>'}
-    <div class="row pv-row"><a class="btn btn-ghost" href="${PRIVACY.policyUrl}" target="_blank" rel="noopener">Privacy policy</a><button class="btn btn-ghost" data-act="export">Export my data</button></div>`;
+    <div class="row pv-row"><a class="btn btn-ghost" href="${PRIVACY.policyUrl}" target="_blank" rel="noopener">Privacy policy</a><button class="btn btn-ghost" data-act="export">Export my data</button></div>
+    <button class="btn btn-ghost btn-block" data-act="transfer">${icon('share')} Transfer or back up your save</button>`;
 }
 
 /** Handlers for the section (delegate(body, …) in openSettings). `close` closes the Settings sheet. */
@@ -86,6 +88,7 @@ export function privacyActions(app, close) {
     copyId: async (b) => { tap(app); try { await navigator.clipboard.writeText(app.profile.privacy.id); toast('Player ID copied'); } catch (e) { const r = document.createRange(); r.selectNodeContents(b); const s = getSelection(); s.removeAllRanges(); s.addRange(r); } },
     consent: () => { tap(app); close(); openConsent(app, 'settings'); },
     export: () => { tap(app); exportData(app); },
+    transfer: () => { tap(app); close(); openTransfer(app); },
   };
 }
 
@@ -98,4 +101,37 @@ export function exportData(app) {
     { label: 'Copy', cls: 'btn-primary', onClick: () => { const t = $(body, '.pv-json'); navigator.clipboard.writeText(data).then(() => toast('Copied'), () => { t.focus(); t.select(); }); return false; } },
     { label: 'Close', cls: 'btn-ghost' },
   ] });
+}
+
+/** Save transfer (meta/transfer.js): this device's code to copy, and a box to restore one (after a confirm). */
+export function openTransfer(app) {
+  const body = h(`<div class="pv">
+    <p class="pv-fine t-dim">${icon('info')} Copy this code to move your progress to another device, or keep it as a backup. Anyone with the code can restore your progress, so keep it private.</p>
+    <textarea class="pv-json pv-code" readonly spellcheck="false" placeholder="Preparing…"></textarea>
+    <button class="btn btn-ghost btn-block" data-act="copyCode">Copy my code</button>
+    <div class="st-sep"></div>
+    <span class="t-label">Restore from a code</span>
+    <textarea class="pv-json pv-in" spellcheck="false" placeholder="Paste a code here (it starts with SS1.)"></textarea>
+    <button class="btn btn-ghost btn-block" data-act="check">Restore</button>
+    <div class="pv-confirm" hidden><p>${icon('info')} <span class="pv-what"></span> This replaces all progress on this device.</p>
+      <div class="row"><button class="btn btn-ghost" data-act="cancelRestore">Cancel</button><button class="btn btn-danger" data-act="restore">Replace my progress</button></div></div>
+  </div>`);
+  const code = $(body, '.pv-code'), input = $(body, '.pv-in'), confirm = $(body, '.pv-confirm');
+  let pending = null;
+  exportCode(app.profile).then((c) => { code.value = c; }).catch(() => { code.value = ''; code.placeholder = 'This device cannot make a code.'; });
+  body.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const act = b.dataset.act;
+    if (act === 'copyCode') { tap(app); navigator.clipboard.writeText(code.value).then(() => toast('Code copied'), () => { code.focus(); code.select(); }); analytics.track('save_transfer', { direction: 'export' }); }
+    else if (act === 'check') {
+      tap(app);
+      const r = await importCode(input.value);
+      if (r.error) { pending = null; confirm.hidden = true; toast(r.error === 'checksum' ? 'That code is incomplete or mistyped.' : 'That is not a SOULSWARM save code.'); return; }
+      pending = r.profile;
+      $(body, '.pv-what').textContent = `Account level ${pending.level}, Chapter ${pending.chapter.unlocked}, ${Object.values(pending.heroes).filter((x) => x.owned).length} heroes.`;
+      confirm.hidden = false;
+    } else if (act === 'cancelRestore') { pending = null; confirm.hidden = true; }
+    else if (act === 'restore' && pending) { analytics.track('save_transfer', { direction: 'import' }); app.replaceProfile(pending); }
+  });
+  return modal({ title: 'Transfer your save', body, cls: 'mm-export mm-transfer', actions: [{ label: 'Close', cls: 'btn-ghost' }] });
 }

@@ -112,6 +112,8 @@
 
 ### 7.3 Backend: cloud save, economy, leaderboards, anti-cheat
 
+*In the build (Update 14):* a save transfer code (`src/meta/transfer.js`, GDD §19) stands in for cloud save, and the privacy groundwork the SDKs need is done: the age gate, consent, restricted mode, the random player ID the backend can adopt, and a consented event queue with taxonomy v1 (`src/meta/analytics.js`, `LIVEOPS.md` §5) waiting for the Firebase transport. The transfer code can restore an older save, so the server must own progress before leaderboards ship.
+
 | Option | Strengths | Weaknesses | Fit |
 |---|---|---|---|
 | **Nakama** (Heroic Labs; open source, self-host or Heroic Cloud) | Built-in auth, storage, wallets, **leaderboards with cron resets and tournaments**, groups (clans), real-time multiplayer (Legion Raids v2), server modules in TypeScript/Go | We run or rent the servers. Smaller ecosystem. | **Chosen.** It covers launch and the roadmap (Covens, Raids). |

@@ -1198,5 +1198,6 @@ export const ANALYTICS = {
     quest_claim: ['quest'],
     bestiary_claim: ['id', 'tier'],
     screen_view: ['screen'],
+    save_transfer: ['direction'],
   },
 };

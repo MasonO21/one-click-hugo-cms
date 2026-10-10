@@ -49,6 +49,7 @@ const app = {
   exitRun,
   applySettings,
   resetProgress,
+  replaceProfile,
   clock, // QA: the clock instance the game uses (a dev server's HMR can serve a second copy to a fresh import)
   heroModels, // QA: likewise, the painted-model cache
   foeModels, // QA: the painted foes' cache
@@ -56,6 +57,14 @@ const app = {
   privacy: { openAgeGate: (done) => openAgeGate(app, done), openConsent: (where, done) => openConsent(app, where, done) }, // QA
 };
 window.__soulswarm = app; // handy for QA scripts
+
+/** Replace the live profile with a restored one (a transfer code, meta/transfer.js): persist, reload. */
+function replaceProfile(next) {
+  for (const k of Object.keys(profile)) delete profile[k];
+  Object.assign(profile, next);
+  saveProfile(profile, true);
+  try { location.reload(); } catch (e) { /* ignore */ }
+}
 
 /** Wipe all progress: blank the live profile (so an unload save cannot restore it), persist, reload. */
 function resetProgress() {

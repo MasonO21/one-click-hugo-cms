@@ -113,6 +113,9 @@ function migrate(p) {
   return out;
 }
 
+/** A profile from outside (a transfer code, meta/transfer.js) through the same repairs as a loaded save. */
+export const sanitizeProfile = (obj) => migrate(obj);
+
 export function loadProfile() {
   let raw = null;
   try {
