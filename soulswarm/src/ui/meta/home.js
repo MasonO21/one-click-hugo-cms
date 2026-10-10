@@ -2,7 +2,7 @@
 // The middle of the screen stays empty so the 3D hero showcase reads through.
 import { h, $, fmt, fmtTime, toast, watchAd } from '../dom.js';
 import { icon } from '../icons.js';
-import { CHAPTERS, ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER, BOSSES, bossFor } from '../../game/data.js';
+import { ENERGY_COST, SKUS, HEROES, DIFFICULTY, DIFFICULTY_ORDER, BOSSES, bossFor, ENDLESS_ID, chapterById, actOf } from '../../game/data.js';
 import { difficultyUnlocked, selectedDifficulty, selectDifficulty, difficultyRecord, clearedOn } from '../../meta/difficulty.js';
 import {
   commit, computeLoadout, notifications, starterAvailable, pactActive, pactDailyAvailable,
@@ -13,11 +13,12 @@ import { now as clockNow } from '../../meta/clock.js';
 import { openQuests, openLogin, openSettings, openStarter, openPact, openEnergy, claimPact, openTrial } from './panels.js';
 import { openRush } from './rush.js';
 import { grimoireChip, openGrimoire } from './grimoire.js';
-import { CHAPTER_ART } from '../art.js';
+import { chapterArt } from '../art.js';
+import { openChapterMap, chapterStops, selectedStop, actRoman } from './chapters.js';
 
 const warmed = new Set();
 /** Decode the neighbouring chapters' paintings ahead of a swipe, so the cross-fade never shows a blank card. */
-const warm = (id) => { const u = CHAPTER_ART[id]; if (!u || warmed.has(u)) return; warmed.add(u); const im = new Image(); im.decoding = 'async'; im.src = u; };
+const warm = (id) => { const u = id && chapterArt(chapterById(id)); if (!u || warmed.has(u)) return; warmed.add(u); const im = new Image(); im.decoding = 'async'; im.src = u; };
 
 export function createHome(ctx) {
   const { app } = ctx;
@@ -34,13 +35,14 @@ export function createHome(ctx) {
     const hero = HEROES[p.selectedHero];
     const L = computeLoadout(p);
     const n = notifications(p);
-    const sel = Math.min(Math.max(1, p.chapter.selected || 1), CHAPTERS.length);
-    const ch = CHAPTERS[sel - 1];
-    const locked = sel > p.chapter.unlocked;
+    // the arrows step through the open chapters, the next locked one and the Endless Abyss (chapters.js)
+    const stops = chapterStops(p), sel = selectedStop(p), at = stops.indexOf(sel), ch = chapterById(sel);
+    const locked = !ch.endless && sel > p.chapter.unlocked;
     const best = p.chapter.best[sel];
     const cc = hex(ch.rune);
-    const art = CHAPTER_ART[sel], prevArt = artShown && artShown !== art ? artShown : '';
-    artShown = art; warm(sel - 1); warm(sel + 1);
+    const art = chapterArt(ch), prevArt = artShown && artShown !== art ? artShown : '';
+    artShown = art; warm(stops[at - 1]); warm(stops[at + 1]);
+    const act = ch.endless ? null : actOf(sel);
 
     // Right column offers
     const right = [];
@@ -102,13 +104,13 @@ export function createHome(ctx) {
       <div class="hm-bottom">
         <div class="chap ${locked ? 'is-locked' : ''} ${dselHtml ? 'has-dsel' : ''}" style="--cc:${cc}" data-art="${sel}">
           ${prevArt ? `<i class="chap-art" style="background-image:url(${prevArt})"></i>` : ''}<i class="chap-art${prevArt ? ' chap-art-in' : ''}" style="background-image:url(${art})"></i>
-          <button class="chap-arrow" data-act="prev" ${sel <= 1 ? 'disabled' : ''} aria-label="Previous chapter">${icon('left')}</button>
+          <button class="chap-arrow" data-act="prev" ${at <= 0 ? 'disabled' : ''} aria-label="Previous chapter">${icon('left')}</button>
           <div class="chap-body">
-            <div class="chap-no t-label">${ch.endless ? 'Endless' : `Chapter ${sel}`}<span class="chap-dots">${CHAPTERS.map((c) => `<i class="${c.id === sel ? 'on' : ''} ${c.id > p.chapter.unlocked ? 'lk' : ''}"></i>`).join('')}</span></div>
+            <button class="chap-no t-label" data-act="map" aria-label="Open the chapter map">${icon('map')}${ch.endless ? 'Endless' : `Act ${actRoman(act.n)} · Chapter ${sel}`}${ch.endless ? '' : `<span class="chap-dots">${Array.from({ length: act.to - act.from + 1 }, (_, i) => act.from + i).map((c) => `<i class="${c === sel ? 'on' : ''} ${c > p.chapter.unlocked ? 'lk' : ''}"></i>`).join('')}</span>`}</button>
             <div class="chap-name t-display">${ch.name}</div>
             <div class="chap-status">${status}</div>
           </div>
-          <button class="chap-arrow" data-act="next" ${sel >= CHAPTERS.length ? 'disabled' : ''} aria-label="Next chapter">${icon('right')}</button>
+          <button class="chap-arrow" data-act="next" ${at >= stops.length - 1 ? 'disabled' : ''} aria-label="Next chapter">${icon('right')}</button>
           ${dselHtml}
         </div>
         ${bloodMoon(p) ? `<div class="bm"><i class="bm-moon"></i><div><b>BLOOD MOON</b><span>2× elites · 2× gold and gems</span></div>${cd(bloodMoonTimes().ends, 0, 'bm-cd')}</div>` : ''}
@@ -128,7 +130,8 @@ export function createHome(ctx) {
 
   function setChapter(d) {
     const p = app.profile;
-    const next = Math.min(CHAPTERS.length, Math.max(1, (p.chapter.selected || 1) + d));
+    const stops = chapterStops(p), at = stops.indexOf(selectedStop(p));
+    const next = stops[Math.min(stops.length - 1, Math.max(0, at + d))];
     if (next === p.chapter.selected) return;
     p.chapter.selected = next;
     tap(app);
@@ -160,20 +163,21 @@ export function createHome(ctx) {
     },
     chestDone: () => { tap(app); toast(`Next free chest in ${fmtTime((nextMidnight() - clockNow()) / 1000)}`); },
     diff: (b) => {
-      const p = app.profile, sel = p.chapter.selected || 1, id = b.dataset.d, i = DIFFICULTY_ORDER.indexOf(id);
-      if (!difficultyUnlocked(p, sel, id)) { tap(app, 'warning', null); toast(`Clear ${CHAPTERS[sel - 1].name} on ${DIFFICULTY[DIFFICULTY_ORDER[i - 1]].name} to unlock ${DIFFICULTY[id].name}`); return; }
+      const p = app.profile, sel = selectedStop(p), id = b.dataset.d, i = DIFFICULTY_ORDER.indexOf(id);
+      if (!difficultyUnlocked(p, sel, id)) { tap(app, 'warning', null); toast(`Clear ${chapterById(sel).name} on ${DIFFICULTY[DIFFICULTY_ORDER[i - 1]].name} to unlock ${DIFFICULTY[id].name}`); return; }
       if (selectedDifficulty(p, sel) === id) return;
       tap(app);
       selectDifficulty(p, sel, id);
       commit(p); // onChange re-renders
     },
+    map: () => { tap(app); openChapterMap(ctx); },
     prev: () => setChapter(-1),
     next: () => setChapter(1),
     battle: () => {
       if (downAt > (app.exitedAt || 0) && downAt - app.exitedAt < 400) return; // the second tap of a double tap on the results' Continue lands here
-      const p = app.profile; const sel = p.chapter.selected || 1;
+      const p = app.profile; const sel = selectedStop(p);
       if (!p.flags.tutorialDone) { tap(app, 'medium', 'select'); app.startRun(1, { tutorial: true }); return; } // the free tutorial comes first
-      if (sel > p.chapter.unlocked) { tap(app, 'warning', null); toast(`Clear Chapter ${sel - 1} to unlock`); return; }
+      if (sel !== ENDLESS_ID && sel > p.chapter.unlocked) { tap(app, 'warning', null); toast(`Clear Chapter ${sel - 1} to unlock`); return; }
       tap(app, 'medium', 'select');
       if (!canPlay(p)) { openEnergy(ctx); return; }
       const ok = app.startRun(sel, { difficulty: selectedDifficulty(p, sel) });

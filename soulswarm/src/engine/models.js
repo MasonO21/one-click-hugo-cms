@@ -248,6 +248,61 @@ export function enemyGeometry(type) {
       P(Sph(0.07, 5, 3), 0, { p: [0.42, 0.8, 0.15], e: 1 }),                          // its crimson coals
       ...mirror((x) => P(Box(0.11, 0.48, 0.11), c2, { p: [0.36 * x, 1.18, 0.08], r: [0.15, 0, 0.18 * x] })),
     );
+  } else if (type === 'siren') { // Update 13: the Drowned Coast's singer, in a long burial dress
+    const c = 0x23303a, skin = 0x7a8a80, hair = 0x101418;
+    parts.push(
+      P(Cone(0.46, 1.4, 8), c, { p: [0, 0.7, 0] }),                                    // the dress, trailing to the ground
+      P(Sph(0.24, 7, 5), c, { p: [0, 1.42, 0], s: [1.05, 0.9, 0.85] }),                // shoulders
+      P(Sph(0.17, 6, 4), skin, { p: [0, 1.72, 0.04] }),
+      P(Cone(0.24, 0.8, 6), hair, { p: [0, 1.48, -0.12], r: [0.15, 0, 0] }),            // long wet hair
+      ...mirror((x) => P(Sph(0.035, 4, 3), 0, { p: [0.06 * x, 1.75, 0.18], e: 1 })),
+      P(Sph(0.06, 5, 3), 0, { p: [0, 1.6, 0.16], e: 1 }),                              // the glowing throat
+      ...mirror((x) => P(Box(0.07, 0.07, 0.62), skin, { p: [0.34 * x, 1.42, 0.2], r: [0.5, 0.35 * x, 0] })), // reaching arms
+    );
+  } else if (type === 'thornback') { // the Thornwood's charger: a boar of bark and thorns
+    const c = 0x2a241c, c2 = 0x1a1610, bone = 0xd8ccb4;
+    parts.push(
+      P(Sph(0.5, 8, 6), c, { p: [0, 0.72, 0], s: [0.95, 0.85, 1.55] }),
+      P(Sph(0.3, 7, 5), c, { p: [0, 0.72, 0.78], s: [0.9, 0.85, 1.1] }),
+      ...mirror((x) => P(Cone(0.05, 0.38, 5), bone, { p: [0.16 * x, 0.66, 1.05], r: [-1.1, 0, 0.35 * x] })), // tusks
+      ...mirror((x) => P(Sph(0.045, 4, 3), 0, { p: [0.13 * x, 0.84, 1.0], e: 1 })),
+      ...mirror((x) => P(Cyl(0.08, 0.1, 0.5, 5), c2, { p: [0.28 * x, 0.25, 0.45] })),
+      ...mirror((x) => P(Cyl(0.08, 0.1, 0.5, 5), c2, { p: [0.28 * x, 0.25, -0.45] })),
+      ...[0, 1, 2, 3, 4].map((i) => P(Cone(0.07, 0.42, 4), c2, { p: [0, 1.2 - Math.abs(i - 2) * 0.06, 0.55 - i * 0.28], r: [-0.25, 0, 0] })), // the ridge of thorns
+    );
+  } else if (type === 'rat') { // the Plague Fens' swarm: a diseased rat the size of a dog
+    const c = 0x3a3024, c2 = 0x241c14;
+    parts.push(
+      P(Sph(0.24, 7, 5), c, { p: [0, 0.3, 0], s: [0.9, 0.8, 1.5] }),
+      P(Sph(0.13, 6, 4), c, { p: [0, 0.32, 0.4], s: [0.9, 0.85, 1.3] }),
+      ...mirror((x) => P(Sph(0.03, 4, 3), 0, { p: [0.06 * x, 0.38, 0.52], e: 1 })),
+      ...mirror((x) => P(Sph(0.06, 4, 3), c2, { p: [0.09 * x, 0.46, 0.34] })),                  // ears
+      P(Cyl(0.01, 0.035, 0.6, 4), c2, { p: [0, 0.22, -0.55], r: [Math.PI / 2 - 0.25, 0, 0] }),  // tail
+      ...[[0.12, 0.42, 0.05], [-0.1, 0.38, -0.12], [0.05, 0.48, -0.2]].map((p) => P(Sph(0.045, 4, 3), 0, { p, e: 1 })), // boils
+      ...mirror((x) => P(Cyl(0.03, 0.03, 0.18, 3), c2, { p: [0.12 * x, 0.09, 0.18] })),
+      ...mirror((x) => P(Cyl(0.03, 0.03, 0.18, 3), c2, { p: [0.12 * x, 0.09, -0.18] })),
+    );
+  } else if (type === 'caller') { // the Storm Spire's caster: a hooded acolyte with a lightning rod
+    const c = 0x4a4a52, c2 = 0x2c2c34, bone = 0xd0c8b8;
+    parts.push(
+      P(Cone(0.45, 1.45, 8), c, { p: [0, 0.72, 0] }),
+      P(Sph(0.25, 7, 5), c, { p: [0, 1.45, 0], s: [1.1, 0.85, 0.95] }),
+      P(Cone(0.24, 0.5, 6), c2, { p: [0, 1.8, -0.04], r: [-0.25, 0, 0] }),              // hood
+      P(Sph(0.13, 6, 4), bone, { p: [0, 1.66, 0.1] }),
+      ...mirror((x) => P(Sph(0.035, 4, 3), 0, { p: [0.05 * x, 1.68, 0.21], e: 1 })),
+      P(Cyl(0.03, 0.03, 2.0, 4), 0x3a3a44, { p: [0.42, 1.0, 0.15] }),                  // the iron rod
+      P(Oct(0.12), 0, { p: [0.42, 2.05, 0.15], e: 1 }),                                // its crackling tip
+    );
+  } else if (type === 'stalker') { // the Hollow Moon's ambusher: a gaunt shadow with one eye
+    const c = 0x14121c, c2 = 0x0c0a12;
+    parts.push(
+      ...mirror((x) => P(Cyl(0.05, 0.07, 0.95, 4), c2, { p: [0.16 * x, 0.48, 0], r: [0, 0, 0.08 * x] })),
+      P(Sph(0.28, 7, 5), c, { p: [0, 1.15, 0], s: [0.85, 1.4, 0.7] }),
+      P(Sph(0.18, 6, 4), c, { p: [0, 1.72, 0.12], s: [0.85, 1.15, 1] }),
+      P(Box(0.04, 0.18, 0.03), 0, { p: [0, 1.74, 0.29], e: 1 }),                       // the single eye-slit
+      ...mirror((x) => P(Box(0.06, 0.06, 0.95), c2, { p: [0.36 * x, 1.2, 0.35], r: [0.65, 0.3 * x, 0] })), // long arms
+      ...mirror((x) => P(Cone(0.04, 0.3, 4), 0, { p: [0.48 * x, 0.92, 0.78], r: [1.2, 0, 0], e: 1 })),      // claws
+    );
   }
   return merge(parts);
 }

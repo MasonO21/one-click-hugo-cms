@@ -19,6 +19,7 @@
 | **Holidays and seasons** | **A themed Soul Urn offering** (GDD §4.10): a limited extra offering in the urn loot table for an event (a pumpkin lantern that drops candy gold at Halloween, say), or a reweighted table for a Blood Moon weekend. Launch has 7 offerings (Update 8, 2026-10-10) | Run variety, event flavour | Light (1 pickup colour, 1 effect) |
 | **Every 2 seasons** | **A new Soul Union** (GDD §7.4): a fifth for Necropolis first, then pairs across the roster as new weapons ship; one painted icon and one synergy each. Launch has 4 (Update 10, 2026-10-10) | Late-run build goals, Endless depth | Light (1 icon, 1 synergy) |
 | **Every 2–3 seasons** | **New foes**: a pair of horde foes with new AI, Bestiary entries (3 milestones each) and risen minion forms, and weapon upgrades alongside (Update 5, "The Deepening Horde", 2026-10-09: the Grave Wraith and the Corpse Priest; GDD §5) | Bestiary growth, horde variety | Yes (medium: 2 paintings, 2 models, AI) |
+| **Every 3–4 seasons** | **A new act** (GDD §8.4): five chapters in a new realm (two painted floors, three props, weather), its ground hazard, its foe and its finale boss, with the earlier bosses returning under its epithet. Launch has six acts, 30 chapters (Update 13, 2026-10-10); the late acts are paced so most players reach the newest one about when the next ships | The campaign's long tail | Yes (heavy: about 450 Higgsfield credits of art and 3–4 engineer-weeks per act) |
 | **Holidays** | Halloween, Winter, Lunar New Year, Spring, Anniversary | — | Medium (reskins + event track) |
 | **Roadmap features** | Clans ("Covens"), co-op **Legion Raids**, difficulty tiers beyond Torment | Clans and Legion Raids on roadmap (Nightmare and Torment are in the build) | Yes (heavy) |
 
@@ -147,6 +148,7 @@
 | Boss Rush variant (modifier + arena tint) | 1 | 1 design-week + 1 engineer-week |
 | Blood Moons | 4 | Config only |
 | Holiday event (when scheduled) | 0–1 | 3–4 artist-weeks + 1 design-week |
+| New act (5 chapters, realm, hazard, foe, boss) | 0.25–0.33 | 4 artist-weeks + 3–4 engineer-weeks + a balance pass |
 | Feature drop | Every 2 seasons | 4–12 engineer-weeks |
 
 ### 4.4 Incident playbook
@@ -172,6 +174,8 @@ Data flow: client and server events → Firebase Analytics → BigQuery (daily e
 | Engagement | DAU / MAU | Stickiness | ≥ 20% | < 15% |
 | | Runs per DAU · minutes per DAU | | 4.0 · 32 min | −15% week-on-week |
 | | Chapter clear rates | Share of attempts that kill the chapter's boss, per chapter | Ch1 70%, Ch2 55%, Ch3 45%, Ch4 35%, Ch5 25% | ±10 pp from target |
+| | Act progress (Update 13) | Share of D30 / D60 / D90 players who have reached each act (GDD §8.4) | Act II 60% of D30; Act III 35% of D60; Act IV+ 20% of D90 | A chapter where more than 30% of arrivals stall for 2+ weeks (a wall) |
+| | Act chapter clear rates | Per chapter, as above; an act's first chapter and finale the hardest | 30–50% (finales 20–35%) | ±10 pp |
 | | Death-minute heatmap | Distribution of death time per chapter | Peak at 4:30–6:00 | Peak before 2:30 (unfair spike) |
 | | Nightmare / Torment uptake | Share of D30+ players with a Nightmare clear · Torment clear; share of their runs on each tier | 40% · 15%; 50%+ of D30+ runs above Normal | < 20% Nightmare (too hard or unseen) |
 | Gameplay | Skill pick rates | Share of offers taken, per card | No card < 10% or > 60% | Outside the band |

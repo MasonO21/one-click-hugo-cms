@@ -17,7 +17,8 @@
     "cap:android": "npm run cap:sync && npx cap open android",
     "trailer": "node scripts/record-trailer.mjs store/trailer-9x16.mp4",
     "screenshots": "node scripts/store-screenshots.mjs",
-    "build:web": "SINGLE=1 vite build && node scripts/build-artifact.mjs"
+    "build:web": "SINGLE=1 vite build && node scripts/build-artifact.mjs",
+    "build:artifact": "ARTIFACT=1 vite build && node scripts/build-artifact.mjs --multi"
   },
   "dependencies": {
     "@capacitor/app": "^7.1.2",

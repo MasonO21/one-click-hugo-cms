@@ -33,13 +33,13 @@ const SHOTS = [
   { name: '05-heroes', caption: 'COLLECT <em>LEGENDARY SHEPHERDS</em>', menu: 'heroes', stage: `
     const p = app.profile; for (const id of ['nyx', 'seraphine', 'liora', 'mordrake']) { p.heroes[id].owned = true; p.heroes[id].stars = 1 + (id === 'mordrake' ? 2 : 1); }
     p.heroes.vael.stars = 3; p.gold = 48200; p.gems = 2350; E.manual = false; app.meta.show('heroes'); app.meta.refresh();` },
-  // Chapter 2's own boss: Pyrexa, the Cinder Matron, her Cinder Rain marked on the ground and in the air, the first already burning
-  { name: '06-chapters', caption: 'FIVE CHAPTERS, <em>FIVE BOSSES</em>', stage: `
-    hero('vael'); start(2, 340); give({ soulBolt: 2, skullHalo: 2 }); legion([['husk', 14], ['ghoul', 6], ['witch', 4]]); r.time = 359.9; sim(1.0, 0, 0);
-    r.boss.cd = 99; sim(2.4, 0, 0); // risen, holding her first attack
-    const b = r.bossEnemy; b.x = r.player.x + 0.9; b.z = r.player.z - 5.2; b.rot = 0;
-    const d0 = r.enemies.damage.bind(r.enemies); r.enemies.damage = (e, a, o) => d0(e, a, e === b ? { ...o, silent: true } : o); // no numbers over her face
-    r.boss.force('rain'); sim(1.5, 0, 0); r.boss.update = () => {};
+  // Act V's finale: Kaelthar, the Storm Herald, turning his Tempest's lightning beams around the Shepherd (Chapter 25)
+  { name: '06-chapters', caption: '30 CHAPTERS, <em>TEN BOSSES</em>', stage: `
+    hero('vael'); start(25, 340); give({ soulBolt: 3, skullHalo: 2, scythe: 2 }); legion([['husk', 16], ['ghoul', 6], ['brute', 4], ['witch', 4]]); r.time = 359.9; sim(1.0, 0, 0);
+    r.boss.cd = 99; r.hazards.thunder = null; sim(2.4, 0, 0); // risen, holding his first attack (and his storm's strikes)
+    const b = r.bossEnemy; b.x = r.player.x + 0.6; b.z = r.player.z - 5.0; b.rot = 0;
+    const d0 = r.enemies.damage.bind(r.enemies); r.enemies.damage = (e, a, o) => d0(e, a, e === b ? { ...o, silent: true } : o); // no numbers over his face
+    r.boss.force('storm'); sim(1.75, 0, 0); // the beams are live and turning
     const rb = r.boss.render.bind(r.boss); r.boss.render = (dt) => { rb(dt); r.boss.mat.uniforms.uFlash.value = 0; };
     r.camPos.copy(r.desiredCam()); sim(0.05, 0, 0);` },
 ];

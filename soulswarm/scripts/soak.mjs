@@ -1,7 +1,7 @@
 // Soak and fuzz harness: a seeded, randomized bot plays whole runs (through Gravemaw to victory, death or an Endless
 // abandon) with chaos inputs at random moments, and checks the run's invariants every frame (cheap) and every second (deep).
 // usage: node scripts/soak.mjs <url> [runs=60] [seed=1]        (needs a running dev server, e.g. npx vite --port 5320)
-//   matrix filters: HERO=vael,nyx  CH=1,3  DIFF=normal,torment  KIND=campaign,endless,trial,bloodmoon  GOD=1|0 (default mixed)
+//   matrix filters: HERO=vael,nyx  CH=1,3 (1–30; default Act I and one chapter per later act)  DIFF=normal,torment  KIND=campaign,endless,trial,bloodmoon  GOD=1|0 (default mixed)
 //   CHAOS=1 (scales every chaos input's rate; 0 = none)  RENDER=240 (full render every Nth frame, 0 = never; plus short
 //   bursts at big moments; the 2D overlay is drawn every 5th frame)
 //   PAR=2 (pages in parallel)  PER_PAGE=4 (runs per page before a fresh one)  CHUNK=300 (frames per evaluate)  ADS=1 (wait out ads)
@@ -33,7 +33,7 @@ const prng = (s) => { let a = s >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; 
 // ---------------------------------------------------------------- the matrix
 function matrix() {
   const rng = prng(SEED), pick = (a) => a[Math.floor(rng() * a.length)];
-  const HEROES = list('HERO', ['vael', 'nyx', 'seraphine', 'liora', 'mordrake']), CHS = list('CH', ['1', '2', '3', '4', '5']).map(Number);
+  const HEROES = list('HERO', ['vael', 'nyx', 'seraphine', 'liora', 'mordrake']), CHS = list('CH', ['1', '2', '3', '4', '5', '8', '14', '19', '23', '29']).map(Number); // Act I and one chapter of each later act
   const DIFFS = list('DIFF', ['normal', 'nightmare', 'torment']), KINDS = list('KIND', ['campaign', 'endless', 'trial', 'bloodmoon']);
   const combos = [];
   for (const hero of HEROES) for (const ch of CHS) for (const diff of DIFFS) combos.push({ hero, ch, diff });
@@ -67,6 +67,10 @@ function installSoak() {
     4: { talents: 60, stars: 3, relics: [['crown', 'epic', 4], ['heart', 'rare', 6], ['idol', 'epic', 3]] },
     5: { talents: 110, stars: 3, relics: [['crown', 'epic', 7], ['heart', 'epic', 5], ['idol', 'epic', 6]] },
   };
+  // Acts II–VI (Update 13): balance.mjs's LATE table (hero stars; relic rarity, level and Ascension stars)
+  for (const [from, stars, rarity, level, rs] of [[6, 3, 'epic', 8, 0], [8, 4, 'epic', 9, 1], [10, 4, 'epic', 10, 1], [12, 4, 'epic', 10, 2], [14, 4, 'legendary', 4, 2],
+    [16, 5, 'legendary', 5, 2], [18, 5, 'legendary', 6, 3], [20, 5, 'legendary', 7, 3], [22, 5, 'legendary', 8, 3], [24, 5, 'legendary', 9, 4], [26, 5, 'legendary', 10, 4], [28, 5, 'legendary', 10, 5]])
+    for (let c = from; c < from + 2; c++) PROG[c] = { talents: 110, stars, relics: [['crown', rarity, level, rs], ['heart', rarity, Math.max(1, level - 1), rs], ['idol', rarity, level, rs]] };
   // intervals still running after their run was exited are a leak: remember which run created each
   const SI = window.setInterval.bind(window), CI = window.clearInterval.bind(window), intervals = new Map();
   let runTag = -1;
@@ -97,11 +101,11 @@ function installSoak() {
     const keys = ['might', 'vitality', 'raise', 'cap', 'swift'];
     for (const k of Object.keys(p.talents)) p.talents[k] = 0;
     for (let i = 0; i < prog.talents; i++) { const k = keys[i % keys.length]; p.talents[k] = Math.min(p.talents[k] + 1, k === 'swift' ? 15 : k === 'raise' || k === 'cap' ? 20 : 25); }
-    p.relics = prog.relics.map(([type, rarity, level], i) => ({ uid: 's' + i, type, rarity, level }));
+    p.relics = prog.relics.map(([type, rarity, level, stars], i) => ({ uid: 's' + i, type, rarity, level, stars: stars || 0 }));
     p.equipped = p.relics.map((r) => r.uid);
     Object.assign(p.heroes[cfg.hero], { owned: true, stars: prog.stars }); p.selectedHero = cfg.hero;
-    p.chapter.unlocked = 6; p.energy = 30; p.gems = 1e6;
-    for (let c = 1; c <= 5; c++) { p.chapter.best[c] = { time: 420, cleared: true, kills: 0 }; p.diff.best[c] = { normal: { time: 420, legion: 0, kills: 0, cleared: true }, nightmare: { time: 420, legion: 0, kills: 0, cleared: true } }; }
+    p.chapter.unlocked = 30; p.energy = 30; p.gems = 1e6;
+    for (let c = 1; c <= 30; c++) { p.chapter.best[c] = { time: 420, cleared: true, kills: 0 }; p.diff.best[c] = { normal: { time: 420, legion: 0, kills: 0, cleared: true }, nightmare: { time: 420, legion: 0, kills: 0, cleared: true } }; }
     p.flags.tutorialDone = !cfg.tut; p.flags.hints = cfg.tut ? {} : { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
     p.flags.bloodMoon = cfg.kind === 'bloodmoon' ? 'on' : 'off';
     Object.assign(p.settings, { shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false, quality: 'auto', muted: true }); // muted: the synth reads the clock
@@ -120,7 +124,7 @@ function installSoak() {
       const dn = Date.now, day = Date.UTC(2026, 0, 1, 12) + Math.floor(S.rnd() * 3650) * 864e5;
       Date.now = () => day;
       try { ok = app.startRun(0, { trial: true }); } finally { Date.now = dn; }
-    } else ok = app.startRun(cfg.kind === 'endless' ? 6 : cfg.ch, { difficulty: cfg.diff });
+    } else ok = app.startRun(cfg.kind === 'endless' ? 100 : cfg.ch, { difficulty: cfg.diff }); // the Endless Abyss is ENDLESS_ID
     if (!ok || !app.run) return false;
     const r = S.run = app.run;
     runRefs.push(new WeakRef(r));

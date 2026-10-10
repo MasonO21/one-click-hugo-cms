@@ -4,12 +4,12 @@ import {
   HEROES, HERO_ORDER, HERO_UNLOCK_SHARDS, HERO_STAR_COST, HERO_MAX_STARS, heroStarBonus,
   RELICS, RELIC_TYPES, RELIC_SLOTS, relicValue, RARITIES,
   TALENTS, talentCost, SKUS, GEM_SHOP, ALTAR, PASS_TIERS, PASS_XP_PER_TIER, passReward,
-  QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS, BLOOD_MOON, WEEKLY_CHEST,
+  QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, CAMPAIGN_LENGTH, ENDLESS_ID, CAMPAIGN_REWARDS, firstClearGems, firstClearSigils, SKINS, BASE, TRIAL, MUTATORS, BLOOD_MOON, WEEKLY_CHEST,
   ASCENSION,
 } from '../game/data.js';
 import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
-import { resultDifficulty, clearedOn, recordDifficulty, rollHoard } from './difficulty.js';
+import { resultDifficulty, clearedOn, recordDifficulty, rollHoard, hoardOdds } from './difficulty.js';
 import { BESTIARY, TUTORIAL, BOSS_RUSH } from '../game/data.js';
 import { bestiaryEntry, bestiaryClaimable, addBestiaryKills } from './bestiary.js';
 import { newPages } from './grimoire.js';
@@ -403,7 +403,8 @@ const trialToday = (p) => { const t = todayKey(); if (p.trial.day !== t) Object.
 /** Today's trial: a chapter the player has cleared, one boon and one bane, picked from the date. */
 export function dailyTrial(p, day = todayKey()) {
   const h = hashStr('trial:' + day);
-  const cleared = Math.max(1, Math.min(5, p.chapter.unlocked - 1));
+  const all = p.chapter.best[CAMPAIGN_LENGTH] && p.chapter.best[CAMPAIGN_LENGTH].cleared; // every chapter cleared
+  const cleared = Math.max(1, Math.min(CAMPAIGN_LENGTH, p.chapter.unlocked - 1 + (all ? 1 : 0)));
   const of = (kind) => Object.keys(MUTATORS).filter((k) => MUTATORS[k].kind === kind);
   const boons = of('boon'), banes = of('bane');
   return { day, chapter: 1 + (h % cleared), boon: boons[(h >>> 8) % boons.length], bane: banes[(h >>> 16) % banes.length] };
@@ -481,7 +482,7 @@ function applyRushResult(p, result) {
 
 export function applyRunResult(p, result) {
   // a partial or malformed result must not write NaN into the profile (NaN currencies and XP are saved as null)
-  result = { ...result, chapter: Math.min(CHAPTERS.length, Math.max(1, Math.floor(result.chapter) || 1)) };
+  result = { ...result, chapter: result.endless ? ENDLESS_ID : Math.min(CAMPAIGN_LENGTH, Math.max(1, Math.floor(result.chapter) || 1)) };
   for (const k of ['time', 'kills', 'raised', 'bestLegion', 'novas', 'gates', 'bonusGold', 'bossKills', 'chests', 'elites', 'evolutions', 'bestStreak', 'urns']) result[k] = Math.max(0, +result[k] || 0);
   if (result.tutorial) return applyTutorialResult(p, result);
   if (result.rush) return applyRushResult(p, result);
@@ -500,16 +501,18 @@ export function applyRunResult(p, result) {
   if (prize) T.won = true;
   const gems = trial ? trialGems
     : result.endless ? (result.bossKills || 0) * 15 + Math.floor(result.time / 60) * 2
-    : result.victory ? 10 + 2 * ch : Math.floor(result.time / 120) * 2;
+    : result.victory ? 10 + 2 * Math.min(ch, CAMPAIGN_REWARDS.clearGemsCap) : Math.floor(result.time / 120) * 2;
   const baseXp = Math.round(20 + result.time / 6 + result.kills / 40 + (result.victory ? 40 : 0) + (prize ? TRIAL.clear.passXp : 0));
   const passXp = Math.round(baseXp * D.passXp);
   const rewards = { gold: gold * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), gems: gems * (result.bloodMoon ? BLOOD_MOON.rewardMul : 1), passXp };
-  // the first-clear bonus is flat: Blood Moon and the ad double only the clear gems (Normal: 40 + 18c on top, 50 + 20c in all)
-  const firstGems = firstClear ? (hard ? D.firstClearGems : 40 + 18 * ch) : 0;
+  // the first-clear bonus is flat: Blood Moon and the ad double only the clear gems (Normal, Act I: 40 + 18c on top,
+  // 50 + 20c in all; later chapters CAMPAIGN_REWARDS, more for an act's last chapter)
+  const firstGems = firstClear ? (hard ? D.firstClearGems : firstClearGems(ch)) : 0;
   if (firstGems) { rewards.gems += firstGems; rewards.firstClearGems = firstGems; }
-  if (firstClear && !hard) rewards.sigils = 1;
+  if (firstClear && !hard) rewards.sigils = firstClearSigils(ch);
   if (prize) { p.trial.clears = (p.trial.clears || 0) + 1; if (p.trial.clears % TRIAL.sigilEvery === 0) rewards.sigils = (rewards.sigils || 0) + 1; }
-  if (result.victory) rewards.relic = D.hoard ? rollHoard(D.hoard, rand()) : ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';
+  if (result.victory) rewards.relic = D.hoard || ch > 5 ? rollHoard(hoardOdds(D, ch), rand()) // (difficulty.js: a harder tier never pays less)
+    : ch >= 3 && rand() < 0.35 ? 'epic' : rand() < 0.5 ? 'rare' : 'common';
   if (result.endless && result.bossKills) rewards.relic = result.bossKills >= 3 ? 'epic+' : result.bossKills >= 2 ? 'epic' : 'rare';
 
   const items = grant(p, rewards);
@@ -529,7 +532,7 @@ export function applyRunResult(p, result) {
   let newBest = !trial && (result.time > prev.time || (result.victory && !prev.cleared));
   if (!trial && !hard) p.chapter.best[ch] = { time: Math.max(prev.time, result.time), cleared: prev.cleared || result.victory, kills: Math.max(prev.kills || 0, result.kills), depth: Math.max(prev.depth || 0, (result.bossKills || 0) + 1) };
   if (!trial) { const nb = recordDifficulty(p, ch, D.id, result); if (hard) newBest = nb; } // records per difficulty
-  if (!trial && !hard && result.victory && ch === p.chapter.unlocked && ch < CHAPTERS.length) p.chapter.unlocked = ch + 1;
+  if (!trial && !hard && !result.endless && result.victory && ch === p.chapter.unlocked && ch < CAMPAIGN_LENGTH) p.chapter.unlocked = ch + 1;
 
   // quests
   questProgress(p, 'kills', result.kills);

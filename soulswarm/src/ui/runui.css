@@ -227,3 +227,6 @@
 .rm-up b { flex: none; color: #ffd77a; }
 .rm-rw { margin-top: 2px; }
 @keyframes rmup { 0% { opacity: 0; transform: translateY(6px) scale(.96); } 100% { opacity: 1; transform: none; } }
+/* Update 13: a first clear that ends an act opens the next (runui.js actTip) */
+#ui .res-act { --ac: #ffd76a; color: #fff; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ac) 55%, transparent); background: color-mix(in srgb, var(--ac) 14%, rgba(5,8,16,.8)); }
+#ui .res-act b { color: var(--ac); }

@@ -113,7 +113,7 @@ check('chapter 1 clear: no runtime errors', !errs.length, errs[0] || '');
 // 4. Endless Abyss: boss returns, run continues
 errs = await session(async (page) => {
   const s = await page.evaluate(() => {
-    const app = window.__soulswarm; app.profile.chapter.unlocked = 6; app.startRun(6);
+    const app = window.__soulswarm; app.profile.chapter.unlocked = 6; app.startRun(100); // the Endless Abyss (ENDLESS_ID)
     const r = app.run; while (r.time < 304 && !r.ended) window.__bot(5, true);
     const b = r.bossEnemy; if (b) { b.hp = 1; r.enemies.damage(b, 50); }
     const gatesBefore = r.counters.gates, t = r.time;
@@ -602,8 +602,8 @@ const BOSS_QA = `
 window.__bossRun = (ch) => {
   const app = window.__soulswarm;
   if (app.run) app.exitRun();
-  app.profile.chapter.unlocked = 6; app.profile.energy = 30; app.profile.flags.tutorialDone = true; app.startRun(ch); // a veteran: the first run's King is gentler
-  const r = app.run; r.player.hurt = () => {}; r.time = ch === 6 ? 299.9 : 359.9;
+  app.profile.chapter.unlocked = Math.max(6, ch === 100 ? 0 : ch, app.profile.chapter.unlocked); app.profile.energy = 30; app.profile.flags.tutorialDone = true; app.startRun(ch); // a veteran: the first run's King is gentler
+  const r = app.run; r.player.hurt = () => {}; r.time = ch === 100 ? 299.9 : 359.9;
   for (let i = 0; i < 150 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) r.update(1 / 30);
   return r;
 };
@@ -674,7 +674,7 @@ errs = await session(async (page) => {
     r = window.__bossRun(2); b = r.boss; b.force('slam'); window.__step(r, 2); out.fire = b.zones.filter((z) => z.kind === 'fire').length;
     r = window.__bossRun(3); b = r.boss; b.force('slam'); window.__step(r, 2); out.frost = b.zones.filter((z) => z.kind === 'frost').length;
     r = window.__bossRun(4); b = r.boss; b.force('ring'); out.waves4 = b.waves;
-    r = window.__bossRun(6); b = r.boss; e = r.bossEnemy; e.hp = 1; r.enemies.damage(e, 50); window.__step(r, 1.5);
+    r = window.__bossRun(100); b = r.boss; e = r.bossEnemy; e.hp = 1; r.enemies.damage(e, 50); window.__step(r, 1.5);
     out.endless = { kills: r.bossKills, arena: b.arena.on, ended: r.ended, spawning: !r.bossSpawned };
     return out;
   });
@@ -1284,9 +1284,9 @@ errs = await session(async (page) => {
     // Endless and the Daily Trial stay Normal; a default run is Normal and run.diff is the identity
     const t = runAt(0, { trial: true, difficulty: 'nightmare' });
     out.modes = { trial: t && t.diff.id };
-    p.chapter.unlocked = 6; p.chapter.best[6] = { time: 900, cleared: true, kills: 0 };
-    out.modes.endlessOpen = D.difficultyUnlocked(p, 6, 'nightmare'); out.modes.endlessStart = !!runAt(6, { difficulty: 'nightmare' });
-    out.modes.endless = runAt(6, {}).diff.id;
+    p.chapter.unlocked = 6; p.chapter.best[100] = { time: 900, cleared: true, kills: 0 };
+    out.modes.endlessOpen = D.difficultyUnlocked(p, 100, 'nightmare'); out.modes.endlessStart = !!runAt(100, { difficulty: 'nightmare' });
+    out.modes.endless = runAt(100, {}).diff.id;
     const n = runAt(1, {}).diff;
     out.identity = { id: n.id, hp: n.hp, ramp: n.ramp, xp: n.xp, bossHp: n.bossHp, bossDmg: n.bossDmg, dmg: n.dmg, spawn: n.spawn, extraElites: n.extraElites, eliteAffixes: n.eliteAffixes, gold: n.gold, passXp: n.passXp, firstClearGems: n.firstClearGems, hoard: n.hoard, tint: n.tint };
     // run scaling on Chapter 2 at 3:20 (past the HP ramp): a Brute's HP and damage, the director's spawn accrual, elites, Gravemaw and
@@ -1407,7 +1407,7 @@ errs = await session(async (page) => {
     out.picked = seg(); out.sel = p.diff.sel[1]; out.battle = q('.btn-battle').classList.contains('d-nightmare');
     q('.chap [data-act="next"]').click(); out.ch2 = seg();
     q('.chap [data-act="prev"]').click(); out.back = seg();
-    p.chapter.selected = 6; p.chapter.unlocked = 6; app.meta.refresh(); out.endless = document.querySelectorAll('.dsel').length;
+    p.chapter.selected = 100; p.chapter.unlocked = 6; app.meta.refresh(); out.endless = document.querySelectorAll('.dsel').length;
     p.chapter.unlocked = 3; p.chapter.selected = 4; app.meta.refresh(); out.locked = document.querySelectorAll('.dsel').length;
     p.chapter.selected = 1; app.meta.refresh();
     const e0 = p.energy; q('.btn-battle').click();
@@ -1869,7 +1869,7 @@ check('clock: no runtime errors', !errs.length, errs[0] || '');
   const heroes = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'isolde'];
   for (const h of heroes) asked.add(h + '_rite').add(h + '_greet');
   const missing = [...asked].filter((n) => !files.includes(n) && !/^a_(normal)$/.test(n));
-  check('voice: 50 lines, and every line the code asks for has a file', files.length === 50 && !missing.length, `files=${files.length} missing=${missing}`);
+  check('voice: 65 lines, and every line the code asks for has a file', files.length === 65 && !missing.length, `files=${files.length} missing=${missing}`);
 }
 errs = await session(async (page) => {
   await page.mouse.click(5, 420); // the audio context needs a gesture
@@ -1877,7 +1877,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const A = window.__soulswarm.audio, { VOICE } = await import('/src/game/data.js'), out = {};
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 50;
+    const st = A.voiceState(); out.decoded = st.loaded === st.lines && st.lines === 65;
     out.rules = Object.keys(VOICE.lines).length > 20;
     const r = [];
     r.push(A.voice('a_carnage')); await sleep(120); out.duck = A.voiceState().duck;
@@ -2020,7 +2020,7 @@ errs = await session(async (page) => {
   check('bestiary: the run result carries the tally and applyRunResult adds it to the profile (junk ignored)',
     JSON.stringify(s.result) === JSON.stringify(R.end) && JSON.stringify(s.added) === JSON.stringify(R.end)
     && s.acc.husk === 60 && s.acc.ghoul === 7 && s.acc.brute === 0 && s.acc.witch === 0 && s.acc.bloater === 0 && s.acc.thief === 1 && s.acc.gravemaw === 0 && !s.acc.junk, JSON.stringify({ result: s.result, added: s.added, acc: s.acc }));
-  check('bestiary: 13 painted entries (8 foes, 5 bosses); silhouette and "???" until the first kill, then the name', s.cards.n === 13 && s.cards.husk.join() === 'false,Husk'
+  check('bestiary: 23 painted entries (13 foes, 10 bosses); silhouette and "???" until the first kill, then the name', s.cards.n === 23 && s.cards.husk.join() === 'false,Husk'
     && s.cards.ghoul.join() === 'true,???,true' && s.cards.img && s.unlock.join() === 'false,Ghoul', JSON.stringify({ c: s.cards, u: s.unlock }));
   check('bestiary: milestones claim in order and once each (double taps too) for 2,000 gold, 1 sigil and 50 gems',
     s.claims.claims.join() === '1,2,3' && s.claims.gained.gold === 2000 && s.claims.gained.sigils === 1 && s.claims.gained.gems === 50
@@ -2034,7 +2034,7 @@ errs = await session(async (page) => {
     && s.nullSave === true, JSON.stringify({ M, C, n: s.nullSave }));
   check('results: a faint chapter painting behind the header', s.resArt, String(s.resArt));
 
-  // the home chapter card wears the selected chapter's painting and cross-fades when it changes; Endless is chapter-6
+  // the home chapter card wears the selected chapter's painting and cross-fades when it changes; Endless is chapter-endless
   const h = await page.evaluate(async () => {
     const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
     const art = () => { const c = q('.chap'), l = [...c.querySelectorAll('.chap-art')]; const top = l[l.length - 1], cr = c.getBoundingClientRect(), ar = top.getBoundingClientRect();
@@ -2043,13 +2043,13 @@ errs = await session(async (page) => {
     const a = art(), hgt = q('.chap').getBoundingClientRect().height;
     q('.chap-arrow[data-act="next"]').click(); await wait(80);
     const b = art(), hgt2 = q('.chap').getBoundingClientRect().height, low = q('.chap').querySelector('.chap-art:not(.chap-art-in)'), under = low ? getComputedStyle(low).backgroundImage : '';
-    p.chapter.selected = 6; app.meta.refresh(); await wait(80);
+    p.chapter.selected = 100; app.meta.refresh(); await wait(80);
     const e = art();
     return { a, b, e, hgt, hgt2, under };
   });
-  check('chapter art: the home card shows the selected chapter\'s painting and cross-fades to the next one (Endless: chapter-6)',
+  check('chapter art: the home card shows the selected chapter\'s painting and cross-fades to the next one (Endless: chapter-endless)',
     h.a.sel === '2' && /chapter-2/.test(h.a.url) && h.a.cover && h.b.sel === '3' && /chapter-3/.test(h.b.url) && h.b.layers === 2 && h.b.fade && /chapter-2/.test(h.under)
-    && /chapter-6/.test(h.e.url) && Math.abs(h.hgt - h.hgt2) < 1, JSON.stringify(h));
+    && /chapter-endless/.test(h.e.url) && Math.abs(h.hgt - h.hgt2) < 1, JSON.stringify(h));
 
   // the run intro card: chapter, twist, difficulty and Blood Moon, in the top third, no input, then gone; banners keep their slot
   const ri = await page.evaluate(async () => {
@@ -2070,8 +2070,8 @@ errs = await session(async (page) => {
     out.gone = gone && !q('.hud').classList.contains('intro-on');
     app.exitRun(); p.flags.bloodMoon = 'off';
     // Endless names the first rotation's twist; Chapter 1 has its own line; Reduce flashes calms it; the Daily Trial keeps its banner
-    p.settings.reduceFlash = true; p.energy = 30; app.startRun(6);
-    out.endless = { name: q('.ri-name').textContent, tag: q('.ri-tag').textContent, kick: q('.ri-kick').textContent, rf: q('.run-intro').classList.contains('rf'), art: /chapter-6/.test(getComputedStyle(q('.ri-art')).backgroundImage) };
+    p.settings.reduceFlash = true; p.energy = 30; app.startRun(100);
+    out.endless = { name: q('.ri-name').textContent, tag: q('.ri-tag').textContent, kick: q('.ri-kick').textContent, rf: q('.run-intro').classList.contains('rf'), art: /chapter-endless/.test(getComputedStyle(q('.ri-art')).backgroundImage) };
     app.exitRun(); p.settings.reduceFlash = false; p.energy = 30; app.startRun(1);
     out.ch1 = { tag: q('.ri-tag').textContent, pills: document.querySelectorAll('.ri-pill').length };
     app.exitRun(); p.trial.done = false; app.startRun(0, { trial: true }); const tr = app.run; app.engine.manual = true; tr.player.hurt = () => {};
@@ -2083,10 +2083,10 @@ errs = await session(async (page) => {
   });
   const K = ri.card;
   check('run intro: names the chapter, its twist, Nightmare and Blood Moon over the painting, in the top third',
-    K.ch === '2' && K.name === 'Ember Wastes' && /fire lingers/.test(K.tag) && /Chapter II/.test(K.kick) && /Nightmare/.test(K.kick) && /Blood Moon/.test(K.kick) && K.art && !K.rf && K.bottom <= K.third, JSON.stringify(K));
+    K.ch === '2' && K.name === 'Ember Wastes' && /fire lingers/.test(K.tag) && /Act I · Chapter 2/.test(K.kick) && /Nightmare/.test(K.kick) && /Blood Moon/.test(K.kick) && K.art && !K.rf && K.bottom <= K.third, JSON.stringify(K));
   check('run intro: takes no input (pointer-events off, taps fall through), then fades and goes; it replaces the chapter banner',
     K.pe === 'none' && K.hits === 0 && ri.gone && ri.at1 === '' && ri.at4 === 'BLOOD MOON', JSON.stringify({ pe: K.pe, hits: K.hits, gone: ri.gone, at1: ri.at1, at4: ri.at4 }));
-  check('run intro: Endless (its first twist, chapter-6, Reduce flashes), Chapter 1 and the Daily Trial (its banner still opens at 0:03.6)',
+  check('run intro: Endless (its first twist, chapter-endless, Reduce flashes), Chapter 1 and the Daily Trial (its banner still opens at 0:03.6)',
     ri.endless.name === 'Endless Abyss' && /^Ember Wastes: /.test(ri.endless.tag) && ri.endless.kick === 'Endless' && ri.endless.rf && ri.endless.art
     && /Hollow King/.test(ri.ch1.tag) && ri.ch1.pills === 0 && /Daily Trial/.test(ri.trial.kick) && ri.trial.banner === 'DAILY TRIAL', JSON.stringify({ e: ri.endless, c: ri.ch1, t: ri.trial }));
 });
@@ -2245,7 +2245,7 @@ errs = await session(async (page) => {
     const app = window.__soulswarm, E = app.engine, p = app.profile, out = { ch: {} };
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
     p.chapter.unlocked = 6; p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
-    for (const id of [1, 2, 3, 4, 5, 6]) {
+    for (const id of [1, 2, 3, 4, 5, 100, 6, 11, 16, 21, 26]) { // Act I, the Endless Abyss, and the first chapter of each later act
       p.energy = 30; app.startRun(id); E.manual = true;
       const r = app.run, W = r.world, u = W.groundMat.uniforms;
       r.player.hurt = () => {}; r.nextGate = r.nextSwarm = 1e9;
@@ -2297,7 +2297,7 @@ errs = await session(async (page) => {
       const m = models[i]; if (!m) return [id, null];
       const g = m.geometry; g.computeBoundingBox(); const b = g.boundingBox;
       return [id, { tris: (g.index ? g.index.count : g.attributes.position.count) / 3, h: +(b.max.y - b.min.y).toFixed(2), want: F.FOES[id].h, floor: +b.min.y.toFixed(3),
-        cx: +((b.min.x + b.max.x) / 2).toFixed(3), wide: b.max.x - b.min.x > b.max.z - b.min.z, map: !!(m.map && m.map.image), hip: +m.gait.a.x.toFixed(2) }];
+        cx: +((b.min.x + b.max.x) / 2).toFixed(3), wide: F.FOES[id].yaw ? b.max.z - b.min.z > b.max.x - b.min.x : b.max.x - b.min.x > b.max.z - b.min.z, // (a side-on quadruped is long along +Z) map: !!(m.map && m.map.image), hip: +m.gait.a.x.toFixed(2) }];
     }));
     const start = (q) => {
       E.setQuality(q); p.energy = 30; app.startRun(1); E.manual = true;
@@ -2331,7 +2331,7 @@ errs = await session(async (page) => {
   });
   const M = s.models, bad = Object.entries(M).filter(([id, m]) => !m || !m.map || Math.abs(m.h - m.want) > 0.02 || Math.abs(m.floor) > 0.01 || Math.abs(m.cx) > 0.01 || !m.wide || m.hip <= 0
     || m.tris < 1000 || m.tris > (m.want > 4 ? 8000 : 3200)); // the five bosses are the tall ones
-  check('painted foes: all thirteen load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length && Object.keys(M).length === 13, JSON.stringify(bad.length ? bad : M));
+  check('painted foes: all twenty-three load standing on the ground, centred, facing +Z, at their heights and within budget', !bad.length && Object.keys(M).length === 23, JSON.stringify(bad.length ? bad : M));
   const md = s.medium, hordeOk = Object.values(md.horde).every((h) => h.painted && h.gait && h.map);
   check('painted foes: in a run the horde, the legion\'s ghosts, the Soul Thief and the Hollow King are painted and walked by the shader',
     hordeOk && Object.values(md.ghosts).every(Boolean) && md.thief && md.boss && md.ticks && md.crowns === 1, JSON.stringify(md));
@@ -2374,7 +2374,7 @@ errs = await session(async (page) => {
     out.withdraw = { marks, roar: b.state, pending: b.zones.filter((z) => z.t < 0).length, teles: r.hazards.teles.filter((t) => t.t < t.dur).length };
     // the Endless Abyss brings the five back in turn: the warning banner names each; the sixth "returns"
     // (a level-up or the relic chest each boss drops would pause the clock: take the first card)
-    r = window.__bossRun(6); const order = [];
+    r = window.__bossRun(100); const order = [];
     // the boss warnings as shown (a jumped clock can bring an elite or event banner over one before it is read)
     const warned = []; { const b0 = r.ui.banner.bind(r.ui); r.ui.banner = (t, sub, kind) => { if (kind === 'boss') warned.push(t); return b0(t, sub, kind); }; }
     const go = (sec) => { for (let i = 0; i < Math.round(sec * 30); i++) { if (r.levelPending) document.querySelector('.lvl-back .card')?.click(); r.update(1 / 30); } };
@@ -3697,6 +3697,232 @@ errs = await session(async (page) => {
     s.ui.card && s.ui.locked && /Isolde/.test(s.ui.name || '') && /Crimson Countess/.test(s.ui.title || '') && s.ui.rite && s.ui.src && s.ui.portrait && /^(audio\/mpeg),\1$/.test(s.voice || ''), JSON.stringify({ u: s.ui, v: s.voice }));
 });
 check('update 12: no runtime errors', !errs.length, errs[0] || '');
+
+// 47. Update 13: the 30-chapter campaign. Six acts of five (ACTS), each with its realm (painted floor, props, weather),
+//     its ground hazard, its foe and its finale boss; earlier bosses return stronger under the act's epithet. The Endless
+//     Abyss moved to ENDLESS_ID (100) and v1 saves carry its records there. Late chapters scale foes and the Shepherd's
+//     weapons together (data.js SCALE), pay more on a first clear and roll richer relics. The home card steps through the
+//     open chapters and the Abyss, and its label opens the campaign map.
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), save = await import('/src/meta/save.js'), eco = await import('/src/meta/economy.js');
+    const W = await import('/src/game/world.js'), WE = await import('/src/game/weather.js'), ART = await import('/src/ui/art.js');
+    const app = window.__soulswarm, p = app.profile, out = {};
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), q = (sel) => document.querySelector(sel);
+    // the campaign's shape
+    const C = D.CHAPTERS;
+    out.data = { n: C.length, acts: D.ACTS.length, spans: D.ACTS.every((A, i) => A.from === i * 5 + 1 && A.to === i * 5 + 5 && C.slice(A.from - 1, A.to).every((c) => c.act === A.n)),
+      finales: D.ACTS.map((A) => C[A.to - 1].bossId + ':' + C[A.to - 1].tier).join(' '),
+      art: C.every((c) => /chapter-\d+/.test(ART.chapterArt(c))) && /chapter-endless/.test(ART.chapterArt(D.ENDLESS)),
+      realms: C.every((c) => W.FLOORS[c.floor] && W.PROPS[c.biome] && W.PROPS[c.biome].length >= 4 && WE.WEATHER[c.biome]),
+      bosses: C.every((c) => D.BOSSES[c.bossId]), returning: C.filter((c) => c.tier > 1).length,
+      endless: D.ENDLESS.id === 100 && D.chapterById(100) === D.ENDLESS && D.chapterById(6) === C[5] && D.ENDLESS.lvl === 6,
+      names: new Set(C.map((c) => c.name)).size };
+    // save migration: a v1 profile's Endless records (chapter 6) move to 100; a v2 one's chapter 6 is Chapter 6
+    const KEY = 'soulswarm.save.v1', load = (v) => { localStorage.setItem(KEY, JSON.stringify(v)); const r = save.loadProfile(); localStorage.removeItem(KEY); return r; };
+    const v1 = save.newProfile(); delete v1.v; v1.chapter = { unlocked: 6, selected: 6, best: { 5: { time: 400, cleared: true, kills: 9 }, 6: { time: 1234, cleared: false, kills: 77, depth: 4 } } };
+    const a = load(v1);
+    const v2 = save.newProfile(); v2.chapter = { unlocked: 31, selected: 7, best: { 6: { time: 380, cleared: true, kills: 5 } } };
+    const b = load(v2);
+    out.save = { endless: a.chapter.best[100] && a.chapter.best[100].time, six: !!a.chapter.best[6], sel: a.chapter.selected, v: a.v,
+      keep: !!(b.chapter.best[6] && b.chapter.best[6].cleared), clamp: b.chapter.unlocked, sel2: b.chapter.selected };
+    // rewards: Act I's first clears are unchanged; later ones pay 100 gems (an act's last 250 + 3 Sigils); richer hoards
+    out.rewards = { g: [1, 5, 6, 9, 10, 25, 30].map(D.firstClearGems), sig: [1, 5, 6, 10, 30].map(D.firstClearSigils),
+      hoard: [6, 11, 21, 30].map((c) => Object.keys(D.normalHoard(c)).join('/')) };
+    // a harder tier never pays less than Normal there: Nightmare takes the richer table, Torment adds the chapter's Legendary chance
+    const DF = await import('/src/meta/difficulty.js');
+    out.rewards.hard = { nm6: DF.hoardOdds(D.DIFFICULTY.nightmare, 6).epic, nm21: DF.hoardOdds(D.DIFFICULTY.nightmare, 21).legendary, t3: DF.hoardOdds(D.DIFFICULTY.torment, 3).legendary, t30: +DF.hoardOdds(D.DIFFICULTY.torment, 30).legendary.toFixed(3) };
+    const res = (ch, extra = {}) => ({ chapter: ch, time: 380, kills: 3000, raised: 400, bestLegion: 150, novas: 5, gates: 8, victory: true, level: 30, bonusGold: 0, heroId: 'vael', endless: false, bossKills: 0, ...extra });
+    const keep = JSON.stringify(p);
+    p.chapter.unlocked = 10; delete p.chapter.best[10];
+    const r10 = eco.applyRunResult(p, res(10));
+    out.rewards.ch10 = { first: r10.rewards.firstClearGems, sigils: r10.rewards.sigils, unlocked: p.chapter.unlocked, relic: r10.rewards.relic };
+    p.chapter.unlocked = 30; delete p.chapter.best[30];
+    const r30 = eco.applyRunResult(p, res(30));
+    out.rewards.ch30 = { first: r30.rewards.firstClearGems, unlocked: p.chapter.unlocked };
+    Object.keys(p).forEach((k) => delete p[k]); Object.assign(p, JSON.parse(keep));
+    // scaling: weapons keep pace from Chapter 6 (Act I and the Abyss play as before); a returning boss is named and harder
+    const tough = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off'; p.chapter.unlocked = 30;
+    for (const ch of [1, 5, 6, 10, 20, 30, 100]) {
+      p.energy = 30; app.startRun(ch); const r = app.run;
+      tough[ch] = { wm: +r.stats.weaponMul.toFixed(2), hp: +r.hpMul().toFixed(2), dmg: +r.dmgMul().toFixed(2), lvl: r.lvl };
+      app.exitRun();
+    }
+    out.scale = tough;
+    // returning bosses: the bar and the warning carry the act's epithet; tiers fight faster
+    const warned = [];
+    let r = window.__bossRun(12); out.tier = { id: r.boss.id, tier: r.boss.tier, bar: q('.bossbar .nm')?.textContent, rate: r.boss.tierRate, dirge: r.boss.dirgeAt, dirge0: D.BOSS_PHASES.dirge.at };
+    app.exitRun();
+    p.energy = 30; app.startRun(7); r = app.run; { const b0 = r.ui.banner.bind(r.ui); r.ui.banner = (t, sub, kind) => { if (kind === 'boss') warned.push(t + ' | ' + sub); return b0(t, sub, kind); }; }
+    r.player.hurt = () => {}; r.time = 352.5; for (let i = 0; i < 20; i++) r.update(1 / 30);
+    out.tier.warn = warned[0]; app.exitRun();
+    // Act foes: only in their acts (the director never picks one elsewhere)
+    const picks = (ch, min) => { p.energy = 30; app.startRun(ch); const rr = app.run; rr.time = min * 60; const n = {}; for (let i = 0; i < 4000; i++) { const t = rr.pickType(); n[t] = (n[t] || 0) + 1; } app.exitRun(); return n; };
+    const P1 = picks(5, 4), P6 = picks(7, 3), P11 = picks(12, 3), P16 = picks(17, 3), P21 = picks(22, 3), P26 = picks(27, 3);
+    const actFoes = ['siren', 'thornback', 'rat', 'caller', 'stalker'];
+    out.foes = { act1: actFoes.filter((t) => P1[t]).length, siren: P6.siren || 0, thornback: P11.thornback || 0, rat: P16.rat || 0, caller: P21.caller || 0, stalker: P26.stalker || 0,
+      stray: [[P6, 'siren'], [P11, 'thornback'], [P16, 'rat'], [P21, 'caller'], [P26, 'stalker']].map(([n, own]) => actFoes.filter((t) => t !== own && n[t]).join('+')).filter(Boolean).join(',') };
+    return out;
+  });
+  const d = s.data;
+  check('campaign: 30 chapters in six acts of five, each painted, in its realm (floor, props, weather), each with a boss; the five act finales bring a new boss',
+    d.n === 30 && d.acts === 6 && d.spans && d.art && d.realms && d.bosses && d.names === 30 && d.finales === 'vesperine:1 morwenna:1 gorrath:1 mire:1 kaelthar:1 nihl:1' && d.returning >= 15, JSON.stringify(d));
+  check('campaign: the Endless Abyss is ENDLESS_ID (100), plays at level 6, and chapterById keeps Chapter 6 as Chapter 6', d.endless, JSON.stringify(d));
+  check('campaign save: a v1 save\'s Endless record and choice move from 6 to 100; a v2 save keeps Chapter 6, and unlocked clamps to 30',
+    s.save.endless === 1234 && !s.save.six && s.save.sel === 100 && s.save.v === 2 && s.save.keep && s.save.clamp === 30 && s.save.sel2 === 7, JSON.stringify(s.save));
+  const R = s.rewards;
+  check('campaign rewards: Act I first clears unchanged; later 100 gems, an act finale 250 + 3 Sigils; Chapter 10 opens 11, Chapter 30 opens nothing; richer relic hoards, and a harder tier never pays less',
+    R.g.join() === '58,130,100,100,250,250,250' && R.sig.join() === '1,1,1,3,3' && R.ch10.first === 250 && R.ch10.sigils === 3 && R.ch10.unlocked === 11 && R.ch10.relic && R.ch30.first === 250 && R.ch30.unlocked === 30
+    && R.hoard.join(' ') === 'common/rare/epic rare/epic rare/epic/legendary rare/epic/legendary'
+    && R.hard.nm6 === 0.4 && R.hard.nm21 === 0.03 && R.hard.t3 === 0.02 && R.hard.t30 === 0.05, JSON.stringify(R));
+  const T = s.scale;
+  check('campaign scaling: Act I and the Abyss keep weapon ×1; from Chapter 6 weapons and foes climb together, foes a step ahead',
+    T[1].wm === 1 && T[5].wm === 1 && T[100].wm === 1 && T[100].lvl === 6 && T[6].wm > 1 && T[10].wm > T[6].wm && T[30].wm > T[20].wm
+    && T[6].hp / T[5].hp > T[6].wm && T[30].hp > T[20].hp && T[30].dmg > T[20].dmg && T[20].dmg > T[6].dmg, JSON.stringify(T));
+  check('campaign: a returning boss carries the act\'s epithet on the bar and the warning, fights faster and sings the Dirge sooner',
+    s.tier.id === 'gravemaw' && s.tier.tier === 3 && /^Thornbound Gravemaw/i.test(s.tier.bar || '') && s.tier.rate > 1 && s.tier.dirge < s.tier.dirge0 && /RETURNS \| Drowned Pyrexa: stronger than before/.test(s.tier.warn || ''), JSON.stringify(s.tier));
+  check('campaign foes: each act\'s foe comes only in its own act (none in Act I)',
+    s.foes.act1 === 0 && s.foes.siren > 0 && s.foes.thornback > 0 && s.foes.rat > 0 && s.foes.caller > 0 && s.foes.stalker > 0 && !s.foes.stray, JSON.stringify(s.foes));
+});
+check('update 13 campaign: no runtime errors', !errs.length, errs[0] || '');
+
+// 48. Update 13: the realms' hazards and the act foes at work, in quiet arenas (no director, no weapons)
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), app = window.__soulswarm, p = app.profile, out = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off'; p.chapter.unlocked = 30;
+    const start = (ch) => {
+      if (app.run) app.exitRun();
+      p.energy = 30; app.startRun(ch); const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0; r.time = 120;
+      r.weapons.update = () => {}; r.addXp = () => {}; r.player.invuln = 0; r.input.tx = r.input.tz = 0; r.events.nextAt = 1e9;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const near = (r, type, dx, dz) => { const e = r.enemies.spawn(type, r.player.x + dx, r.player.z + dz, { hpMul: 50 }); e.spawnT = 2; return e; };
+    const find = (r, kind, fn) => { const H = r.hazards; for (let cx = -8; cx <= 8; cx++) for (let cz = -8; cz <= 8; cz++) for (let k = 0; k < 9; k++) { const x = cx * 6 + (k % 3) * 2, z = cz * 6 + ((k / 3) | 0) * 2; if (fn(H, x, z)) return { x, z }; } return null; };
+    // tide pools slow the Shepherd (Act II); brambles slow and cut (Act III)
+    let r = start(6), H = r.hazards, P = r.player;
+    let at = find(r, 'tide', (H, x, z) => H.tideAt(x, z));
+    out.tide = at ? { slow: H.slowAt(at.x, at.z) } : null;
+    if (at) { P.x = at.x; P.z = at.z; r.input.tx = 0.3; step(r, 0.1); out.tide.ground = P.ground; r.input.tx = 0; }
+    r = start(11); H = r.hazards; P = r.player;
+    at = find(r, 'brambles', (H, x, z) => H.brambleAt(x, z) && H.slowAt(x, z) < 1);
+    if (at) { P.x = at.x; P.z = at.z; const hp0 = P.hp; step(r, 2); out.bramble = { slow: H.slowAt(at.x, at.z), cut: +(hp0 - P.hp).toFixed(1) }; }
+    // miasma clouds drift through the fens (Act IV) and poison; lightning strikes where the Shepherd goes (Act V)
+    r = start(16); H = r.hazards; P = r.player; step(r, 0.2);
+    out.miasma = { clouds: H.clouds.length };
+    if (H.clouds[0]) { const c = H.clouds[0]; c.t = 3; P.x = c.x; P.z = c.z; c.vx = c.vz = 0; const hp0 = P.hp; step(r, 1.5); out.miasma.poison = +(hp0 - P.hp).toFixed(1); }
+    r = start(21); H = r.hazards; P = r.player; H.boltT = 0; step(r, 0.1);
+    out.lightning = { marked: H.bolts.length, at: H.bolts[0] && +Math.hypot(H.bolts[0].x - P.x, H.bolts[0].z - P.z).toFixed(1) };
+    if (H.bolts[0]) { H.bolts[0].x = P.x; H.bolts[0].z = P.z; } // (a mark can land up to 2.2 m off: stand under it)
+    let hurt = 0; P.hurt = () => { hurt++; }; H.boltT = 99; step(r, 1.3); out.lightning.struck = hurt; out.lightning.left = H.bolts.length;
+    // gravity wells pull the Shepherd toward their cores (Act VI)
+    r = start(26); H = r.hazards; P = r.player;
+    const G = D.HAZARDS.gravity; let pulled = null;
+    for (let i = 0; i < 400 && !pulled; i++) { step(r, 1 / 30 * 6); for (let k = 0; k < H.nw; k++) { const Wl = H.wells[k]; if (Wl.pull) { pulled = { x: Wl.x, z: Wl.z }; break; } } }
+    if (pulled) { P.x = pulled.x + G.radius * 0.5; P.z = pulled.z; const d0 = Math.hypot(P.x - pulled.x, P.z - pulled.z); step(r, 0.2); out.well = { d0: +d0.toFixed(2), d1: +Math.hypot(P.x - pulled.x, P.z - pulled.z).toFixed(2) }; }
+    // a Siren's song holds the minions inside its circle; they drift to her and fight again after
+    r = start(7); P = r.player; P.hurt = () => {};
+    for (let i = 0; i < 8; i++) r.legion.raise(P.x + (Math.random() - 0.5), P.z + (Math.random() - 0.5), { fx: false });
+    let e = near(r, 'siren', 0, -8); e.shootCd = 0;
+    step(r, 0.1); out.siren = { marked: e.state === 1 && !!e.tele };
+    step(r, D.ENEMIES.siren.song.tele - 0.2);
+    for (const m of r.legion.list) { m.x = e.lx + (Math.random() - 0.5); m.z = e.lz + (Math.random() - 0.5); } // (they ran at her: back into the circle)
+    step(r, 0.3);
+    out.siren.held = r.legion.list.filter((m) => m.charmT > 0).length;
+    step(r, D.ENEMIES.siren.song.entrance + 0.3); out.siren.free = r.legion.list.filter((m) => m.charmT > 0).length;
+    // a Thornback marks a lane, charges down it, throws the Shepherd aside and leaves brambles
+    r = start(12); P = r.player; hurt = 0; P.hurt = () => { hurt++; };
+    e = near(r, 'thornback', 0, -6); e.moveCd = 0; const tr0 = r.hazards.trails.length;
+    step(r, 0.1); out.thorn = { lane: e.state === 1 && r.hazards.lines.length > 0 };
+    for (let i = 0; i < 90 && e.state !== 3; i++) step(r, 1 / 30); out.thorn.hit = hurt; out.thorn.trail = r.hazards.trails.filter((t) => t.kind === 'bramble').length - tr0; // to the end of the charge
+    // a Plague Rat swarm comes as a pack; a Stormcaller's bolt runs down its marked line; a Void Stalker blinks beside him
+    r = start(17); const before = r.enemies.counts.rat; r.spawnPack(10, 'rat'); out.rats = r.enemies.counts.rat - before;
+    r = start(22); P = r.player; hurt = 0; P.hurt = () => { hurt++; };
+    e = near(r, 'caller', 0, -7); e.shootCd = 0; step(r, 0.1); out.caller = { marked: e.state === 1 && r.hazards.lines.length > 0 };
+    step(r, D.ENEMIES.caller.bolt.tele + 0.1); out.caller.struck = hurt;
+    r = start(27); P = r.player; P.hurt = () => {};
+    e = near(r, 'stalker', 0, -9); e.shootCd = 0; step(r, 0.1); out.stalker = { marked: e.state === 1 && !!e.tele, d0: +Math.hypot(e.x - P.x, e.z - P.z).toFixed(1) };
+    step(r, D.ENEMIES.stalker.blink.tele + 0.05); out.stalker.d1 = +Math.hypot(e.x - P.x, e.z - P.z).toFixed(1);
+    app.exitRun();
+    return out;
+  });
+  check('realms: tide pools slow the Shepherd (Act II); brambles slow and cut him (Act III)',
+    s.tide && s.tide.slow < 1 && s.tide.ground < 1 && s.bramble && s.bramble.slow < 1 && s.bramble.cut > 0, JSON.stringify({ t: s.tide, b: s.bramble }));
+  check('realms: miasma clouds drift through the fens and poison (Act IV); lightning marks where he goes, then strikes (Act V)',
+    s.miasma.clouds >= 2 && s.miasma.poison > 0 && s.lightning.marked === 1 && s.lightning.at < 4 && s.lightning.struck === 1 && s.lightning.left === 0, JSON.stringify({ m: s.miasma, l: s.lightning }));
+  check('realms: a gravity well pulls the Shepherd toward its core (Act VI)', s.well && s.well.d1 < s.well.d0 - 0.1, JSON.stringify(s.well));
+  check('act foes: the Siren sings a marked circle that holds the minions inside, then lets them go',
+    s.siren.marked && s.siren.held >= 6 && s.siren.free === 0, JSON.stringify(s.siren));
+  check('act foes: the Thornback marks a lane, charges, throws the Shepherd once and leaves brambles; Plague Rats come as a pack',
+    s.thorn.lane && s.thorn.hit === 1 && s.thorn.trail > 0 && s.rats >= 9, JSON.stringify({ t: s.thorn, rats: s.rats }));
+  check('act foes: the Stormcaller marks a line and its bolt strikes; the Void Stalker marks a spot beside him and blinks there',
+    s.caller.marked && s.caller.struck === 1 && s.stalker.marked && s.stalker.d0 > 8 && s.stalker.d1 < 4, JSON.stringify({ c: s.caller, s: s.stalker }));
+});
+check('update 13 realms: no runtime errors', !errs.length, errs[0] || '');
+
+// 49. Update 13: the act bosses' signatures (Tidal Lanes, Briar Roots, Plague Spores, the Tempest, the First Night's
+//     echoes and pull), their painted models and voices, and the chapter map
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), app = window.__soulswarm, p = app.profile, out = { ch: {} };
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), q = (sel) => document.querySelector(sel);
+    await app.foeModels.loadFoeModels();
+    p.chapter.unlocked = 30;
+    for (const ch of [10, 15, 20, 25, 30]) {
+      const r = window.__bossRun(ch), b = r.boss, P = r.player;
+      r.weapons.update = () => {};
+      const c = out.ch[ch] = { id: b.id, bar: q('.bossbar .nm').textContent, painted: !!b.mat.uniforms.uMap.value, tier: b.tier };
+      let hurt = 0; P.hurt = () => { hurt++; };
+      b.cd = 99;
+      if (b.id === 'morwenna') { b.force('tidal'); c.lanes = b.lanes.length; c.state = b.state; const L = b.lanes[0]; P.x = (L.x0 + L.x1) / 2; P.z = (L.z0 + L.z1) / 2; window.__step(r, 1.6); c.fired = b.lanes.filter((l) => l.fired).length; }
+      if (b.id === 'gorrath') { b.force('roots'); c.state = b.state; c.zones = b.zones.length; const z = b.zones[0]; P.x = z.x; P.z = z.z; window.__step(r, 1.8); c.rooted = (P.rootT || 0) > 0 || hurt > 0; }
+      if (b.id === 'mire') { b.force('spores'); c.state = b.state; window.__step(r, 0.4); c.lobs = r.projectiles.lobs.filter((l) => l.burn === 'miasma').length; window.__step(r, 2.5); c.clouds = r.hazards.trails.filter((t) => t.kind === 'miasma').length; }
+      if (b.id === 'kaelthar') { b.force('storm'); c.state = b.state; c.beams = b.beams && b.beams.n; window.__step(r, 1.4); c.lines = r.hazards.lines.length; c.thunder = !!r.hazards.thunder; }
+      if (b.id === 'nihl') { const ks = []; for (let i = 0; i < 4; i++) { b.state = 'chase'; b.force('echo'); ks.push(b.state); b.cancelAttacks && b.cancelAttacks(); } c.echo = ks; b.state = 'chase'; b.wellT = 0; window.__step(r, 0.2); c.well = !!b.well; }
+      c.hurt = hurt;
+    }
+    app.exitRun();
+    // their announcer lines and painted portraits ship
+    const keys = ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'].flatMap((b) => ['a_' + b, 'a_' + b + '_return', 'a_' + b + '_slain']);
+    const types = await Promise.all(keys.map((k) => fetch('/src/assets/voice/' + k + '.mp3').then((x) => (x.ok ? x.headers.get('content-type') : 'missing'))));
+    out.voice = types.every((t) => t === 'audio/mpeg') ? keys.length : types.join();
+    const ART = await import('/src/ui/art.js');
+    out.bestiary = ['siren', 'thornback', 'rat', 'caller', 'stalker', 'morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'].filter((id) => D.BESTIARY.order.includes(id) && ART.FOE_ART[id]).length;
+    out.models = ['siren', 'thornback', 'rat', 'caller', 'stalker', 'morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'].filter((id) => app.foeModels.foeModel(id)).length;
+    // the home card: Act II · Chapter 7 with its act's five dots; the arrows reach the Endless Abyss; the label opens the map
+    p.flags.tutorialDone = true; p.flags.coach = ''; p.chapter.unlocked = 8; p.chapter.selected = 7; app.meta.show('battle'); app.meta.refresh(); await wait(150);
+    out.home = { label: q('.chap-no')?.textContent.trim(), dots: document.querySelectorAll('.chap-dots i').length, on: [...document.querySelectorAll('.chap-dots i')].findIndex((i) => i.classList.contains('on')) };
+    for (let i = 0; i < 3; i++) { q('.chap [data-act="next"]').click(); await wait(60); } // 8, 9 (the next, locked) and the Abyss
+    out.home.end = p.chapter.selected; out.home.endLabel = q('.chap-no')?.textContent.trim(); out.home.nextOff = q('.chap [data-act="next"]').disabled;
+    q('.chap-no').click(); await wait(200);
+    const m = q('.mm-chapters');
+    out.map = { open: !!m, acts: m ? m.querySelectorAll('.cm-act:not(.cm-endless)').length : 0, tiles: m ? m.querySelectorAll('.cm-ch:not(.cm-wide)').length : 0,
+      locked: m ? m.querySelectorAll('.cm-ch.lk').length : 0, on: m && m.querySelector('.cm-ch.on')?.dataset.id };
+    m && m.querySelector('.cm-ch[data-id="20"]').click(); await wait(80);
+    out.map.lockedTap = p.chapter.selected;
+    m && m.querySelector('.cm-ch[data-id="3"]').click(); await wait(150);
+    out.map.picked = p.chapter.selected; out.map.closed = !q('.mm-chapters'); out.map.label = q('.chap-no')?.textContent.trim();
+    return out;
+  });
+  const B = s.ch, D_NAME = { morwenna: 'Morwenna', gorrath: 'Gorrath', mire: 'Mother Mire', kaelthar: 'Kaelthar', nihl: 'Nihl' };
+  check('act bosses: each act finale fights in its colour, painted, named on the bar',
+    B[10].id === 'morwenna' && B[15].id === 'gorrath' && B[20].id === 'mire' && B[25].id === 'kaelthar' && B[30].id === 'nihl' && Object.values(B).every((c) => c.painted && c.tier === 1 && c.bar.toUpperCase().includes(D_NAME[c.id].toUpperCase())), JSON.stringify(B));
+  check('act bosses: Morwenna\'s Tidal Lanes mark and fire; Gorrath\'s roots rise where marked; Mother Mire lobs spores that leave miasma',
+    B[10].state === 'tidal' && B[10].lanes >= 2 && B[10].fired >= 1 && B[10].hurt >= 1 && B[15].state === 'roots' && B[15].zones > 3 && B[15].rooted && B[20].state === 'spores' && B[20].lobs > 0 && B[20].clouds > 0, JSON.stringify([B[10], B[15], B[20]]));
+  check('act bosses: Kaelthar\'s Tempest sweeps beams and calls thunder; Nihl echoes the fallen bosses\' signatures and pulls',
+    B[25].state === 'storm' && B[25].beams >= 2 && B[25].lines >= 2 && B[25].thunder && B[30].echo.length === 4 && new Set(B[30].echo).size === 4 && B[30].well, JSON.stringify([B[25], B[30]]));
+  check('act bosses and foes: 15 announcer lines, 10 Bestiary paintings and 10 painted models ship', s.voice === 15 && s.bestiary === 10 && s.models === 10, JSON.stringify({ v: s.voice, b: s.bestiary, m: s.models }));
+  check('chapter card: "Act II · Chapter 7" with its act\'s five dots; the arrows step to the next open chapter and the Endless Abyss, then stop',
+    /Act II · Chapter 7/.test(s.home.label) && s.home.dots === 5 && s.home.on === 1 && s.home.end === 100 && /Endless/.test(s.home.endLabel) && s.home.nextOff, JSON.stringify(s.home));
+  check('chapter map: six acts of five painted tiles (locked past the next chapter), the Abyss below; a locked tap does nothing, an open one selects and closes',
+    s.map.open && s.map.acts === 6 && s.map.tiles === 30 && s.map.locked === 22 && s.map.on === '100' && s.map.lockedTap === 100 && s.map.picked === 3 && s.map.closed && /Act I · Chapter 3/.test(s.map.label), JSON.stringify(s.map));
+});
+check('update 13 bosses and map: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

@@ -1,6 +1,6 @@
 // Player profile persistence. localStorage can be unavailable (private mode, sandboxed previews),
 // so every access is guarded and the game still runs from in-memory state.
-import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, RELICS, RARITIES, RELIC_SLOTS, TALENTS, CHAPTERS } from '../game/data.js';
+import { HERO_ORDER, HEROES, HERO_MAX_STARS, ENERGY_MAX, STARTER_PACK_HOURS, RELICS, RARITIES, RELIC_SLOTS, TALENTS, CAMPAIGN_LENGTH, ENDLESS_ID, ENDLESS_UNLOCK } from '../game/data.js';
 import { migrateDifficulty } from './difficulty.js';
 import { BESTIARY, GRIMOIRE } from '../game/data.js';
 import { bestiaryGoals } from './bestiary.js';
@@ -17,7 +17,7 @@ export function newProfile() {
   const heroes = {};
   for (const id of HERO_ORDER) heroes[id] = { owned: id === 'vael', stars: id === 'vael' ? 1 : 0, shards: 0 };
   return {
-    v: 1,
+    v: 2, // 2: the 30-chapter campaign (Update 13); the Endless Abyss moved from chapter id 6 to ENDLESS_ID
     createdAt: now,
     lastSeen: now,
     clock: { t: 0, day: '' }, // meta/clock.js: last trusted time and latest day, so winding the clock back gains nothing
@@ -87,7 +87,18 @@ function migrate(p) {
     .map((r) => ({ ...r, level: int(r.level, 1, 1, 10), stars: int(r.stars, 0, 0, 5), dups: int(r.dups, 0, 0, 999) })); // Relic Ascension: stars and shards
   out.equipped = Array.from({ length: RELIC_SLOTS }, (_, i) => { const u = out.equipped[i]; return uids.has(u) && out.equipped.indexOf(u) === i ? u : null; });
   out.relicSeq = Math.max(int(out.relicSeq, 1, 1), ...out.relics.map((r) => (parseInt(String(r.uid).slice(1), 10) || 0) + 1)); // new relics never reuse an id
-  out.chapter.unlocked = int(out.chapter.unlocked, 1, 1, CHAPTERS.length); out.chapter.selected = int(out.chapter.selected, 1, 1, CHAPTERS.length);
+  // Update 13: the Endless Abyss was chapter id 6 while the campaign had five chapters; a v1 save's records and choice for it
+  // move to ENDLESS_ID (unlocked 6 = Chapter 5 cleared = Chapter 6 and the Endless Abyss open)
+  if (!(p && +p.v >= 2)) {
+    const C = out.chapter, D = out.diff;
+    if (C.best && C.best[6]) { C.best[ENDLESS_ID] = C.best[6]; delete C.best[6]; }
+    if (D && D.best && D.best[6]) { D.best[ENDLESS_ID] = D.best[6]; delete D.best[6]; }
+    if (D && D.sel) delete D.sel[6];
+    if (+C.selected === 6) C.selected = ENDLESS_ID;
+  }
+  out.v = 2;
+  out.chapter.unlocked = int(out.chapter.unlocked, 1, 1, CAMPAIGN_LENGTH);
+  out.chapter.selected = +out.chapter.selected === ENDLESS_ID && out.chapter.unlocked >= ENDLESS_UNLOCK ? ENDLESS_ID : int(out.chapter.selected, 1, 1, CAMPAIGN_LENGTH);
   migrateDifficulty(out);
   for (const id of BESTIARY.order) { const b = out.bestiary; b.kills[id] = int(b.kills[id], 0); b.claimed[id] = int(b.claimed[id], 0, 0, bestiaryGoals(id).length); }
   if (!(p && p.bestiary)) out.bestiary.kills.gravemaw = int(out.stats.clears, 0); // saves from before the Bestiary: every clear slew Gravemaw

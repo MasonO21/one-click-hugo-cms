@@ -15,6 +15,8 @@ const TAU = Math.PI * 2;
 // enemy type -> variant key (anything unknown rises as a Shade)
 const VARIANT_OF = {};
 for (const k in MINIONS) if (MINIONS[k].from) VARIANT_OF[MINIONS[k].from] = k;
+// Update 13's act foes rise as the nearest kin among the legion's variants
+Object.assign(VARIANT_OF, { rat: 'runner', thornback: 'bulwark', siren: 'soulWitch', caller: 'soulWitch', stalker: 'phantom' });
 // spectral variants: source model and instance capacity (when a mesh is full, extras draw as wisps)
 const GHOSTS = { runner: { model: 'ghoul', max: 160 }, bulwark: { model: 'brute', max: 96 }, soulWitch: { model: 'witch', max: 96 }, soulBomb: { model: 'bloater', max: 64 },
   phantom: { model: 'wraith', max: 64 }, soulPriest: { model: 'priest', max: 24 } };
@@ -26,6 +28,7 @@ const LIFT = 0.3;
 const RADIUS = { shade: 0.35 };
 for (const k of GHOST_KINDS) { const E = ENEMIES[GHOSTS[k].model]; RADIUS[k] = E.radius * (MINIONS[k].scale || 1) / (E.scale || 1); }
 const MAX_ORBS = 120, MAX_CAND = 40;
+const SONG_HDR = [0.6, 3.0, 2.6]; // a Drowned Siren's song over the minions it holds
 const TITHE_HDR = [3.2, 1.6, 0.6], FX_TITHE = { speed: 5, life: 0.35, size: 0.4, up: 1 }; // Ossuary Tithe's bursts
 const GOLD = new THREE.Color(0xffd04a), GOLD_HDR = [3.2, 2.3, 0.6], WHITE_HDR = [3.2, 3.3, 3.5], HEAL_HDR = [1.0, 3.2, 2.2], SHADE_DIE_HDR = [2.5, 2.5, 2.8];
 // shared option objects: enemies.damage and particles.burst read them at once and keep no reference
@@ -138,7 +141,7 @@ export class Legion {
     m.radius = RADIUS[key] * (elite ? C.scale : 1);
     m.target = null; m.tuid = 0; m.retarget = Math.random() * 0.3; m.atkCd = 0.2;
     m.born = 0; m.phase = Math.random() * 6.28; m.slot = this.slotSeq++;
-    m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1; m.fade = 0;
+    m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1; m.fade = 0; m.charmT = 0;
     this.list.push(m);
     if (key === 'bulwark') this.taunters.push(m);
     if (this.list.length > this.peak) this.peak = this.list.length;
@@ -276,17 +279,19 @@ export class Legion {
       m.born += dt;
       m.atkCd -= dt * haste;
       m.retarget -= dt;
+      // entranced by a Drowned Siren's song: no fighting, a slow drift toward the singer (a Soul Bomb's lit fuse burns on)
+      const charmed = m.charmT > 0 && (m.charmT -= dt) > 0 && m.fuse < 0;
       if (m.flash > 0) m.flash = Math.max(0, m.flash - dt * 6);
       const leash = BASE.minionLeash + (v.leash || 0);
       const maxSpeed = S.minionSpeed * v.speed;
 
       // keep a target only while it stays inside the leash around the Shepherd; at most bossEngage fight the boss
-      let tg = m.target;
+      let tg = charmed ? null : m.target;
       if (tg && (!tg.active || tg.uid !== m.tuid || (tg.x - P.x) ** 2 + (tg.z - P.z) ** 2 > (leash + 3) ** 2)) tg = null;
       if (tg && tg === boss && m.fuse < 0) { if (engaged < M.bossEngage) engaged++; else tg = null; }
       if (m.retarget <= 0) {
         m.retarget = kind === 'soulBomb' ? v.searchEvery * (0.8 + Math.random() * 0.4) : 0.25 + Math.random() * 0.2;
-        if (!tg && m.fuse < 0) {
+        if (!tg && m.fuse < 0 && !charmed) {
           this._leash2 = leash * leash; this._bossFull = engaged >= M.bossEngage;
           tg = kind === 'soulBomb' ? this.findCluster(m, v) : this.nearestFor(m.x, m.z, v.seek);
           if (tg) { m.tuid = tg.uid; if (tg === boss) engaged++; }
@@ -301,6 +306,9 @@ export class Legion {
         m.flash = 0.55 + 0.45 * Math.sin(m.fuse * 60);
         if (m.fuse >= v.fuse) { this.detonate(m, v); alive--; this.pool.push(m); continue; }
         tx = m.x; tz = m.z; desiredSpeed = 0;
+      } else if (charmed) {
+        tx = m.cx; tz = m.cz; desiredSpeed = maxSpeed * 0.35; arrive = -1;
+        if (Math.random() < dt * 3) run.particles.emit(m.x, m.y + 0.6, m.z, 0, 1.1, 0, 0.6, 0.28, 0.03, SONG_HDR[0], SONG_HDR[1], SONG_HDR[2], 0.9, 0, 0);
       } else if (tg && kind === 'soulWitch') {
         // hold `keep` metres from the target, drifting sideways
         const ox = m.x - tg.x, oz = m.z - tg.z, od = Math.sqrt(ox * ox + oz * oz) || 0.001;
@@ -384,6 +392,19 @@ export class Legion {
     T.length = tn;
     this.fadeOverflow(dt, fading);
     this.updateOrbs(dt);
+  }
+
+  /** A Drowned Siren's song: minions within r m of (x, z) stop fighting for t s and drift toward the singer (sx, sz).
+   *  Returns how many it held. */
+  entrance(x, z, r, t, sx, sz) {
+    const L = this.list, r2 = r * r;
+    let n = 0;
+    for (let i = 0; i < L.length; i++) {
+      const m = L[i];
+      if (m.gone || !(m.hp > 0) || m.fade > 0 || (m.x - x) ** 2 + (m.z - z) ** 2 > r2) continue;
+      m.charmT = Math.max(m.charmT || 0, t); m.cx = sx; m.cz = sz; m.target = null; n++;
+    }
+    return n;
   }
 
   /** Ossuary Tithe: a fallen minion bursts for T.dmg × minion damage within T.r m (as a Soul Bomb does, it passes

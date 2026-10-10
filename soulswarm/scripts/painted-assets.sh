@@ -10,10 +10,10 @@ mkdir -p "$W"
 for h in vael nyx seraphine mordrake liora osric grimsby; do
   convert "$A/hero-$h.jpg" -resize 540x720 -quality 80 -define webp:method=6 "$W/hero-$h.webp"
 done
-for i in 1 2 3 4 5 6; do # chapter key art (home chapter card, run intro)
+for i in $(seq 1 30) endless; do # chapter key art (home chapter card, chapter map, run intro)
   convert "$A/chapter-$i.jpg" -resize 960x -quality 72 -define webp:method=6 "$W/chapter-$i.webp"
 done
-for f in husk ghoul brute witch bloater wraith priest thief; do # Bestiary portraits
+for f in husk ghoul brute witch bloater wraith priest thief siren thornback rat caller stalker; do # Bestiary portraits
   convert "$A/foe-$f.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-$f.webp"
 done
 for r in lantern crown idol heart boots coin hourglass eye; do # relic icons (tiles, detail, Altar reveal, reward chips)
@@ -29,7 +29,7 @@ for i in 1 2 3 4 5 6; do # gem packs, smallest to largest (shop)
   convert "$A/gems-$i.jpg" -resize 288x288 -quality 82 -define webp:method=6 "$W/gems-$i.webp"
 done
 convert "$A/skin-eclipse-vael.jpg" -resize 540x720 -quality 80 -define webp:method=6 "$W/skin-eclipse-vael.webp" # Soul Pass skin
-for b in gravemaw pyrexa vaulkar azrathel vesperine; do # the chapter bosses: Bestiary portrait and boss-warning band
+for b in gravemaw pyrexa vaulkar azrathel vesperine morwenna gorrath mire kaelthar nihl; do # the chapter bosses: Bestiary portrait and boss-warning band
   convert "$A/boss-$b.jpg" -resize 540x720 -quality 78 -define webp:method=6 "$W/foe-$b.webp"
   convert "$A/boss-$b.jpg" -crop 1792x1000+0+60 +repage -resize 900x -quality 78 -define webp:method=6 "$W/boss-band-$b.webp"
 done

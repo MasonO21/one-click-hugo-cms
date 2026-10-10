@@ -12,7 +12,7 @@
 // outward, Hallowfire's terror leaves foes vulnerable, half of Osric's monks rise as Champions. Rank 10 adds an aura.
 // Run.update calls poll() (input), update(dt) right after the Shepherd moves, and render() inside the glow pass.
 import * as THREE from 'three';
-import { RITES, EVOLUTIONS } from './data.js';
+import { RITES, EVOLUTIONS, chapterLevel } from './data.js';
 import { hdr } from '../engine/particles.js';
 import { makeRuneCircle, makeArc } from './fxmeshes.js';
 
@@ -179,7 +179,7 @@ export class Rites {
   dmg(base, crit = true) {
     const run = this.run, S = run.stats;
     this.o.crit = crit && Math.random() < S.crit;
-    return base * S.dmgMul * (1 + RITES.ch * (run.chapter.id - 1)) * (this.o.crit ? 2 : 1);
+    return base * S.dmgMul * (1 + RITES.ch * (chapterLevel(run.chapter) - 1)) * (this.o.crit ? 2 : 1);
   }
 
   opts(kx, kz, knock, silent) { const o = this.o; o.kx = kx; o.kz = kz; o.knock = knock; o.silent = silent; return o; }
@@ -591,7 +591,7 @@ export class Rites {
 
   // ---------------------------------------------------------------- Grimsby: Hallowfire
   grimsby(D, P) {
-    const run = this.run, k = 1 + RITES.ch * (run.chapter.id - 1);
+    const run = this.run, k = 1 + RITES.ch * (chapterLevel(run.chapter) - 1);
     this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0;
     run.enemies.query(P.x, P.z, D.r, this._blaze);
     this.blazeT = D.dur;

@@ -300,13 +300,13 @@ function pageHelpers() {
     const all = []; for (const t of D.RELIC_TYPES) for (const r of D.RARITIES) all.push([t, r, 1 + ((all.length * 7) % 10)]);
     relicSet(late, all); late.equipped = ['r4', 'r8', 'r12'];
     late.talents = Object.fromEntries(Object.entries(D.TALENTS).map(([k, t]) => [k, t.max]));
-    late.chapter = { unlocked: 6, selected: 5, best: {} };
+    late.chapter = { unlocked: 14, selected: 12, best: {} }; // deep in Act III (Update 13's 30 chapters)
     late.diff = { sel: { 5: 'torment', 1: 'torment', 2: 'nightmare' }, best: {} };
-    for (let c = 1; c <= 5; c++) {
+    for (let c = 1; c <= 13; c++) {
       late.chapter.best[c] = { time: 400 + c, cleared: true, kills: 2500 + c * 100, depth: 1 };
       late.diff.best[c] = Object.fromEntries(D.DIFFICULTY_ORDER.map((d, i) => [d, { time: 390 + c + i, legion: 380 + i, kills: 2600 + c * 100, streak: 400 + i * 10, cleared: true }]));
     }
-    late.chapter.best[6] = { time: 1834, cleared: false, kills: 12000, depth: 7 };
+    late.chapter.best[100] = { time: 1834, cleared: false, kills: 12000, depth: 7 }; // the Endless Abyss (ENDLESS_ID)
     late.pass = { season: 1, xp: 15000, premium: true, claimedFree: Array.from({ length: 25 }, (_, i) => i + 1), claimedPrem: Array.from({ length: 20 }, (_, i) => i + 1) };
     late.purchases = { ...late.purchases, starterBought: true, pactUntil: now + 12 * 864e5, pactLastClaim: null, first: Object.fromEntries(D.GEM_SKUS.slice(0, 4).map((s) => [s, true])), history: [] };
     late.altar = { pity: 59, pulls: 1234, freeDate: null };
@@ -337,7 +337,8 @@ function pageHelpers() {
   S.SCREENS = {
     'home': {},
     'home-locked-chapter': { states: ['fresh', 'mid'], go: () => { p().chapter.selected = p().chapter.unlocked + 1; app().meta.refresh(); } },
-    'home-endless': { states: ['late'], go: () => { p().chapter.selected = 6; app().meta.refresh(); } },
+    'home-endless': { states: ['late'], go: () => { p().chapter.selected = 100; app().meta.refresh(); } },
+    'chapter-map': { states: ['mid', 'late'], go: () => click('.chap-no') }, // the campaign's six acts (Update 13)
     'home-ch1': { states: ['mid', 'late'], go: () => { p().chapter.selected = 1; app().meta.refresh(); } },
     'home-locked-difficulty-toast': { states: ['fresh', 'mid'], wait: 300, go: () => { p().chapter.selected = 1; app().meta.refresh(); click('.dsel-b[data-d="torment"]'); } },
     'profile': { go: () => click('[data-top="player"]') },
@@ -733,8 +734,8 @@ async function economyPhase() {
     for (let i = 0; i < 4000; i++) {
       const p = rand() < 0.3 ? fresh() : cleared();
       const before = { energy: p.energy };
-      const r = { chapter: 1 + Math.floor(rand() * 6), time: X[Math.floor(rand() * X.length)], kills: K[Math.floor(rand() * K.length)], raised: K[Math.floor(rand() * K.length)], bestLegion: Math.floor(rand() * 500), novas: Math.floor(rand() * 20), gates: Math.floor(rand() * 15), victory: rand() < 0.5, level: 1 + Math.floor(rand() * 40), bonusGold: rand() < 0.3 ? Math.floor(rand() * 2000) : 0, heroId: 'vael', endless: rand() < 0.15, bossKills: Math.floor(rand() * 5), trial: rand() < 0.15, bloodMoon: rand() < 0.3, difficulty: ['normal', 'nightmare', 'torment', 'bogus', undefined][Math.floor(rand() * 5)], chests: Math.floor(rand() * 9), elites: Math.floor(rand() * 9), evolutions: Math.floor(rand() * 3), bestStreak: Math.floor(rand() * 900) };
-      if (r.chapter === 6) r.endless = true;
+      const r = { chapter: 1 + Math.floor(rand() * 30), time: X[Math.floor(rand() * X.length)], kills: K[Math.floor(rand() * K.length)], raised: K[Math.floor(rand() * K.length)], bestLegion: Math.floor(rand() * 500), novas: Math.floor(rand() * 20), gates: Math.floor(rand() * 15), victory: rand() < 0.5, level: 1 + Math.floor(rand() * 40), bonusGold: rand() < 0.3 ? Math.floor(rand() * 2000) : 0, heroId: 'vael', endless: rand() < 0.15, bossKills: Math.floor(rand() * 5), trial: rand() < 0.15, bloodMoon: rand() < 0.3, difficulty: ['normal', 'nightmare', 'torment', 'bogus', undefined][Math.floor(rand() * 5)], chests: Math.floor(rand() * 9), elites: Math.floor(rand() * 9), evolutions: Math.floor(rand() * 3), bestStreak: Math.floor(rand() * 900) };
+      if (r.chapter === 6 && rand() < 0.5) { r.chapter = 100; r.endless = true; } // the Endless Abyss (ENDLESS_ID)
       if (rand() < 0.25) for (const k of Object.keys(r)) if (k !== 'chapter' && rand() < 0.3) delete r[k]; // a partial result
       try {
         const o = eco.applyRunResult(p, r); runs++;

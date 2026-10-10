@@ -1,17 +1,29 @@
-// Ground hazards and chapter identity: telegraph circles and cones, burning ground, ice patches,
-// ember vents and abyssal hands (and the Witchfire Lantern's friendly flames, simulated in weapons.js). Every decal draws through one pooled instanced mesh with a small shader.
-// Enemies drive update()/render() each frame; the Shepherd asks iceAt() and gets burned or rooted from here.
+// Ground hazards and chapter identity: telegraph circles, cones and lanes, burning ground, ice patches, ember vents and
+// abyssal hands; Update 13's tide pools, brambles, miasma clouds, lightning and gravity wells (and the Witchfire Lantern's
+// friendly flames, simulated in weapons.js). Every decal draws through one pooled instanced mesh with a small shader.
+// Enemies drive update()/render() each frame; the Shepherd asks iceAt() / slowAt() and gets burned or rooted from here.
 import * as THREE from 'three';
-import { HAZARDS } from './data.js';
+import { HAZARDS, ENEMIES } from './data.js';
 import { hash2 } from './world.js';
 import { hdr } from '../engine/particles.js';
 
-const MAX = 256;           // decal instances drawn per frame (room for every kind at its cap, the Witchfire Lantern included)
+const MAX = 384;           // decal instances drawn per frame (room for every kind at its cap, the Witchfire Lantern and a realm's patches included)
 const VIEW2 = 26 * 26;     // decals farther than this from the Shepherd are skipped
-const K_CIRCLE = 0, K_CONE = 1, K_BURN = 2, K_ICE = 3, K_VENT = 4, K_HANDS = 5, K_WITCH = 6;
+const K_CIRCLE = 0, K_CONE = 1, K_BURN = 2, K_ICE = 3, K_VENT = 4, K_HANDS = 5, K_WITCH = 6, K_TIDE = 7, K_BRAMBLE = 8, K_MIASMA = 9, K_WELL = 10, K_LINE = 11;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 const _ice = { x: 0, z: 0, rx: 1, rz: 1, rot: 0, seed: 0 };
 const _vent = { x: 0, z: 0 };
+const _pt = { x: 0, z: 0, r: 1, seed: 0 };   // a tide pool or bramble patch (hash grid)
+const _well = { x: 0, z: 0 };
+const SALT = { tide: 41, brambles: 51 };
+const BOLT = { kx: 0, kz: 0, knock: 0, crit: false, source: 'lightning', silent: false };
+/** The gravity well in grid cell (cx, cz), written to _well; false when the cell has none. */
+function wellAt(cx, cz) {
+  const G = HAZARDS.gravity, C = G.cell;
+  if ((cx === 0 && cz === 0) || hash2(cx, cz, 61) > G.chance) return false;
+  _well.x = (cx + 0.3 + hash2(cx, cz, 62) * 0.4) * C; _well.z = (cz + 0.3 + hash2(cx, cz, 63) * 0.4) * C;
+  return true;
+}
 /** The ember vent in grid cell (cx, cz), written to _vent; false when the cell has none. */
 function ventAt(cx, cz) {
   const V = HAZARDS.vents, C = V.cell;
@@ -59,8 +71,8 @@ float shards(vec2 p) {
 }
 void main() {
   float r = length(vUv);
-  if (r > 1.0) discard;
   float k = vData.w, p = vData.x;
+  if (r > 1.0 && k < 10.5) discard; // every kind but the lane is round
   vec3 col = vCol; float a;
   if (k < 0.5) {                     // circle telegraph (Witch lobs, vents, hands); z > 1 adds an "incoming" ring closing in from z × radius
     float s = max(vData.z, 1.0), rr = r * s;
@@ -102,7 +114,7 @@ void main() {
     float swirl = noise(vec2(ang * 3.0 + uTime * 2.0, r * 4.0 - uTime * 3.0));
     col = vec3(0.03, 0.0, 0.07) + vCol * (claws * 2.6 + swirl * 0.4 * p);
     a = max(pool, claws);
-  } else {                           // witchfire (the Shepherd's own): flickering tongues of the lantern's colour, a scorched rim
+  } else if (k < 6.5) {              // witchfire (the Shepherd's own): flickering tongues of the lantern's colour, a scorched rim
     vec2 q = vW * 1.6 + vec2(vData.z * 13.0, -uTime * 1.8);
     q += 0.8 * vec2(noise(q * 0.9 + 3.1), noise(q * 0.9 - 5.7)); // warped, so the flames curl instead of tiling
     float n = noise(q), n2 = noise(q * 2.3 - vec2(uTime * 1.3, 0.0)) * 0.6 + noise(q * 4.1 + uTime) * 0.4;
@@ -111,6 +123,45 @@ void main() {
     float heat = clamp(tongues + smoothstep(0.75, 0.0, r) * 0.3 * n, 0.0, 1.0);
     col = mix(vCol * 0.08, vCol * 1.8 + vec3(0.18), heat);
     a = mask * (0.35 + 0.6 * heat);
+  } else if (k < 7.5) {              // tide pool: dark water with slow ripples and a pale foam rim
+    float n = noise(vW * 0.6 + vec2(uTime * 0.15, -uTime * 0.1) + vData.z * 7.0);
+    float edge = smoothstep(1.0, 0.82, r + (n - 0.5) * 0.12);
+    float rim = smoothstep(0.7, 0.96, r) * edge;
+    float rip = 0.5 + 0.5 * sin(r * 22.0 - uTime * 2.2 + n * 6.0);
+    col = vec3(0.01, 0.06, 0.07) + vCol * (rim * 0.75 + rip * 0.1 * edge + n * 0.08);
+    a = edge * (0.6 + 0.15 * n) + rim * 0.2;
+  } else if (k < 8.5) {              // brambles: a dark tangle of thorny vines
+    float edge = smoothstep(1.0, 0.72, r + (noise(vW * 2.0 + vData.z * 9.0) - 0.5) * 0.4);
+    float vines = smoothstep(0.09, 0.0, shards(vW * 1.6 + vData.z * 5.0)) + smoothstep(0.07, 0.0, shards(vW * 2.7 - vData.z * 3.0)) * 0.7;
+    float thorn = step(0.8, noise(vW * 9.0 + vData.z * 3.0)) * clamp(vines, 0.0, 1.0);
+    col = vec3(0.04, 0.035, 0.015) + vCol * (vines * 0.45 + thorn * 1.5);
+    a = edge * (0.5 + 0.45 * clamp(vines, 0.0, 1.0));
+  } else if (k < 9.5) {              // miasma: a slow toxic swirl
+    vec2 q = vW * 0.45 + vec2(uTime * 0.12, -uTime * 0.08) + vData.z * 11.0;
+    float n = noise(q) * 0.6 + noise(q * 2.3 + uTime * 0.2) * 0.4;
+    float edge = smoothstep(1.0, 0.4, r + (n - 0.5) * 0.45);
+    col = vCol * (0.45 + 1.5 * n);
+    a = edge * (0.3 + 0.35 * n);
+  } else if (k < 10.5) {             // gravity well: a turning vortex that deepens as it gathers (p) and blazes as it pulls (z)
+    float ang = atan(vUv.y, vUv.x);
+    float swirl = 0.5 + 0.5 * sin(ang * 3.0 + r * 9.0 - uTime * (2.0 + 7.0 * vData.z));
+    float core = smoothstep(0.3, 0.0, r), edge = smoothstep(1.0, 0.65, r);
+    col = vec3(0.015, 0.0, 0.04) + vCol * (swirl * (0.25 + 0.9 * p + 1.5 * vData.z) * edge + core * (0.5 + 2.2 * vData.z));
+    a = edge * (0.35 + 0.35 * p + 0.2 * vData.z) * (0.55 + 0.45 * swirl) + core * 0.6;
+  } else {                           // lane: fills from its origin while it warns (p); z = 1 is the live beam itself
+    float along = -vUv.y, across = abs(vUv.x);
+    if (vData.z > 0.5) {
+      float flick = 0.65 + 0.35 * noise(vec2(along * 7.0 - uTime * 24.0, uTime * 9.0));
+      float core = smoothstep(0.5, 0.0, across);
+      col = vCol * (1.3 + 2.6 * core) * flick + vec3(0.7) * core;
+      a = (core + smoothstep(1.0, 0.3, across) * 0.35) * flick;
+    } else {
+      float side = smoothstep(0.14, 0.02, abs(across - 0.9));
+      float fill = step((along + 1.0) * 0.5, p);
+      float stripes = step(0.55, fract(along * 3.0 - uTime * 2.2)) * (1.0 - fill);
+      a = side + fill * 0.3 + stripes * 0.14 + 0.06;
+      col *= 1.35;
+    }
   }
   gl_FragColor = vec4(col, clamp(a, 0.0, 1.0) * vData.y);
 }`;
@@ -136,8 +187,17 @@ export class Hazards {
     for (let i = 0; i < 25; i++) this.vents.push({ x: 0, z: 0, warn: 0, flare: 0 });
     this.grab = { on: false, x: 0, z: 0, t: 0, hit: false };
     this.handT = 0;
-    this.col = { white: new THREE.Color(1, 1, 1), vent: new THREE.Color(0xff8a2a), hand: new THREE.Color(0xb35bff), witch: new THREE.Color(0xc6ff3d) };
+    // Update 13's realms: short-lived patches laid by foes and bosses ({ kind: 'tide' | 'bramble' | 'miasma', x, z, r, t,
+    // life, seed }), drifting miasma clouds, pending lightning bolts, the gravity wells in reach this frame, and lanes /
+    // live beams other systems draw through us each frame (lines: { x, z, rot, w, len, p, live, col })
+    this.trails = []; this.clouds = []; this.bolts = []; this.boltT = 2.5; this.thunder = null;
+    this.wells = []; this.nw = 0; for (let i = 0; i < 25; i++) this.wells.push({ x: 0, z: 0, warn: 0, pull: 0 });
+    this.lines = [];
+    this.col = { white: new THREE.Color(1, 1, 1), vent: new THREE.Color(0xff8a2a), hand: new THREE.Color(0xb35bff), witch: new THREE.Color(0xc6ff3d),
+      tide: new THREE.Color(0x2fb8a8), bramble: new THREE.Color(0x8a9a3a), miasma: new THREE.Color(0x6fbf2a), well: new THREE.Color(0x9a6bff),
+      bolt: new THREE.Color(0x8fd8ff) };
     this.fire = hdr(0xff8a2a, 3.4); this.ember = hdr(0xff6a1a, 3); this.violet = hdr(0xb35bff, 3);
+    this.spark = hdr(0xbfe6ff, 4); this.tox = hdr(0x9cff3a, 1.6);
     this.post = run.engine.post;
     if (this.post.uVignette.base === undefined) this.post.uVignette.base = this.post.uVignette.value;
     this.setMods(run.mods);
@@ -152,7 +212,8 @@ export class Hazards {
     sight.value = this.mods.sight ?? sight.base;
     this.handT = HAZARDS.hands.every[0];
     this.grab.on = false;
-    this.nv = 0;
+    this.nv = 0; this.nw = 0;
+    if (!this.mods.miasma) this.clouds.length = 0;
   }
 
   // ---------------------------------------------------------------- telegraphs (pooled; purely visual)
@@ -193,6 +254,158 @@ export class Hazards {
     for (const b of this.burns) this.burnPool.push(b);
     this.teles.length = 0; this.burns.length = 0;
     this.grab.on = false;
+    this.trails.length = 0; this.bolts.length = 0;
+  }
+
+  // ---------------------------------------------------------------- Update 13's realms
+  /** The tide pool or bramble patch of grid cell (cx, cz) (kind 'tide' | 'brambles'), written to _pt; false without one. */
+  patch(kind, cx, cz) {
+    const H = HAZARDS[kind], S = SALT[kind], C = H.cell;
+    if ((cx === 0 && cz === 0) || hash2(cx, cz, S) > H.chance) return false; // keep the spawn clear
+    _pt.x = (cx + 0.25 + hash2(cx, cz, S + 1) * 0.5) * C; _pt.z = (cz + 0.25 + hash2(cx, cz, S + 2) * 0.5) * C;
+    _pt.r = H.radius[0] + hash2(cx, cz, S + 3) * (H.radius[1] - H.radius[0]); _pt.seed = hash2(cx, cz, S + 4);
+    return true;
+  }
+  inPatch(kind, x, z, pad = 0) {
+    const C = HAZARDS[kind].cell, cx0 = Math.floor(x / C), cz0 = Math.floor(z / C);
+    for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) for (let cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+      if (this.patch(kind, cx, cz) && (x - _pt.x) ** 2 + (z - _pt.z) ** 2 < (_pt.r * 0.92 + pad) ** 2) return true;
+    }
+    return false;
+  }
+  laidAt(kind, x, z, pad = 0) {
+    const T = this.trails;
+    for (let i = 0; i < T.length; i++) { const t = T[i]; if (t.kind === kind && t.t > 0.15 && (x - t.x) ** 2 + (z - t.z) ** 2 < (t.r * 0.9 + pad) ** 2) return true; }
+    return false;
+  }
+  tideAt(x, z) { return (!!this.mods.tide && this.inPatch('tide', x, z)) || this.laidAt('tide', x, z); }
+  brambleAt(x, z) { return (!!this.mods.brambles && this.inPatch('brambles', x, z)) || this.laidAt('bramble', x, z); }
+  miasmaAt(x, z) {
+    const C = this.clouds;
+    for (let i = 0; i < C.length; i++) { const c = C[i]; if ((x - c.x) ** 2 + (z - c.z) ** 2 < (c.r * 0.85 * this.cloudFade(c)) ** 2) return true; }
+    return this.laidAt('miasma', x, z);
+  }
+  cloudFade(c) { return Math.max(0, Math.min(1, c.t / 1.5, (c.life - c.t) / 1.5)); }
+  /** The Shepherd's top-speed factor from the ground: tide pools and brambles slow him; 1 elsewhere. */
+  slowAt(x, z) {
+    let k = 1;
+    if (this.tideAt(x, z)) k = Math.min(k, HAZARDS.tide.speed);
+    if (this.brambleAt(x, z)) k = Math.min(k, HAZARDS.brambles.speed);
+    return k;
+  }
+  /** A short-lived patch: a Thornback's brambles, a boss's tide pools, brambles or miasma. */
+  lay(kind, x, z, r, life) {
+    if (this.trails.length >= 72) return;
+    this.trails.push({ kind, x, z, r, t: 0, life, seed: Math.random() });
+  }
+  /** A lane drawn this step (a telegraph filling to p, or a live beam); Enemies.update clears them before each step. */
+  line(x0, z0, x1, z1, w, p, live, col) {
+    const dx = x1 - x0, dz = z1 - z0, len = Math.hypot(dx, dz) || 0.01;
+    this.lines.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, rot: Math.atan2(dx, dz), w, len, p, live: live ? 1 : 0, col });
+  }
+
+  updateRealms(dt) {
+    const run = this.run, P = run.player, M = this.mods;
+    // laid patches age away
+    const T = this.trails;
+    let w = 0;
+    for (let i = 0; i < T.length; i++) { const t = T[i]; t.t += dt; if (t.t < t.life) T[w++] = t; }
+    T.length = w;
+    if (P.dead) return;
+    // brambles cut and miasma poisons, in quiet ticks (they never stack with each other's tick: the worse one counts)
+    let dps = 0;
+    if (this.brambleAt(P.x, P.z)) dps = Math.max(dps, HAZARDS.brambles.dps);
+    if (M.miasma) this.updateClouds(dt);
+    if (this.miasmaAt(P.x, P.z)) dps = Math.max(dps, HAZARDS.miasma.dps);
+    if (dps > 0) P.burn(dps * run.dmgMul(), dt);
+    if (M.lightning || this.thunder) this.updateLightning(dt);
+    else this.bolts.length = 0;
+    if (M.gravity) this.updateWells(dt); else this.nw = 0;
+  }
+
+  updateClouds(dt) {
+    const H = HAZARDS.miasma, P = this.run.player, C = this.clouds;
+    let w = 0;
+    for (let i = 0; i < C.length; i++) {
+      const c = C[i];
+      c.t += dt; c.x += c.vx * dt; c.z += c.vz * dt;
+      if (c.t < c.life && (c.x - P.x) ** 2 + (c.z - P.z) ** 2 < 34 * 34) C[w++] = c;
+    }
+    C.length = w;
+    while (C.length < H.n) { // a new cloud drifts in ahead of the Shepherd (or anywhere around him while he stands)
+      const mv = Math.hypot(P.vx, P.vz) > 0.5, a = mv ? Math.atan2(P.vz, P.vx) + (Math.random() - 0.5) * 2.2 : Math.random() * 6.283;
+      const d = H.near + Math.random() * (H.far - H.near), da = Math.random() * 6.283, sp = H.drift * (0.5 + Math.random() * 0.5);
+      C.push({ x: P.x + Math.cos(a) * d, z: P.z + Math.sin(a) * d, r: H.radius[0] + Math.random() * (H.radius[1] - H.radius[0]),
+        vx: Math.cos(da) * sp, vz: Math.sin(da) * sp, t: 0, life: H.life[0] + Math.random() * (H.life[1] - H.life[0]), seed: Math.random() });
+    }
+  }
+
+  /** A lightning strike marked where the Shepherd is heading: a telegraph, then the bolt (it burns the horde too). */
+  updateLightning(dt) {
+    const L = HAZARDS.lightning, run = this.run, P = run.player, Q = this.bolts;
+    let w = 0;
+    for (let i = 0; i < Q.length; i++) { const b = Q[i]; b.t -= dt; if (b.t > 0) Q[w++] = b; else this.strike(b.x, b.z); }
+    Q.length = w;
+    if ((this.boltT -= dt) > 0) return;
+    const ev = this.thunder || L.every;
+    this.boltT = ev[0] + Math.random() * (ev[1] - ev[0]);
+    const a = Math.random() * 6.283, j = Math.random() * L.jitter;
+    this.bolt(P.x + P.vx * L.lead + Math.cos(a) * j, P.z + P.vz * L.lead + Math.sin(a) * j);
+  }
+  /** Marks a strike at (x, z) that lands after the warning. */
+  bolt(x, z) {
+    const L = HAZARDS.lightning;
+    this.bolts.push({ x, z, t: L.warn });
+    this.circle(x, z, L.radius, L.warn, this.col.bolt, 1.5);
+  }
+  strike(x, z) {
+    const L = HAZARDS.lightning, run = this.run, P = run.player;
+    if ((P.x - x) ** 2 + (P.z - z) ** 2 < (L.radius + P.radius * 0.5) ** 2) P.hurt(L.dmg * run.dmgMul());
+    const dmg = L.foeHit * ENEMIES.husk.hp * run.hpMul();
+    run.enemies.query(x, z, L.radius, (e) => { if (e.type !== 'boss' && !e.ev && e.active) run.enemies.damage(e, dmg, BOLT); });
+    const c = this.spark, n = Math.round(30 * run.particles.budget);
+    for (let k = 0; k < n; k++) run.particles.emit(x + (Math.random() - 0.5) * 0.5, Math.random() * 9, z + (Math.random() - 0.5) * 0.5, 0, 1 + Math.random() * 2, 0, 0.35, 0.45, 0.05, c[0], c[1], c[2], 1);
+    run.particles.burst(x, 0.3, z, 22, c, { speed: 6, life: 0.4, size: 0.5, up: 0.8 });
+    run.fx.light(x, z, 8, 2.6, this.col.bolt, 0.25);
+    run.fx.shockwave(x, z, L.radius * 1.4, 0x8fd8ff, 0.3, 0.1);
+    const d2 = (P.x - x) ** 2 + (P.z - z) ** 2;
+    if (d2 < 196) { run.fx.shake(0.15 + 0.2 * (1 - Math.sqrt(d2) / 14)); run.audio.sfx('boss_slam', { volume: 0.4, pitch: 1.9 }); }
+  }
+
+  /** Gravity wells: each gathers, then pulls the Shepherd (and the horde) toward its core; the core hurts once a pulse. */
+  updateWells(dt) {
+    const G = HAZARDS.gravity, run = this.run, P = run.player, C = G.cell;
+    const cx0 = Math.floor(P.x / C), cz0 = Math.floor(P.z / C);
+    let n = 0;
+    for (let cx = cx0 - 2; cx <= cx0 + 2; cx++) {
+      for (let cz = cz0 - 2; cz <= cz0 + 2; cz++) {
+        if (!wellAt(cx, cz)) continue;
+        const x = _well.x, z = _well.z;
+        const period = G.period[0] + hash2(cx, cz, 64) * (G.period[1] - G.period[0]), off = hash2(cx, cz, 65) * period;
+        const u = (this.time + off) % period, prev = (this.time - dt + off) % period;
+        const pullAt = period - G.pull, warnAt = pullAt - G.warn;
+        const W = this.wells[n++];
+        W.x = x; W.z = z;
+        W.warn = u >= warnAt && u < pullAt ? (u - warnAt) / G.warn : u >= pullAt ? 1 : 0;
+        W.pull = u >= pullAt ? 1 : 0;
+        const crossed = prev <= u ? prev < pullAt && pullAt <= u : prev < pullAt || pullAt <= u;
+        const dx = x - P.x, dz = z - P.z, d = Math.hypot(dx, dz);
+        if (crossed && d < G.coreR + P.radius * 0.5) P.hurt(G.dmg * run.dmgMul());
+        if (crossed && d < 18) run.audio.sfx('summon', { volume: 0.3, pitch: 0.5 });
+        if (!W.pull) continue;
+        if (d < G.radius && d > 0.3) { const f = G.strength * (1 - d / G.radius) * dt; P.x += (dx / d) * f; P.z += (dz / d) * f; }
+        run.enemies.query(x, z, G.radius, (e) => {
+          if (e.type === 'boss' || e.ev) return;
+          const ex = x - e.x, ez = z - e.z, ed = Math.hypot(ex, ez);
+          if (ed > 0.4) { const f = G.strength * 0.8 * (1 - ed / G.radius) * dt; e.x += (ex / ed) * f; e.z += (ez / ed) * f; }
+        });
+        if (Math.random() < 0.5) {
+          const a = Math.random() * 6.283, rr = G.radius * (0.4 + Math.random() * 0.6), v = this.violet;
+          run.particles.emit(x + Math.cos(a) * rr, 0.2, z + Math.sin(a) * rr, -Math.cos(a) * rr * 1.2, 0.4, -Math.sin(a) * rr * 1.2, 0.6, 0.3, 0.05, v[0], v[1], v[2], 0.9, 0, 0);
+        }
+      }
+    }
+    this.nw = n;
   }
 
   // ---------------------------------------------------------------- ice (hash grid, stateless)
@@ -238,6 +451,15 @@ export class Hazards {
       for (let k = 0; k < 24; k++) { const a = k < 16 ? k * 0.3927 : k * 0.785, rr = k < 16 ? r : r * 0.5; if (this.iceAt(x + Math.cos(a) * rr, z + Math.sin(a) * rr)) return false; }
     }
     for (const b of this.burns) if ((x - b.x) ** 2 + (z - b.z) ** 2 < (r + b.r) ** 2) return false;
+    if (M.tide && this.inPatch('tide', x, z, r)) return false;
+    if (M.brambles && this.inPatch('brambles', x, z, r)) return false;
+    for (const c of this.clouds) if ((x - c.x) ** 2 + (z - c.z) ** 2 < (r + c.r) ** 2) return false;
+    if (M.gravity) {
+      const G = HAZARDS.gravity, cx0 = Math.floor(x / G.cell), cz0 = Math.floor(z / G.cell);
+      for (let cx = cx0 - 1; cx <= cx0 + 1; cx++) for (let cz = cz0 - 1; cz <= cz0 + 1; cz++) {
+        if (wellAt(cx, cz) && (x - _well.x) ** 2 + (z - _well.z) ** 2 < (r + G.radius * 0.6) ** 2) return false;
+      }
+    }
     const g = this.grab;
     return !(g.on && (x - g.x) ** 2 + (z - g.z) ** 2 < (r + HAZARDS.hands.radius) ** 2);
   }
@@ -271,6 +493,7 @@ export class Hazards {
     if (dps > 0) P.burn(dps, dt);
     if (this.mods.vents) this.updateVents(dt); else this.nv = 0;
     if (this.mods.hands) this.updateHands(dt);
+    this.updateRealms(dt);
   }
 
   updateVents(dt) {
@@ -335,10 +558,10 @@ export class Hazards {
   }
 
   // ---------------------------------------------------------------- drawing
-  put(kind, x, z, rx, rz, rot, p, alpha, extra, col) {
+  put(kind, x, z, rx, rz, rot, p, alpha, extra, col, reach = 0) {
     if (this.n >= MAX) return;
     const P = this.run.player;
-    if ((x - P.x) ** 2 + (z - P.z) ** 2 > VIEW2) return;
+    if ((x - P.x) ** 2 + (z - P.z) ** 2 > (26 + reach) ** 2) return;
     const i = this.n++;
     _p.set(x, 0.03 + kind * 0.002, z);
     _q.setFromAxisAngle(_up, rot);
@@ -359,6 +582,21 @@ export class Hazards {
         for (let cz = cz0 - 2; cz <= cz0 + 2; cz++) if (this.icePatch(cx, cz)) this.put(K_ICE, _ice.x, _ice.z, _ice.rx, _ice.rz, _ice.rot, 0, 1, _ice.seed, W);
       }
     }
+    // Update 13's realms: tide pools and brambles (grid), laid patches, miasma clouds and gravity wells
+    for (const kind of ['tide', 'brambles']) {
+      if (!this.mods[kind]) continue;
+      const C = HAZARDS[kind].cell, cx0 = Math.floor(P.x / C), cz0 = Math.floor(P.z / C), K = kind === 'tide' ? K_TIDE : K_BRAMBLE, col = kind === 'tide' ? this.col.tide : this.col.bramble;
+      for (let cx = cx0 - 2; cx <= cx0 + 2; cx++) for (let cz = cz0 - 2; cz <= cz0 + 2; cz++) if (this.patch(kind, cx, cz)) this.put(K, _pt.x, _pt.z, _pt.r, _pt.r, _pt.seed * 6.283, 0, 1, _pt.seed, col);
+    }
+    for (const t of this.trails) {
+      const fade = Math.min(1, t.t * 4) * Math.min(1, (t.life - t.t) * 1.5);
+      if (t.kind === 'tide') this.put(K_TIDE, t.x, t.z, t.r, t.r, 0, 0, fade, t.seed, this.col.tide);
+      else if (t.kind === 'bramble') this.put(K_BRAMBLE, t.x, t.z, t.r, t.r, t.seed * 6.283, 0, fade, t.seed, this.col.bramble);
+      else this.put(K_MIASMA, t.x, t.z, t.r, t.r, 0, 0, fade, t.seed, this.col.miasma);
+    }
+    for (const c of this.clouds) { const f = this.cloudFade(c); this.put(K_MIASMA, c.x, c.z, c.r, c.r, 0, 0, f, c.seed, this.col.miasma); }
+    const Gr = HAZARDS.gravity;
+    for (let i = 0; i < this.nw; i++) { const W = this.wells[i]; this.put(K_WELL, W.x, W.z, Gr.radius, Gr.radius, 0, W.warn, 1, W.pull, this.col.well); }
     const V = HAZARDS.vents;
     for (let i = 0; i < this.nv; i++) {
       const v = this.vents[i];
@@ -384,6 +622,7 @@ export class Hazards {
       const p = Math.min(1, t.t / t.dur), R = t.kind === K_CIRCLE ? t.r * Math.max(1, t.arc) : t.r;
       this.put(t.kind, t.x, t.z, R, R, t.rot, p, Math.min(1, t.t * 8 + 0.3), t.arc, t.col);
     }
+    for (const L of this.lines) this.put(K_LINE, L.x, L.z, L.w, L.len / 2, L.rot, L.p, 1, L.live, L.col, L.len / 2 + 2); // refilled every simulation step (Enemies.update clears them), so they hold through a pause
     this.mesh.count = this.n;
     if (this.n) { this.mesh.instanceMatrix.needsUpdate = true; this.iData.needsUpdate = true; this.iCol.needsUpdate = true; }
     this.mat.uniforms.uTime.value = this.time;

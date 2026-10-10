@@ -98,7 +98,7 @@ Format: iOS 6.9" (1320 × 2868) is required, and the 6.5" set is derived from it
 | 3 | **DETONATE THE LEGION** | Mid-Nova: 180 souls detonating in a chain through two rings of the horde | Peak bloom frame, 0.45 s into the chain (after the 0.25 s wind-up). |
 | 4 | **SLAY THE HOLLOW KING** | Gravemaw mid Grave Slam telegraph, facing the camera, the legion around Vael | Ring bands and safe lanes visible. |
 | 5 | **COLLECT LEGENDARY SHEPHERDS** | The heroes screen with all five painted hero cards (Vael, Nyx, Seraphine, Liora, Mordrake) | Rarity frames (Common → Legendary) and star rows visible. |
-| 6 | **FIVE CHAPTERS, FIVE BOSSES** | Chapter 2 (Ember Wastes): its boss, Pyrexa, the Cinder Matron, rains fire around Vael; the first fireballs already burn the ground | Chapter palette, the arena in the boss's own ember colour, and a boss beyond the Hollow King. |
+| 6 | **30 CHAPTERS, TEN BOSSES** | Chapter 25 (The Storm Spire): its finale boss, Kaelthar, the Storm Herald, turns his Tempest's lightning beams around Vael and the legion | The campaign's scale (Update 13: six acts, 30 chapters), a boss in its own storm-blue, and an attack a player reads at a glance. |
 | 7 | **UNLEASH YOUR HERO'S RITE** | Seraphine casts Ashfall: ash chains rain on the horde | The RITE button and the Soul Frenzy chip visible. |
 | 8 | **DARE NIGHTMARE & TORMENT** | Chapter 5 on Torment: the blood-red floor, a Warded and Hasted elite with its tags, Vael's cyan legion | Shows the endgame tiers and elite affixes. |
 | 9 | **HUNT EVERY HORROR** | The Bestiary: painted foe cards with kill counts and milestone pips, rewards waiting | The collection layer; App Store only. |

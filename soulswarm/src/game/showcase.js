@@ -5,7 +5,7 @@ import { makeCharMaterial, GlowSprites } from '../engine/materials.js';
 import { heroGeometry } from '../engine/models.js';
 import { heroModel, loadHeroModel, hasHeroModel, HeroRig } from '../engine/heromodels.js';
 import { Particles } from '../engine/particles.js';
-import { CHAPTERS, HEROES, SKINS } from './data.js';
+import { CHAPTERS, chapterById, HEROES, SKINS } from './data.js';
 import { makeRuneCircle } from './fxmeshes.js';
 
 const WISPS = 34;
@@ -89,7 +89,7 @@ export class Showcase {
   setChapter(id) {
     if (id === this.chapterId) return;
     this.chapterId = id;
-    this.world.setChapter(CHAPTERS[id - 1]);
+    this.world.setChapter(chapterById(id));
   }
 
   resize(w, h) {

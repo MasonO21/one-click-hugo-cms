@@ -7,7 +7,7 @@ import { makeRuneCircle } from './fxmeshes.js';
 import { SKINS, HAZARDS } from './data.js';
 import { hdr } from '../engine/particles.js';
 
-const FROST = hdr(0xcfeeff, 1.8), ROOT = hdr(0xb35bff, 2.6);
+const FROST = hdr(0xcfeeff, 1.8), ROOT = hdr(0xb35bff, 2.6), SPLASH = hdr(0x6fe8d8, 1.6);
 const SCALE = 1.25; // the Shepherd's model scale in a run
 
 export class Player {
@@ -56,8 +56,9 @@ export class Player {
     if (this.dead) { this.vx = this.vz = this.kx = this.kz = 0; return; }
     const H = this.run.hazards, I = HAZARDS.ice;
     this.onIce = !!H && H.iceAt(this.x, this.z);
+    this.ground = H ? H.slowAt(this.x, this.z) : 1; // tide pools and brambles drag at his feet (Update 13)
     this.rootT = Math.max(0, this.rootT - dt);
-    const top = this.rootT > 0 ? 0 : S.speed * (this.onIce ? I.speed : 1);
+    const top = this.rootT > 0 ? 0 : S.speed * (this.onIce ? I.speed : 1) * this.ground;
     const tx = input.x * top, tz = input.z * top;
     // on ice: sluggish acceleration while steering, low friction once the stick is released (a glide, not a skate)
     const rate = this.rootT > 0 ? 40 : this.onIce ? 14 * (input.x * input.x + input.z * input.z > 0.01 ? I.accel : I.friction) : 14;
@@ -71,6 +72,7 @@ export class Player {
     this.moving = sp > 0.5;
     this.speed = sp;
     const parts = this.run.particles;
+    if (this.ground < 0.8 && sp > 1.5 && Math.random() < dt * 16) parts.emit(this.x, 0.1, this.z, (Math.random() - 0.5) * 1.5, 1.2, (Math.random() - 0.5) * 1.5, 0.4, 0.3, 0.05, SPLASH[0], SPLASH[1], SPLASH[2], 0.8, 2, 0);
     if (this.onIce && sp > 2 && Math.random() < dt * 14) parts.emit(this.x, 0.08, this.z, -this.vx * 0.15, 0.4, -this.vz * 0.15, 0.45, 0.32, 0.05, FROST[0], FROST[1], FROST[2], 0.8, 2, 0);
     if (this.rootT > 0 && Math.random() < dt * 30) {
       const a = Math.random() * 6.283;

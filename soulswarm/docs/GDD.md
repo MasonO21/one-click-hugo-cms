@@ -14,8 +14,8 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 | Area | Playable in the current build | Planned (not in the build) |
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 7 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, Grave Wraith dives and Corpse Priest raisings, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with rerolls for 50 gems or an ad and 2 banishes (§4.6), **Soul Urns** with five new offerings (§4.10), **the Grimoire**: 8 run-start pages unlocked by account goals (§4.9), 9 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), each **ascending** at Hero Mastery rank 5 (§11.2), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
-| Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 7 enemy types plus elites (the Grave Wraith and the Corpse Priest joined on 2026-10-09, §5), 9 weapons, 10 passives, 9 evolutions (Gravefall, Soul Leech, Grave Ward and Dread Reach joined on 2026-10-10, §7), **4 Soul Unions** (§7.4), 8 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, Isolde the Crimson Countess on 2026-10-10, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
-| Meta and economy | **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **Relic Ascension** (§12.1: Lv10 relics ascend ★1–★5 for gold and spare duplicates), **The Bestiary** (§5.2: 13 painted entries, kills per foe and boss, 39 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Content | **30 chapters in six acts** (§8.4: six realms with their own hazards and foes, ten bosses, earlier bosses returning stronger; Update 13, 2026-10-10), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 12 enemy types plus elites (the Grave Wraith and the Corpse Priest joined on 2026-10-09, §5; the five act foes on 2026-10-10, §8.4), 9 weapons, 10 passives, 9 evolutions (Gravefall, Soul Leech, Grave Ward and Dread Reach joined on 2026-10-10, §7), **4 Soul Unions** (§7.4), 8 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, Isolde the Crimson Countess on 2026-10-10, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
+| Meta and economy | **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **Relic Ascension** (§12.1: Lv10 relics ascend ★1–★5 for gold and spare duplicates), **The Bestiary** (§5.2: 23 painted entries, kills per foe and boss, 69 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3), the **share card** (§10.1) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, replay clips, a store link on the share card |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -370,7 +370,7 @@ Runs spread by about ±60 s (standard error about 15 s). The one drop is Ch5 wit
 
 A collection screen that turns the horde into long-term goals with painted rewards: the **BESTIARY** sub-tab of the Heroes screen, beside Heroes, Relics and Talents. Numbers live in `BESTIARY` (`data.js`), the rules in `src/meta/bestiary.js` (claims in `economy.claimBestiary`), the screen in `src/ui/meta/bestiary.js`.
 
-- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, Grave Wraith, Corpse Priest, the Soul Thief (§4.8) and the five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine; wide cards across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
+- **Entries:** Husk, Ghoul, Brute, Cinder Witch, Bloater, Grave Wraith, Corpse Priest, the five act foes (Drowned Siren, Thornback, Plague Rat, Stormcaller, Void Stalker; §8.4), the Soul Thief (§4.8) and the ten chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine, Morwenna, Gorrath, Mother Mire, Kaelthar, Nihl; wide cards across the row). Each has its painting (3:4, `src/assets/art/foe-*.webp`), its name and role, a line of lore, a "How it fights" line and its kill count. A summary panel counts entries discovered, milestones claimed and foes slain.
 - **Locked:** until its first kill an entry shows a dark, cold silhouette of its painting under a "?", named "???" and "Undiscovered". Its milestones are already listed, so the goal is visible.
 - **What counts:** every kill of a type, whoever lands it (the Shepherd, the legion, the Nova, gate bursts, Bloater blasts). Gilded elites count as their base type, and so do Splitter copies, gate guards, coffin waves and the bosses' arena adds. A slain Soul Thief counts as a Soul Thief; a broken Cursed Coffin never counts. Each boss counts for itself, once per campaign victory over it (also when the legion fells it while the Shepherd is down) and once per Endless kill. Daily Trial runs count too.
 - **How it is tracked:** the run keeps `run.counters.byType` (one integer increment per kill, no allocation; the Soul Thief in `events.js`, the bosses in `Run.onBossKilled`). The run result carries a copy as `byType`, and `applyRunResult` adds it to `profile.bestiary.kills`, ignoring unknown ids and junk values.
@@ -380,10 +380,12 @@ A collection screen that turns the horde into long-term goals with painted rewar
 |---|---|---|---|
 | Husk, Ghoul, Brute, Cinder Witch, Bloater, Grave Wraith | 100 kills | 1,000 | 10,000 |
 | Corpse Priest | 50 | 500 | 3,000 |
-| Soul Thief, the five chapter bosses | 1 | 10 | 50 |
+| Drowned Siren, Thornback, Stormcaller, Void Stalker (Update 13) | 50 | 500 | 3,000 |
+| Plague Rat (Update 13; they come in swarms) | 500 | 5,000 | 50,000 |
+| Soul Thief, the ten chapter bosses | 1 | 10 | 50 |
 | Reward | 2,000 gold | 1 Altar Sigil | 50 gems |
 
-All 39 milestones pay 26,000 gold, 13 sigils and 650 gems, once per account (budget check in `MONETIZATION.md` §2.6).
+All 69 milestones (23 entries: Update 13 added the five act foes and the five act bosses, §8.4) pay 46,000 gold, 23 sigils and 1,150 gems, once per account (budget check in `MONETIZATION.md` §2.6). The new entries can only begin once their act is open, so they pay out across the later acts.
 
 - **Pacing:** a bot's Chapter 1 clear (2,511 kills) slew 1,335 Husks, 526 Ghouls, 252 Brutes, 207 Cinder Witches and 191 Bloaters (53 / 21 / 10 / 8 / 8%). Later chapters spawn more and tilt the mix (Ember Wastes ×1.8 Witches, Abyssal Cathedral ×2 Bloaters, Crimson Throne ×1.6 Brutes). For a daily player (about 3 runs, ~1,800 kills a run):
   - for the five horde foes, tier I lands in the first run or two (Witches and Bloaters join the horde at 2:00, Brutes at 3:00) and tier II within one to three days;
@@ -640,9 +642,9 @@ A second recipe on top of the evolutions. When **both evolutions of a pair** are
 | 5 | Crimson Throne | Blood red | 7.50 | 1.60 | **8 elites** (45, 75, 110, 150, 185, 225, 255, 290 s); Brute weight ×1.6 | ~110 |
 | ∞ | Endless Abyss | Shifting | 4.00 (flatter curve) | 1.40 | No time limit; a boss rises every 5:00 (the five in turn, from Gravemaw), +60% HP each time. Each depth rotates the active modifiers Ch2 → Ch3 → Ch4 → Ch5 ("THE ABYSS SHIFTS"); under Ch5 modifiers elites come every 35 s | Endgame |
 
-Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with the intro card naming the chapter and its twist (below). Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Chapter N's boss dies (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
+This table is Act I; Acts II–VI (Chapters 6–30) are in §8.4. Chapters differ in palette, HP mult, spawn mult, the modifiers above and the chapter terms below. A run opens with the intro card naming the chapter and its twist (below). Hazards (burning ground, vents, hands, ice) affect only the Shepherd. Every chapter but Ch5 has 4 elites. Each chapter is exactly 6:00 plus the boss. Chapter N+1 unlocks when Chapter N's boss dies (on Normal). Endless Abyss unlocks after the first Chapter 5 clear. Every campaign chapter can then be replayed on **Nightmare** and **Torment** (§8.2).
 
-**Chapter art.** Each chapter has a painted 16:9 key art (`src/assets/art/chapter-N.webp`; Endless Abyss is chapter 6; style and jobs in `ART_AND_ADS.md`).
+**Chapter art.** Each chapter has a painted 16:9 key art (`src/assets/art/chapter-N.webp`, 1–30; the Endless Abyss's is `chapter-endless.webp`; style and jobs in `ART_AND_ADS.md`).
 - **Home chapter card:** the selected chapter's painting fills the card behind its content. Gradients darken the edges (behind the arrows), the centre (behind the name) and the bottom (behind the difficulty selector), with the chapter's rune colour glowing at the top, so the name, record line, selector and arrows stay readable. A new chapter's painting fades in over the last one in 0.45 s, and the neighbouring paintings are decoded ahead of a swipe. A locked chapter's painting is greyed. The card keeps its size and layout on every phone; the layers are absolutely positioned behind the content.
 - **Run intro card** (`src/ui/runintro.js`), replacing the old chapter banner at 0:00.6:
   - **What it shows:** for about 2.4 s, the chapter's painting as a wide strip feathered at the edges, the chapter number (or "Endless", or "Daily Trial · Chapter N"), the chapter name in Cinzel under a glowing rule, and its twist (the modifier tagline; campaign chapters without a modifier tag: "Survive 6:00, then slay the Hollow King", naming that chapter's boss; Endless: the first rotation's twist, e.g. "Ember Wastes: The witches' fire lingers"). Nightmare or Torment and Blood Moon show as tags beside the chapter number.
@@ -651,7 +653,7 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
   - **Reduce flashes** (§17) drops its light flare and the glow on the rule.
 - **Results:** a faint strip of the chapter's painting sits behind the VICTORY / DEFEAT header.
 
-**Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal):
+**Formulas** (c = chapter 1–5, m = minutes elapsed as a decimal; Chapters 6–30 in §8.4):
 
 - **Enemy HP** = BaseHP × chapter HP mult × (1 + 0.28m + 0.04m²) × difficulty HP (§8.2; 1 on Normal, ramping in from 1 over the first minutes, and 1 for the boss's arena adds)
 - **Enemy damage** = BaseDamage × (1 + 0.1m) × (1 + 0.35(c−1)) × difficulty damage (1 for the boss's arena adds). Ch1 goes from ×1.00 to ×1.60 at 6:00; Ch5 from ×2.40 to ×3.84 (on Normal).
@@ -675,7 +677,7 @@ Chapters differ in palette, HP mult, spawn mult, the modifiers above and the cha
 
 These are upper bounds: when the alive limit is reached, the director skips spawns.
 
-**Endless Abyss (in the build).** Chapter id 6, unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). A boss rises every 5:00, the five chapter bosses in turn (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine, then Gravemaw again, each with its own twist and signature; the warning reads "… RETURNS" from the sixth), with HP `12,500 × 4.0 × 1.25 × (1 + 0.6k)` (62,500 for the first, k = kills so far), and every return replays all three phases and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per boss plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as the chapter-6 best time. Endless is **Normal only**: it already escalates without end, so the chapter card hides the difficulty selector there (§8.2). *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
+**Endless Abyss (in the build).** Chapter id `ENDLESS_ID` = 100 (it was 6 until Update 13; §8.4), unlocked by the first Chapter 5 clear. It uses its own flatter HP curve, `4.0 × (1 + 0.32m + 0.025m²)` (×26.8 at minute 10, ×45.6 at minute 15), and spawn mult 1.40 under the normal alive limit. There is no time limit: the run ends when the player falls (one paid revive as usual). A boss rises every 5:00, the five chapter bosses in turn (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine, then Gravemaw again, each with its own twist and signature; the warning reads "… RETURNS" from the sixth), with HP `12,500 × 4.0 × 1.25 × (1 + 0.6k)` (62,500 for the first, k = kills so far), and every return replays all three phases and damage × √(1 + 0.6k). Each kill drops a Relic Chest, raises 25 souls and resets the 5:00 clock. Elites keep coming every 70 s after the first four. Rewards: the normal gold formula, 15 gems per boss plus 2 per minute, and a relic (Rare; Epic from 2 kills; Epic+ from 3). The deepest run is saved as chapter 100's best time. Endless is **Normal only**: it already escalates without end, so the chapter card hides the difficulty selector there (§8.2). *(Planned: weekly leaderboards ranked by time survived, kills as tie-break.)*
 
 ### 8.1 Daily Trial
 
@@ -758,6 +760,103 @@ A limited event: the five chapter bosses back to back in one run. Numbers live i
 - **Results.** "COURT CLEARED" or "FALLEN · Boss Rush · *n* of 5 bosses": the run's kill and time gold, pass XP, quests (kills, bosses and the rest), Bestiary kills (each boss counts for itself) and account XP. No chapter records, no Boss Hoard relic, no ad doubling.
 - **Event rewards.** Milestones by bosses beaten in one attempt, each paid once per event: 1 boss 1,000 gold · 2 bosses 20 gems · 3 bosses 1,500 gold · 4 bosses 30 gems · the Court cleared 1 Altar Sigil + 40 gems. The panel shows the five bosses (ticked when beaten this event), the track, the event's best clear and the all-time best. *(Planned: the power-matched leaderboard and the cosmetic legion banner, LIVEOPS.md §3.2.)*
 - **Balance (2026-10-08, `RUSH=1 scripts/balance.mjs`, Vael, `GOD=1`).** Fights last about as long as the campaign's at matching progression, so how far a player gets tracks their campaign: Chapter 5 progression clears in about 3:00 (each boss 25–48 s), Chapter 3 in about 4:15, a fresh Chapter 1 clear in about 7:00 with the later bosses 70–130 s each. Mortal, the bot (which does not dodge) cleared it once in two at Chapter 5 progression and fell to the first boss at Chapter 1–2.
+
+### 8.4 The campaign: six acts, 30 chapters (Update 13, in the build)
+
+Update 13 (2026-10-10) grew the campaign from 5 chapters to **30**, in six acts of five. Act I is the five chapters above, unchanged. Each later act has:
+- its own **realm**: two painted floors, three painted 3D props of its own plus one of Act I's, and its own weather (§14, `ART_AND_ADS.md` §5);
+- its own **ground hazard** (below), which every chapter of the act carries;
+- its own **foe**, which comes only in its act (and in a few Act VI chapters, where every realm's dead march);
+- its own **finale boss** in the act's fifth chapter, with a new twist and signature (§6 frame).
+
+Its other four chapters bring an earlier boss back **stronger** (`tier`), under the act's epithet: "Drowned Gravemaw, the Hollow King", warned as "THE HOLLOW KING RETURNS · Drowned Gravemaw: stronger than before". Data: `ACTS` and `CHAPTERS` in `data.js`.
+
+| Act | Name | Chapters | Realm (floors) | Hazard | Foe | Finale | Epithet |
+|---|---|---|---|---|---|---|---|
+| I | The Waking Dark | 1–5 | the five Act I floors | per chapter (§8) | — | Vesperine, the Crimson Queen | — |
+| II | The Drowned Coast | 6–10 | drowned crypts, salt shore | tide pools | Drowned Siren | **Morwenna, the Drowned Cantor** | Drowned |
+| III | The Thornwood | 11–15 | thornwood, hanging grove | brambles | Thornback | **Gorrath, the Briar King** | Thornbound |
+| IV | The Plague Fens | 16–20 | fen, fungal abbey | miasma clouds | Plague Rat (swarms) | **Mother Mire, the Plague Bloom** | Blighted |
+| V | The Storm Spire | 21–25 | storm slate, peak | lightning | Stormcaller | **Kaelthar, the Storm Herald** | Stormforged |
+| VI | The Hollow Moon | 26–30 | moon regolith, star floor | gravity wells | Void Stalker | **Nihl, the First Night** | Moonless |
+
+| # | Chapter | Boss (tier) | Twist beyond the act's hazard and foe | HP mult |
+|---|---|---|---|---|
+| 6 | Sunken Choir | Gravemaw (2) | — | 8.84 |
+| 7 | Saltgrave Shore | Pyrexa (2) | Ghoul packs | 10.21 |
+| 8 | Wreck of the Last Ark | Vaulkar (2) | Witch fire burns | 11.62 |
+| 9 | Lighthouse of Lost Souls | Azrathel (2) | 8 elites | 13.08 |
+| 10 | The Abyssal Choir | **Morwenna** | Sirens ×2.2, Wraiths, short sight | 14.57 |
+| 11 | Witherwood Edge | Vesperine (2) | — | 16.11 |
+| 12 | The Hanging Grove | Gravemaw (3) | Ghoul packs | 17.69 |
+| 13 | Briar Labyrinth | Pyrexa (3) | short sight, Corpse Priests | 19.31 |
+| 14 | Rotheart Hollow | Morwenna (2) | Bloaters ×1.8 | 20.98 |
+| 15 | The Thorn Throne | **Gorrath** | Thornbacks ×2, Brutes | 22.69 |
+| 16 | Mirewood Fen | Vaulkar (4) | — | 24.45 |
+| 17 | Gallows Bog | Azrathel (4) | Wraiths ×1.8 | 26.26 |
+| 18 | Leper's Crossing | Vesperine (4) | Witch fire burns | 28.12 |
+| 19 | The Rotting Abbey | Gorrath (2) | Corpse Priests ×2, Bloaters | 30.02 |
+| 20 | Mother of Rot | **Mother Mire** | rat swarms ×2, 8 elites | 31.98 |
+| 21 | Thunderstep Pass | Gravemaw (5) | — | 33.99 |
+| 22 | The Shattered Bridges | Pyrexa (5) | ice patches | 36.05 |
+| 23 | Galebreak Monastery | Vaulkar (5) | 8 elites | 38.17 |
+| 24 | Eye of the Tempest | Mire (2) | ember vents | 40.34 |
+| 25 | The Storm Spire | **Kaelthar** | Stormcallers ×2.2, Brutes | 42.57 |
+| 26 | Moonfall Steps | Azrathel (6) | — | 44.86 |
+| 27 | The Silent Sea | Vesperine (6) | abyssal hands | 47.20 |
+| 28 | Orrery of Bones | Kaelthar (2) | tide pools and brambles; Sirens and Thornbacks | 49.61 |
+| 29 | The Last Cathedral | Morwenna (5) | miasma, 8 elites; Rats and Stormcallers | 52.07 |
+| 30 | The Hollow Moon | **Nihl** | lightning, short sight; Stalkers ×2 | 54.60 |
+
+**Unlocks and the Endless Abyss.** Chapter N+1 still opens when Chapter N falls on Normal, up to 30. The Endless Abyss is no longer chapter 6: it is `ENDLESS_ID` = **100**, opens with the first Chapter 5 clear as before, and plays at scaling level 6 (unchanged numbers). Saves from before (`v` < 2) move its record, depth and choice from 6 to 100 (`save.js`); the selected chapter clamps to 1–30 or 100.
+
+**Scaling past Chapter 5** (`SCALE` and helpers in `data.js`; c = the chapter, Act I unchanged):
+- **The Shepherd's weapons keep pace:** weapon damage × `weaponScale(c)` = (1 + 0.45(c−1)) / 2.8 from Chapter 6 (×1.16 at 6, ×1.80 at 10, ×3.41 at 20, ×5.02 at 30); 1 in Act I and the Endless Abyss. Minion damage and the Nova keep their ×(1 + 0.45(c−1)), minion HP its ×(1 + 0.4(c−1)).
+- **Foes stay a step ahead:** HP mult = 7.5 × weaponScale(c) × 1.015^(c−5) (the table above); spawn mult = min(2.0, 1.6 + 0.016(c−5)). Foe damage grows 1.2% a chapter past Chapter 6 (×2.88 at 10, ×3.25 at 20, ×3.66 at 30, before the in-run minute ramp). So a player with typical progression for the chapter (below) meets the same fight as in Act I, about 1.5% tougher each chapter plus the act's hazard and foe, and the climb is carried by relics, stars and Mastery, since talents are full by Chapter 5. (The first pass used 2.8% and 2.4%: the bot then lost every run from Chapter 20 on, two of them before the boss; see the balance check below.)
+- **Boss:** HP = 12,500 × HP mult × (1 + 0.05(c−1)), damage × (1 + 0.3(c−1)) to Chapter 6, then ×1.012 a chapter. A **returning boss** (tier t > 1) fights 6% faster per tier (recoveries), sings its enrage 12 s sooner per tier (180 s → no sooner than 120 s), and from tier 3 adds one wave to every ring volley.
+
+**The realms' hazards** (`HAZARDS` in `data.js`, `hazards.js`). Like Act I's, they are stateless hash grids around the Shepherd, so they cost nothing far away and the spawn stays clear.
+- **Tide pools** (Act II): 13 m grid, half the cells, radius 2.4–4 m. In one the Shepherd's top speed is ×0.72 and teal spray kicks up at his feet.
+- **Brambles** (Act III): 12 m grid, 42% of cells, radius 1.5–2.6 m. Inside: top speed ×0.85 and 5 damage a second. A charging Thornback leaves a 1 m bramble patch every 1.3 m it runs (4 s).
+- **Miasma** (Act IV): 3 clouds 2.6–3.8 m across drift in 6–16 m ahead of the Shepherd and live 14–22 s, fading in and out over 1.5 s; inside, 6 damage a second (brambles and miasma never stack: the worse one counts).
+- **Lightning** (Act V): every 3.5–5.5 s a 1.5 m strike is marked where the Shepherd is going (0.5 s ahead, up to 2.2 m off) and lands 1.1 s later: 14 damage to him, and 1.6 × a Husk's HP to every foe inside, so a strike can thin the horde.
+- **Gravity wells** (Act VI): 16 m grid, 40% of cells. Each pulses every 7–9.5 s: a 1.2 s gathering mark, then for 1.6 s it pulls the Shepherd (and the horde) toward its core, up to 5 m/s at the core, 0 at 6 m. The pulse hurts for 12 inside its 1.3 m core.
+All hazard damage scales like enemy damage. No hazard hurts the legion; the lightning burns the horde but never a minion.
+
+**The act foes** (`ENEMIES` in `data.js`, behaviour in `enemies.js`; their risen forms in §4.2).
+
+| Foe | Act | HP | Speed | Damage | What it does | Counterplay |
+|---|---|---|---|---|---|---|
+| **Drowned Siren** | II, from 1:00, at most 6 | 26 | 2.4 | 8 | Holds 9 m off and backs away inside 6 m. Every 7 s she sings onto a 4.2 m teal circle where the Shepherd stands (1.1 s mark): the minions inside fall still for 2.5 s and drift toward her. Ignores taunts. | Step out of the circle and drag the legion with you; Soul Bolts and Chains reach her. |
+| **Thornback** | III, from 1:00, at most 8 | 70 | 2.0 | 16 | Mass 4. From 3–10 m it lowers its head over a marked 0.9 m lane (1.0 s), then charges 11 m at 13 m/s: the Shepherd in its path is thrown aside for 1.4× damage, once a charge, and minions in its way are trampled. 4.5 s between charges. | Sidestep the lane; it ignores taunts mid-charge. |
+| **Plague Rat** | IV, from 0:30, at most 90 | 5 | 5.0 | 3 | Comes in **packs of 9–13** (banked like Ghoul packs), flanking wide until it closes in; bites every 0.5 s. | Area weapons: Skull Halo, Grave Pulse, the Nova. They are raise fodder. |
+| **Stormcaller** | V, from 1:00, at most 10 | 24 | 2.3 | 11 | Holds 9 m off. Every 4 s it marks a 12 m line toward where the Shepherd is going (1.0 s), then lightning runs down it: full damage to him, 0.6× to each minion inside. Ignores taunts. | Step across the line, not along it. |
+| **Void Stalker** | VI, from 1:00, at most 12 | 30 | 3.0 | 12 | From 5–15 m it marks a spot 2.4 m beside the Shepherd, shimmers out (1.0 s), appears there and pounces at 9 m/s for 0.25 s. 5 s between blinks. | Keep moving when the violet mark appears; it lands where you were going. |
+
+**The act bosses** (the §6 frame: same stats, arena and three phases, a twist on the shared attacks and a signature; `BOSSES` and `BOSS_PHASES` in `data.js`).
+
+| Ch | Boss | Colour | Twist | Signature (weights I / II / III) | Phases · enrage |
+|---|---|---|---|---|---|
+| 10 | **Morwenna, the Drowned Cantor** | sea green #2fe6c8 | Slam rings leave 4 / 6 / 8 tide pools (2.2 m, 6 s) | **Tidal Lanes** (0.25 / 0.25 / 0.2): 2 / 3 / 4 parallel 30 m lanes, 1.3 m wide, toward the Shepherd, marked 1.2 s and running 0.35 s apart; 0.6× damage, 8 m/s knockback, minions 0.6× | Low Tide · Drowning Hymn · The Deep Choir · High Tide |
+| 15 | **Gorrath, the Briar King** | thorn green #c8e040 | Slam rings leave 5 / 8 / 11 bramble patches (1.1 m, 5 s) | **Briar Roots** (0.25 / 0.25 / 0.2): 2 / 3 / 4 lines of 7 thorn spikes from 2 m out, 0.1 s apart (1.0 s marks); a spike holds the Shepherd fast for 0.6 s and deals 0.45× | Thorn Crown · Root Snare · The Wild Hunt · Overgrowth |
+| 20 | **Mother Mire, the Plague Bloom** | blight green #9cff3a | Slam rings leave 2 / 3 / 4 miasma patches (2 m, 6 s) | **Plague Spores** (0.25 / 0.25 / 0.2): 4 / 6 / 8 spore pods lobbed 2–6 m around the Shepherd (1.15 s flight, 1.3 m, 0.5×), each leaving a 2.6 m miasma cloud for 6 s | Spore Season · Blight Rain · The Great Rot · Pestilence |
+| 25 | **Kaelthar, the Storm Herald** | storm blue #7fd4ff | Lightning strikes every 2.6–3.8 s through the whole fight (as Act V, faster) | **The Tempest** (0.25 / 0.25 / 0.2): 2 / 3 / 4 16 m lightning beams from his body, marked 1.2 s, then turning 0.62 rad/s for 3.2 s; 0.5× every 0.6 s inside; safe within 1.6 m of him | Gathering Storm · Tempest · The Last Thunder · Maelstrom |
+| 30 | **Nihl, the First Night** | moonlight #d0b8ff | Phase III at 50% (as Vesperine); every 7–9 s the dark pulls the Shepherd toward Nihl (1.2 s warning, 1.4 s pull, 14 m reach) | **Echoes of the Fallen** (0.3 / 0.3 / 0.25): each cast is the next fallen boss's signature in turn: Cinder Rain, Glacier Lances, Smite, Blood Lances, Tidal Lanes, Briar Roots, Plague Spores, the Tempest | Eventide · Echoes of the Fallen · The First Night · Endless Night |
+
+Each has a painted 3D model, a painted Bestiary portrait and warning band, its colour on the bar, banners and telegraphs, and three announcer lines (arrival, return, death; `ART_AND_ADS.md` §3). Every damaging mark is at least 1.0 s (the §6 accessibility floor), and a phase roar withdraws marks that have not gone off, lanes and beams included.
+
+**Rewards past Act I** (`CAMPAIGN_REWARDS` in `data.js`, §10):
+- **Clear gems** stay 10 + 2c, capped at c = 10 (30 per clear from Chapter 10).
+- **First clear:** 100 gems and 1 Sigil; an act's last chapter (10, 15, 20, 25, 30) **250 gems and 3 Sigils**.
+- **Boss Hoard (Normal):** Ch6–10 as Ch3–5 (32.5% Common, 32.5% Rare, 35% Epic); Ch11–20 50% Rare, 50% Epic; Ch21–30 30% Rare, 67% Epic, **3% Legendary**. A harder tier never pays less than Normal there: Nightmare takes the richer of its table and the chapter's, and Torment adds the chapter's Legendary chance to its own 2% (5% from Chapter 21).
+- **Gold** keeps its 400 × c clear term: 12,000 for the Chapter 30 boss (400 for Chapter 1), for relic levels and Relic Ascension (up to 150,000 gold a relic).
+
+**The chapter card and the map** (`home.js`, `chapters.js`).
+- The card's label reads "Act II · Chapter 7", with five dots for the act's chapters (the current one lit, locked ones dim). The arrows and swipes step through the open chapters, the next locked one as a preview, then the Endless Abyss.
+- Tapping the label opens **The Campaign**: a scrolling sheet of the six acts, each with its name, its clears (n/5) and five painted tiles (number, name, boss, "returns" for a returning boss, and Normal / Nightmare / Torment pips lit where cleared), the Endless Abyss below. Tiles past the next chapter are greyed and locked ("Clear Chapter n"); an open tile selects that chapter and closes the sheet.
+- A first Normal clear of an act's last chapter says so on the results: "Act III is open: The Thornwood" (and the Endless Abyss after Chapter 5; after Chapter 30, the campaign is won).
+
+**Typical progression past Chapter 5** (`scripts/balance.mjs` PROGRESSION; talents are full from Chapter 5): hero 3★ → 4★ by Chapter 8 → 5★ by 16; relics Epic Lv8 → Epic Lv10 ★1 by 10 → Legendary from 14 → Legendary Lv10 ★5 by 28; Hero Mastery rank 3 → 10.
 
 ## 9. In-run XP curve
 

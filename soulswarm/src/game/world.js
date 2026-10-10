@@ -8,15 +8,27 @@ import { Weather } from './weather.js';
 
 const FLOOR_URL = assetFiles(import.meta.glob('../assets/floors/*.webp', { eager: true, query: '?url', import: 'default' }));
 
-// Each chapter's painted floor (Higgsfield, docs/ART_AND_ADS.md §5): the texture, the metres one copy covers, how bright
-// the paint sits under the ambient light, and how much of its bright saturated paint glows (lava, starlit cracks).
+// The painted floors (Higgsfield, docs/ART_AND_ADS.md §5) by key (CHAPTERS[].floor): the texture, the metres one copy
+// covers, how bright the paint sits under the ambient light, and how much of its bright saturated paint glows (lava,
+// starlit cracks, toxic sludge).
 export const FLOORS = {
-  1: { tex: 'necropolis', scale: 15, gain: 1.0, glow: 0 },
-  2: { tex: 'ember', scale: 17, gain: 1.15, glow: 1.1 },
-  3: { tex: 'ossuary', scale: 16, gain: 1.15, glow: 0.4 },
-  4: { tex: 'cathedral', scale: 15, gain: 1.8, glow: 0.7 },
-  5: { tex: 'throne', scale: 18, gain: 1.45, glow: 0 },
-  6: { tex: 'abyss', scale: 16, gain: 1.05, glow: 0.9 },
+  necropolis: { tex: 'necropolis', scale: 15, gain: 1.0, glow: 0 },
+  ember: { tex: 'ember', scale: 17, gain: 1.15, glow: 1.1 },
+  ossuary: { tex: 'ossuary', scale: 16, gain: 1.15, glow: 0.4 },
+  cathedral: { tex: 'cathedral', scale: 15, gain: 1.8, glow: 0.7 },
+  throne: { tex: 'throne', scale: 18, gain: 1.45, glow: 0 },
+  abyss: { tex: 'abyss', scale: 16, gain: 1.05, glow: 0.9 },
+  // Update 13's realms: two floors each
+  drowned: { tex: 'drowned', scale: 16, gain: 1.25, glow: 0.3 },
+  shore: { tex: 'shore', scale: 17, gain: 1.2, glow: 0 },
+  thornwood: { tex: 'thornwood', scale: 15, gain: 1.3, glow: 0 },
+  grove: { tex: 'grove', scale: 16, gain: 1.3, glow: 0.2 },
+  fen: { tex: 'fen', scale: 16, gain: 1.2, glow: 0.9 },
+  fungal: { tex: 'fungal', scale: 15, gain: 1.25, glow: 1.0 },
+  slate: { tex: 'slate', scale: 16, gain: 1.3, glow: 0.8 },
+  peak: { tex: 'peak', scale: 17, gain: 1.2, glow: 0.4 },
+  regolith: { tex: 'regolith', scale: 17, gain: 1.05, glow: 0.6 },
+  starfloor: { tex: 'starfloor', scale: 16, gain: 1.2, glow: 0.9 },
 };
 const floorTextures = new Map();
 
@@ -32,16 +44,22 @@ export function floorTexture(key) {
 const PROP_GLB = assetFiles(import.meta.glob('../assets/props/*.glb', { eager: true, query: '?url', import: 'default' }));
 const PROP_TEX = assetFiles(import.meta.glob('../assets/props/*.webp', { eager: true, query: '?url', import: 'default' }));
 
-// Each chapter's painted props (Higgsfield concept art turned to 3D, docs/ART_AND_ADS.md §5): height in metres (each
-// placement varies it 0.85-1.2x), how often it turns up (weight), how much bright saturated paint glows, and for a
-// flame or a crystal the flickering pool of light it casts on the floor ([colour, radius m, intensity]).
+// Each realm's painted props (Higgsfield concept art turned to 3D, docs/ART_AND_ADS.md §5) by biome (CHAPTERS[].biome):
+// height in metres (each placement varies it 0.85-1.2x), how often it turns up (weight), how much bright saturated paint
+// glows, and for a flame or a crystal the flickering pool of light it casts on the floor ([colour, radius m, intensity]).
 export const PROPS = {
-  1: [{ key: 'graves', h: 1.6, w: 3 }, { key: 'angel', h: 2.6, w: 1.2 }, { key: 'lamp', h: 3.0, w: 1, glow: 2.6, light: [0x4ef2ff, 5.5, 0.55] }, { key: 'deadtree', h: 3.6, w: 1.2 }],
-  2: [{ key: 'spire', h: 3.0, w: 2, glow: 2 }, { key: 'charredtree', h: 3.4, w: 1.2, glow: 1.6 }, { key: 'brazier', h: 1.5, w: 1, glow: 2.6, light: [0xff8a2a, 6, 0.75] }, { key: 'skulls', h: 0.9, w: 1.6, glow: 1.6 }],
-  3: [{ key: 'icecrystal', h: 2.4, w: 2, glow: 0.6 }, { key: 'ribcage', h: 1.8, w: 1.2 }, { key: 'icepillar', h: 3.2, w: 1.2 }, { key: 'sarcophagus', h: 1.0, w: 1 }],
-  4: [{ key: 'column', h: 3.6, w: 1.6, glow: 1 }, { key: 'candelabra', h: 2.4, w: 1, glow: 2.6, light: [0xa35bff, 5.5, 0.6] }, { key: 'gargoyle', h: 2.2, w: 1 }, { key: 'altar', h: 1.3, w: 1, glow: 1.6, light: [0xa35bff, 4, 0.35] }],
-  5: [{ key: 'banner', h: 3.8, w: 1.4 }, { key: 'knight', h: 2.9, w: 1 }, { key: 'candles', h: 1.8, w: 1, glow: 2.2, light: [0xffb02e, 5, 0.55] }, { key: 'fountain', h: 1.1, w: 1 }],
-  6: [{ key: 'voidcrystal', h: 2.4, w: 2, glow: 2, light: [0x6b7bff, 5, 0.45] }, { key: 'obelisk', h: 3.6, w: 1.2, glow: 1.6 }, { key: 'arch', h: 3.4, w: 1 }],
+  necropolis: [{ key: 'graves', h: 1.6, w: 3 }, { key: 'angel', h: 2.6, w: 1.2 }, { key: 'lamp', h: 3.0, w: 1, glow: 2.6, light: [0x4ef2ff, 5.5, 0.55] }, { key: 'deadtree', h: 3.6, w: 1.2 }],
+  ember: [{ key: 'spire', h: 3.0, w: 2, glow: 2 }, { key: 'charredtree', h: 3.4, w: 1.2, glow: 1.6 }, { key: 'brazier', h: 1.5, w: 1, glow: 2.6, light: [0xff8a2a, 6, 0.75] }, { key: 'skulls', h: 0.9, w: 1.6, glow: 1.6 }],
+  ossuary: [{ key: 'icecrystal', h: 2.4, w: 2, glow: 0.6 }, { key: 'ribcage', h: 1.8, w: 1.2 }, { key: 'icepillar', h: 3.2, w: 1.2 }, { key: 'sarcophagus', h: 1.0, w: 1 }],
+  cathedral: [{ key: 'column', h: 3.6, w: 1.6, glow: 1 }, { key: 'candelabra', h: 2.4, w: 1, glow: 2.6, light: [0xa35bff, 5.5, 0.6] }, { key: 'gargoyle', h: 2.2, w: 1 }, { key: 'altar', h: 1.3, w: 1, glow: 1.6, light: [0xa35bff, 4, 0.35] }],
+  throne: [{ key: 'banner', h: 3.8, w: 1.4 }, { key: 'knight', h: 2.9, w: 1 }, { key: 'candles', h: 1.8, w: 1, glow: 2.2, light: [0xffb02e, 5, 0.55] }, { key: 'fountain', h: 1.1, w: 1 }],
+  abyss: [{ key: 'voidcrystal', h: 2.4, w: 2, glow: 2, light: [0x6b7bff, 5, 0.45] }, { key: 'obelisk', h: 3.6, w: 1.2, glow: 1.6 }, { key: 'arch', h: 3.4, w: 1 }],
+  // Update 13's realms: three props of their own and one fitting prop from Act I
+  drowned: [{ key: 'anchor', h: 2.4, w: 1.4 }, { key: 'hullribs', h: 2.6, w: 1 }, { key: 'coralpillar', h: 2.8, w: 1.2, glow: 2.4, light: [0x2fe6c8, 5, 0.5] }, { key: 'graves', h: 1.6, w: 1.6 }],
+  thorn: [{ key: 'gibbet', h: 3.4, w: 1 }, { key: 'thornbush', h: 1.4, w: 2 }, { key: 'hollowstump', h: 1.6, w: 1, glow: 2.2, light: [0xffaa3a, 4.5, 0.5] }, { key: 'deadtree', h: 3.6, w: 1.2 }],
+  fen: [{ key: 'plaguecart', h: 1.6, w: 1 }, { key: 'fungus', h: 2.2, w: 1.4, glow: 2.4, light: [0x9cff3a, 4.5, 0.5] }, { key: 'scarecrow', h: 2.6, w: 1.2 }, { key: 'skulls', h: 0.9, w: 1.2 }],
+  storm: [{ key: 'lightningrod', h: 3.6, w: 1, glow: 2.6, light: [0x7fd4ff, 5, 0.55] }, { key: 'prayerbell', h: 2.6, w: 1 }, { key: 'monolith', h: 3.2, w: 1.4, glow: 1.8 }, { key: 'column', h: 3.6, w: 1 }],
+  moon: [{ key: 'moonrock', h: 1.8, w: 2, glow: 0.8 }, { key: 'orrery', h: 2.6, w: 1 }, { key: 'eclipseshrine', h: 2.0, w: 1, glow: 2.4, light: [0xd0b8ff, 5, 0.5] }, { key: 'voidcrystal', h: 2.4, w: 1, glow: 2, light: [0x8f7bff, 5, 0.4] }],
 };
 const propModels = new Map();
 
@@ -128,7 +146,7 @@ export class World {
     u.uRune.value.setHex(ch.rune);
     u.uFog.value.setHex(ch.fog);
     // the painted floor; a Blood Moon or a harder difficulty recolours it (look.recolor) keeping the paint's detail
-    const F = FLOORS[ch.id];
+    const F = FLOORS[ch.floor];
     u.uTexOn.value = 0;
     u.uRecolor.value.setHex(ch.ground);
     u.uRecolorAmt.value = ch.recolor || 0;
@@ -143,11 +161,11 @@ export class World {
       for (let i = 0; i < PER_TYPE; i++) attrs.tint.setXYZ(i, this.runeColor.r, this.runeColor.g, this.runeColor.b);
       attrs.tint.needsUpdate = true;
     }
-    this.weather.setChapter(ch.id);
+    this.weather.setChapter(ch.biome);
     this.clearPainted();
     this.kinds = this.fallback;
     this.lastCell = null;
-    const defs = this.props && PROPS[ch.id];
+    const defs = this.props && PROPS[ch.biome];
     if (defs) {
       Promise.all(defs.map(propModel)).then((models) => {
         if (this.chapter !== ch || this.disposed || models.some((m) => !m)) return;

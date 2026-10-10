@@ -1,6 +1,8 @@
 // The horde: pooled enemies, instanced rendering, spatial hash, AI and damage.
 // Signature moves: Ghoul packs flank and lunge, Brutes slam a cone, Cinder Witches lob onto telegraphed circles, Grave
 // Wraiths pass through the legion and dive, Corpse Priests raise the horde's dead (run.corpses) as hollow Husks.
+// Update 13's act foes: Drowned Sirens sing the legion still, Thornbacks charge down marked lanes, Plague Rats swarm,
+// Stormcallers bring lightning down a marked line, Void Stalkers blink onto a marked spot beside the Shepherd.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import * as DATA from './data.js';
@@ -10,16 +12,19 @@ import { enemyGeometry } from '../engine/models.js';
 import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
 import { hdr } from '../engine/particles.js';
 
-const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest'];
-const MAX_PER = { husk: 320, ghoul: 160, brute: 70, witch: 70, bloater: 60, wraith: 40, priest: 12 };
+const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest', 'siren', 'thornback', 'rat', 'caller', 'stalker'];
+const MAX_PER = { husk: 320, ghoul: 160, brute: 70, witch: 70, bloater: 60, wraith: 40, priest: 12, siren: 16, thornback: 24, rat: 160, caller: 24, stalker: 32 };
 const CELL = 2.0, GRID = 64, GRID_MASK = 63;
 // Taunt (contract with the Legion): enemies steer to the nearest run.legion.taunters minion within this radius.
 // Read MINIONS off the namespace so it is just undefined (radius 3) until the Legion branch adds that export.
 const MINIONS = Reflect.get(DATA, 'MINIONS');
 const TAUNT_R = (MINIONS && MINIONS.bulwark && MINIONS.bulwark.taunt) || 3;
-const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5, wraith: 1.75, priest: 2.15 }; // crown height above the model origin
+const HEAD = { husk: 1.4, ghoul: 0.85, brute: 2.25, witch: 2.35, bloater: 1.5, wraith: 1.75, priest: 2.15, siren: 2.0, thornback: 1.4, rat: 0.7, caller: 2.2, stalker: 2.0 }; // crown height above the model origin
 const RAISE_COL = 0xff2e4a; // a Corpse Priest's necromancy (its threads, sigils and the risen Husks' burst)
+const SONG_COL = 0x2fe6c8, LANE_COL = 0xd8e040, BOLT_COL = 0x8fd8ff, BLINK_COL = 0xb98aff; // Update 13's act foes' marks
+const SONG_HDR = hdr(SONG_COL, 2.6), BOLT_HDR = hdr(BOLT_COL, 3.4), VOID_HDR = hdr(BLINK_COL, 3);
 const MAX_CROWNS = 24;
+const NO_TAUNT = { bloater: 1, wraith: 1, priest: 1, siren: 1, caller: 1 };
 const CONE_COL = 0xff4a2a;
 
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
@@ -68,7 +73,7 @@ export class Enemies {
     this.eliteColor = new THREE.Color(0xffd04a);
     this.burstCol = hdr(run.chapter.enemy, 3.2);
     this.eliteBurst = hdr(0xffd04a, 3.5);
-    this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, wraith: 0, priest: 0, boss: 0 };
+    this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, wraith: 0, priest: 0, siren: 0, thornback: 0, rat: 0, caller: 0, stalker: 0, boss: 0 };
     this.raiseHdr = hdr(RAISE_COL, 3); this.raiseColor = new THREE.Color(RAISE_COL);
     this.uidSeq = 0;
     this.crowns = new THREE.InstancedMesh(crownGeometry(), new THREE.MeshBasicMaterial({ color: new THREE.Color(ELITE.crown).multiplyScalar(2.6) }), MAX_CROWNS);
@@ -78,6 +83,7 @@ export class Enemies {
     this.crownGlow = hdr(ELITE.crown, 1.2);
     this.slamCol = hdr(0xff8a3d, 3);
     this.slamLight = new THREE.Color(0xff7a2e);
+    this.laneCol = new THREE.Color(LANE_COL); this.boltCol = new THREE.Color(BOLT_COL);
   }
 
   get count() { return this.active.length; }
@@ -130,6 +136,11 @@ export class Enemies {
     e.bloodT = 0; // Isolde's Crimson Sabbath: blood-marked until this run time (keyed to bloodUid)
     e.reborn = false; // raised by a Corpse Priest: drops no soul shard and leaves no corpse
     if (type === 'priest') { e.shootCd = d.raise.cd * (0.4 + Math.random() * 0.4); e.chant = null; }
+    e.tele = null; // a pending mark on the ground (a Siren's song, a Stalker's blink), withdrawn if the move is called off
+    if (type === 'siren') e.shootCd = d.song.cd * (0.3 + Math.random() * 0.4);
+    else if (type === 'caller') e.shootCd = d.bolt.cd * (0.3 + Math.random() * 0.4);
+    else if (type === 'stalker') e.shootCd = d.blink.cd * (0.3 + Math.random() * 0.4);
+    else if (type === 'thornback') e.moveCd = 1 + Math.random() * 1.5;
     this.active.push(e);
     this.counts[type]++;
     return e;
@@ -184,6 +195,7 @@ export class Enemies {
   update(dt) {
     this.time += dt;
     const run = this.run, P = run.player, a = this.active;
+    run.hazards.lines.length = 0; // lanes are drawn afresh by whoever still holds one this step
     const T = run.legion.taunters, nT = T ? T.length : 0; // Bulwark taunters (Legion variants); inert while absent or empty
     // Bulwarks stay leashed near the Shepherd: enemies beyond the farthest one's reach skip the taunter scan
     let tReach = 0;
@@ -205,7 +217,7 @@ export class Enemies {
       const pdist = Math.hypot(P.x - e.x, P.z - e.z) || 0.001;
       // taunt: the nearest taunter within range replaces the Shepherd as the target
       let tm = null;
-      if (pdist < tReach && e.type !== 'bloater' && e.type !== 'wraith' && e.type !== 'priest') { // Bloaters, Wraiths and Priests ignore taunts
+      if (pdist < tReach && !NO_TAUNT[e.type] && !(e.type === 'thornback' && e.state)) { // Bloaters, Wraiths, the casters and a charging Thornback ignore taunts
         let bd = TAUNT_R * TAUNT_R;
         for (let k = 0; k < nT; k++) {
           const m = T[k];
@@ -321,6 +333,111 @@ export class Enemies {
           }
           if (e.stateT >= R.channel - 1e-6) { this.raiseCorpses(e); e.state = 0; e.shootCd = R.cd * (0.8 + Math.random() * 0.4); }
         }
+      } else if (e.type === 'siren') {
+        // holds `keep` m off and sings onto a marked circle where the Shepherd stands: the minions inside fall still
+        const Sg = d.song;
+        speed = dist < d.flee ? -e.speed * 0.8 : dist < d.keep ? 0 : e.speed;
+        if (e.state === 0) {
+          e.shootCd -= dt;
+          if (e.shootCd <= 0 && e.spawnT > 1 && pdist < 16) {
+            e.state = 1; e.stateT = -dt; e.lx = P.x; e.lz = P.z;
+            e.tele = run.hazards.circle(e.lx, e.lz, Sg.r, Sg.tele, SONG_COL, 1.25);
+            run.audio.sfx('summon', { volume: 0.35, pitch: 1.7 });
+          }
+        } else {
+          e.stateT += dt; speed = 0; wobble = false;
+          e.flash = Math.max(e.flash, 0.3 + 0.2 * Math.sin(e.stateT * 20));
+          if (Math.random() < dt * 24) { // notes stream from her throat to the circle
+            const u = Math.random(), c = SONG_HDR;
+            run.particles.emit(e.x + (e.lx - e.x) * u, 1.6 - u, e.z + (e.lz - e.z) * u, (e.lx - e.x) * 0.6, 0.4, (e.lz - e.z) * 0.6, 0.4, 0.3, 0.04, c[0], c[1], c[2], 0.9, 0, 0);
+          }
+          if (e.stateT >= Sg.tele - 1e-6) {
+            const n = run.legion.entrance(e.lx, e.lz, Sg.r, Sg.entrance, e.x, e.z);
+            run.particles.ring(e.lx, e.lz, Sg.r, 36, SONG_HDR, { life: 0.5, size: 0.4, y: 0.3 });
+            if (n && pdist < 18) run.audio.sfx('ward', { volume: 0.4, pitch: 1.4 });
+            e.state = 0; e.tele = null; e.shootCd = Sg.cd * (0.8 + Math.random() * 0.4);
+          }
+        }
+      } else if (e.type === 'thornback') {
+        // lowers its head over a marked lane, then charges down it: it throws the Shepherd aside and tramples minions
+        const C = d.charge;
+        if (e.state === 0 && dist < C.range && dist > C.min && e.moveCd <= 0 && e.spawnT > 1 && !tm) {
+          e.state = 1; e.stateT = -dt; e.lx = dx; e.lz = dz; e.hitP = false; e.trailD = 0;
+          if (pdist < 16) run.audio.sfx('growl', { volume: 0.55, pitch: 0.75 });
+        }
+        if (e.state) {
+          e.stateT += dt; wobble = false; sx = e.lx; sz = e.lz;
+          if (e.state === 1) {
+            speed = 0;
+            e.flash = Math.max(e.flash, 0.15 + 0.2 * Math.sin(e.stateT * (12 + 20 * e.stateT)));
+            run.hazards.line(e.x, e.z, e.x + e.lx * C.dist, e.z + e.lz * C.dist, C.w, Math.min(1, e.stateT / C.tele), false, this.laneCol);
+            if (e.stateT >= C.tele - 1e-6) { e.state = 2; e.stateT = 0; if (pdist < 16) run.audio.sfx('lunge', { volume: 0.9, pitch: 0.7 }); }
+          } else if (e.state === 2) {
+            speed = C.speed;
+            this.trample(e, C, P, pdist);
+            e.trailD += C.speed * dt;
+            if (e.trailD >= DATA.HAZARDS.brambles.trail.every) { e.trailD = 0; run.hazards.lay('bramble', e.x, e.z, DATA.HAZARDS.brambles.trail.r, DATA.HAZARDS.brambles.trail.life); }
+            if (e.stateT >= C.dist / C.speed) { e.state = 3; e.stateT = 0; }
+          } else {
+            speed = e.speed * 0.3;
+            if (e.stateT >= C.recover) { e.state = 0; e.moveCd = C.cd * (0.85 + Math.random() * 0.3); }
+          }
+        }
+      } else if (e.type === 'rat') {
+        // the swarm flanks like a Ghoul pack, wide until it closes in
+        if (e.flank) {
+          const f = e.flank * Math.min(1, Math.max(0, (dist - 2) / 4)), c = Math.cos(f), s = Math.sin(f);
+          sx = dx * c - dz * s; sz = dx * s + dz * c;
+        }
+      } else if (e.type === 'caller') {
+        // holds `keep` m off and marks a line toward where the Shepherd is going; lightning runs down it
+        const Bo = d.bolt;
+        speed = dist < d.flee ? -e.speed * 0.8 : dist < d.keep ? 0 : e.speed;
+        if (e.state === 0) {
+          e.shootCd -= dt;
+          if (e.shootCd <= 0 && e.spawnT > 1 && pdist < 15) {
+            const ax = P.x + P.vx * Bo.lead - e.x, az = P.z + P.vz * Bo.lead - e.z, al = Math.hypot(ax, az) || 1;
+            e.state = 1; e.stateT = -dt; e.lx = ax / al; e.lz = az / al; e.cx0 = e.x; e.cz0 = e.z;
+            run.audio.sfx('summon', { volume: 0.3, pitch: 1.9 });
+          }
+        } else if (e.state === 1) {
+          e.stateT += dt; speed = 0; wobble = false; sx = e.lx; sz = e.lz;
+          e.flash = Math.max(e.flash, 0.25 + 0.25 * Math.sin(e.stateT * 30));
+          run.hazards.line(e.cx0, e.cz0, e.cx0 + e.lx * Bo.len, e.cz0 + e.lz * Bo.len, Bo.w, Math.min(1, e.stateT / Bo.tele), false, this.boltCol);
+          if (e.stateT >= Bo.tele - 1e-6) { this.callBolt(e, Bo, P); e.state = 2; e.stateT = 0; }
+        } else {
+          e.stateT += dt; speed = 0; wobble = false; sx = e.lx; sz = e.lz;
+          run.hazards.line(e.cx0, e.cz0, e.cx0 + e.lx * Bo.len, e.cz0 + e.lz * Bo.len, Bo.w, 1, true, this.boltCol);
+          if (e.stateT >= 0.2) { e.state = 0; e.shootCd = Bo.cd * (0.85 + Math.random() * 0.3); }
+        }
+      } else if (e.type === 'stalker') {
+        // marks a spot beside the Shepherd, vanishes, appears there and pounces
+        const Bl = d.blink;
+        if (e.state === 0) {
+          e.shootCd -= dt;
+          if (e.shootCd <= 0 && e.spawnT > 1 && dist > Bl.range[0] && dist < Bl.range[1]) {
+            const side = Math.random() < 0.5 ? 1 : -1;
+            e.lx = P.x + P.vx * 0.4 - dz * side * Bl.dist; e.lz = P.z + P.vz * 0.4 + dx * side * Bl.dist;
+            e.state = 1; e.stateT = -dt;
+            e.tele = run.hazards.circle(e.lx, e.lz, 0.9, Bl.tele, BLINK_COL, 1.5);
+            if (pdist < 16) run.audio.sfx('summon', { volume: 0.3, pitch: 0.8 });
+          }
+        } else if (e.state === 1) {
+          e.stateT += dt; speed = 0; wobble = false;
+          e.flash = Math.max(e.flash, 0.35 + 0.35 * Math.sin(e.stateT * 34)); // it shimmers out
+          if (e.stateT >= Bl.tele - 1e-6) {
+            run.particles.burst(e.x, 1.1, e.z, 16, VOID_HDR, { speed: 3, life: 0.4, size: 0.45, up: 1 });
+            e.x = e.lx; e.z = e.lz; e.tele = null;
+            run.particles.burst(e.x, 1.1, e.z, 20, VOID_HDR, { speed: 4, life: 0.45, size: 0.5, up: 1.2 });
+            const px = P.x - e.x, pz = P.z - e.z, pl = Math.hypot(px, pz) || 1;
+            e.px = px / pl; e.pz = pz / pl;
+            e.state = 2; e.stateT = 0;
+            if (pdist < 16) run.audio.sfx('lunge', { volume: 0.7, pitch: 1.3 });
+          }
+        } else {
+          e.stateT += dt; wobble = false; sx = e.px; sz = e.pz; speed = Bl.pounce;
+          if (e.stateT >= Bl.pounceT) { e.state = 0; e.shootCd = Bl.cd * (0.8 + Math.random() * 0.4); }
+        }
       }
 
       if (e.slowUid === e.uid && e.slowT > this.time) speed *= e.slowMul; // a broken ward's stagger, a Commander's rout (affixes.js)
@@ -356,8 +473,8 @@ export class Enemies {
       // contact damage: a taunted enemy hits its taunter instead of the Shepherd
       if (tm) {
         if (dist < e.radius + (tm.radius || 0.4) && e.atkCd <= 0) { e.atkCd = 0.8; run.legion.hitMinion(tm, e.dmg); }
-      } else if (dist < e.radius + P.radius && e.atkCd <= 0) {
-        e.atkCd = 0.8;
+      } else if (dist < e.radius + P.radius && e.atkCd <= 0 && !(e.type === 'thornback' && e.state === 2)) { // a charge's trample is its hit
+        e.atkCd = d.bite || 0.8; // a Plague Rat bites quickly
         P.hurt(e.dmg);
       }
       // despawn stragglers that fell far behind (they respawn ahead via the director)
@@ -369,6 +486,45 @@ export class Enemies {
     // the horde's ranged and ground threats tick with it
     run.projectiles.updateLobs(dt);
     run.hazards.update(dt);
+  }
+
+  /** A charging Thornback: the Shepherd in its path is thrown aside once a charge (dmgMul × damage); minions in its way are
+   *  trampled (its damage) and knocked aside. */
+  trample(e, C, P, pdist) {
+    const run = this.run, r = e.radius + 0.35;
+    if (!e.hitP && pdist < e.radius + P.radius + 0.15) {
+      e.hitP = true;
+      const side = Math.sign(e.lx * (P.z - e.z) - e.lz * (P.x - e.x)) || 1; // which side of the lane he stands on
+      P.hurt(e.dmg * C.dmgMul);
+      P.knock(-e.lz * side * C.knock, e.lx * side * C.knock);
+      run.fx.shake(0.3);
+    }
+    const L = run.legion, list = L.list;
+    for (let i = 0; i < list.length; i++) {
+      const m = list[i];
+      if (m.gone || !(m.hp > 0) || m.trampled === e.uid) continue;
+      const mx = m.x - e.x, mz = m.z - e.z;
+      if (mx * mx + mz * mz > r * r) continue;
+      m.trampled = e.uid;
+      if (L.hitMinion) L.hitMinion(m, e.dmg); else m.hp -= e.dmg;
+      const side = Math.sign(e.lx * mz - e.lz * mx) || 1;
+      m.vx += -e.lz * side * 6; m.vz += e.lx * side * 6;
+    }
+    if (Math.random() < 0.5) run.particles.emit(e.x, 0.3, e.z, -e.lx * 2 + (Math.random() - 0.5) * 2, 1, -e.lz * 2 + (Math.random() - 0.5) * 2, 0.45, 0.4, 0.1, 0.5, 0.42, 0.25, 0.9, 2, 0);
+  }
+
+  /** A Stormcaller's lightning runs down its marked line: the Shepherd inside it (+ half his radius) is struck, and so is
+   *  every minion inside (minionDmg × its damage). */
+  callBolt(e, Bo, P) {
+    const run = this.run, x0 = e.cx0, z0 = e.cz0, lx = e.lx, lz = e.lz;
+    const inside = (x, z, pad) => { const t = (x - x0) * lx + (z - z0) * lz; return t > -pad && t < Bo.len + pad && Math.abs((x - x0) * lz - (z - z0) * lx) < Bo.w + pad; };
+    if (!P.dead && inside(P.x, P.z, P.radius * 0.5)) P.hurt(e.dmg);
+    const L = run.legion, list = L.list, md = e.dmg * Bo.minionDmg;
+    for (let i = 0; i < list.length; i++) { const m = list[i]; if (!m.gone && m.hp > 0 && inside(m.x, m.z, 0.2)) { if (L.hitMinion) L.hitMinion(m, md); else m.hp -= md; } }
+    const c = BOLT_HDR, n = Math.round(26 * run.particles.budget);
+    for (let k = 0; k < n; k++) { const u = Math.random() * Bo.len; run.particles.emit(x0 + lx * u, 0.3 + Math.random() * 0.6, z0 + lz * u, (Math.random() - 0.5) * 2, 1.5 + Math.random() * 2, (Math.random() - 0.5) * 2, 0.3, 0.35, 0.05, c[0], c[1], c[2], 1); }
+    run.fx.light(x0 + lx * Bo.len * 0.5, z0 + lz * Bo.len * 0.5, 7, 1.8, this.boltCol, 0.2);
+    if (Math.hypot(P.x - e.x, P.z - e.z) < 16) { run.audio.sfx('explosion', { volume: 0.35, pitch: 1.8 }); run.fx.shake(0.12); }
   }
 
   /** Brute slam: everything in the cone (Shepherd and minions) takes dmgMul × damage and is knocked back. */
@@ -414,6 +570,9 @@ export class Enemies {
     if (e.type === 'boss') { const B = this.run.boss; if (B.state === 'chase') B.cd += DATA.RITES.bossStagger; return; }
     if (e.state && e.type !== 'witch') {
       if (e.type === 'priest') this.breakChant(e);
+      const T = e.tele; // a Siren's song or a Stalker's blink still marked: the mark goes with it
+      if (T && T.x === e.lx && T.z === e.lz && T.t < T.dur) T.t = T.dur;
+      e.tele = null;
       if (e.type === 'bloater') for (const T of this.run.fx.teles) if (T.active && !T.onDone && (T.mesh.position.x - e.x) ** 2 + (T.mesh.position.z - e.z) ** 2 < 1.5) { T.active = false; T.mesh.visible = false; }
       e.state = 0; e.stateT = 0;
     }

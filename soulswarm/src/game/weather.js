@@ -4,13 +4,18 @@ import * as THREE from 'three';
 
 // n: flakes at full quality · size: metres · fall: m/s (negative falls, positive rises) · sway: side drift (m) ·
 // tumble: how fast they flicker/turn · glow: additive brightness (0 = soft, alpha-blended flakes) · a: opacity
-export const WEATHER = {
-  1: { n: 170, color: 0xa9b7c8, size: 0.17, fall: -0.45, sway: 0.7, tumble: 1.2, glow: 0, a: 0.3 },   // grey ash
-  2: { n: 210, color: 0xff7a26, size: 0.13, fall: 0.9, sway: 0.5, tumble: 6, glow: 2.0, a: 1 },       // rising embers
-  3: { n: 250, color: 0xe8f4ff, size: 0.16, fall: -0.9, sway: 0.6, tumble: 1.5, glow: 0, a: 0.45 },   // snow
-  4: { n: 130, color: 0xb57aff, size: 0.13, fall: 0.18, sway: 0.9, tumble: 2.5, glow: 2.0, a: 0.9 },  // violet motes
-  5: { n: 150, color: 0xffc46b, size: 0.11, fall: -0.12, sway: 0.8, tumble: 3, glow: 1.3, a: 0.7 },   // golden dust
-  6: { n: 170, color: 0x8fa2ff, size: 0.12, fall: 0.25, sway: 0.5, tumble: 4, glow: 2.2, a: 0.9 },    // star motes
+export const WEATHER = { // by biome (CHAPTERS[].biome)
+  necropolis: { n: 170, color: 0xa9b7c8, size: 0.17, fall: -0.45, sway: 0.7, tumble: 1.2, glow: 0, a: 0.3 },   // grey ash
+  ember: { n: 210, color: 0xff7a26, size: 0.13, fall: 0.9, sway: 0.5, tumble: 6, glow: 2.0, a: 1 },       // rising embers
+  ossuary: { n: 250, color: 0xe8f4ff, size: 0.16, fall: -0.9, sway: 0.6, tumble: 1.5, glow: 0, a: 0.45 },   // snow
+  cathedral: { n: 130, color: 0xb57aff, size: 0.13, fall: 0.18, sway: 0.9, tumble: 2.5, glow: 2.0, a: 0.9 },  // violet motes
+  throne: { n: 150, color: 0xffc46b, size: 0.11, fall: -0.12, sway: 0.8, tumble: 3, glow: 1.3, a: 0.7 },   // golden dust
+  abyss: { n: 170, color: 0x8fa2ff, size: 0.12, fall: 0.25, sway: 0.5, tumble: 4, glow: 2.2, a: 0.9 },    // star motes
+  drowned: { n: 240, color: 0x9fdcd6, size: 0.1, fall: -2.6, sway: 0.3, tumble: 1, glow: 0, a: 0.32 },  // sea drizzle
+  thorn: { n: 120, color: 0xb8a050, size: 0.2, fall: -0.55, sway: 1.2, tumble: 3, glow: 0, a: 0.5 },     // falling leaves
+  fen: { n: 160, color: 0xb0ff60, size: 0.12, fall: 0.35, sway: 0.8, tumble: 2.5, glow: 1.5, a: 0.8 },   // rising spores
+  storm: { n: 260, color: 0xc8dcff, size: 0.09, fall: -5.5, sway: 0.6, tumble: 1, glow: 0, a: 0.38 },    // driving rain
+  moon: { n: 150, color: 0xe2d8ff, size: 0.1, fall: 0.12, sway: 0.6, tumble: 3, glow: 1.6, a: 0.8 },     // silver dust
 };
 const MAX = 260;
 const AREA = new THREE.Vector3(34, 9, 40); // x, height, z around the Shepherd (the view is taller than wide)
@@ -83,8 +88,8 @@ export class Weather {
     scene.add(this.points);
   }
 
-  setChapter(id) {
-    const W = WEATHER[id], u = this.material.uniforms;
+  setChapter(biome) {
+    const W = WEATHER[biome], u = this.material.uniforms;
     this.points.visible = !!W;
     if (!W) return;
     u.uCount.value = Math.round(W.n * this.budget);

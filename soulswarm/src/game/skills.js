@@ -1,20 +1,21 @@
 // In-run stats and the level-up card draw.
-import { SKILLS, EVOLUTIONS, UNIONS, WEAPON_SLOTS, BASE, BANISH } from './data.js';
+import { SKILLS, EVOLUTIONS, UNIONS, WEAPON_SLOTS, BASE, BANISH, chapterLevel, sideScale, weaponScale, minionHpScale } from './data.js';
 
 export function computeStats(L, lv, chapter, level) {
   const g = (k) => lv[k] || 0;
-  const ch = chapter.id - 1;
+  const lvl = chapterLevel(chapter); // the chapter's scaling level (data.js SCALE)
   return {
     dmgMul: L.dmgMul * (1 + 0.10 * g('might')),
+    weaponMul: chapter.endless ? 1 : weaponScale(lvl), // from Chapter 6 the weapons grow with the chapter (minions, Nova and Rites always have)
     haste: L.hasteMul * (1 + 0.08 * g('frenzy')),
     speed: L.speed * (1 + 0.08 * g('haste')),
     maxHp: L.hpMax + 20 * g('vitality'),
     pickup: BASE.pickup * (1 + 0.30 * g('soulMagnet')),
     raise: Math.min(0.85, L.raise + 0.06 * g('raiseDead')),
     cap: Math.min(BASE.hardLegionMax, Math.round((BASE.cap + L.capBonus + 10 * g('legionCap')) * L.capMul)),
-    minionDmg: BASE.minionDmg * L.dmgMul * L.minionDmgMul * (1 + 0.2 * g('minionFury')) * (1 + 0.04 * (level - 1)) * (1 + 0.45 * ch),
+    minionDmg: BASE.minionDmg * L.dmgMul * L.minionDmgMul * (1 + 0.2 * g('minionFury')) * (1 + 0.04 * (level - 1)) * sideScale(lvl),
     minionSpeed: BASE.minionSpeed * L.minionSpeedMul,
-    minionHp: BASE.minionHp * (1 + 0.08 * (level - 1)) * (1 + 0.4 * ch),
+    minionHp: BASE.minionHp * (1 + 0.08 * (level - 1)) * minionHpScale(lvl),
     novaMul: L.novaMul,
     crit: 0.1,
     area: 1 + 0.10 * g('dreadReach'),

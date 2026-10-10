@@ -227,25 +227,29 @@ export class Projectiles {
     this.lobCol = hdr(0xff7a2a, 3.6);
     this.lobHot = hdr(0xffd08a, 3.2);
     this.lobTele = new THREE.Color(0xff7a2e);
+    this.sporeCol = hdr(0x9cff3a, 3); this.sporeTele = new THREE.Color(0x9cff3a); // Mother Mire's spore pods
     this.lobLight = new THREE.Color(0xff7a2e);
     this.lobScale = new THREE.Vector3(1.7, 1.7, 1.7);
   }
 
-  /** Lob an orb from (x, z) onto (tx, tz). spec = ENEMIES.witch.lob {flight, radius, height}; burn leaves burning ground. */
+  /** Lob an orb from (x, z) onto (tx, tz). spec = ENEMIES.witch.lob {flight, radius, height}; burn leaves burning ground,
+   *  or 'miasma' a spore pod's poison cloud (spec.cloud m, spec.life s: Mother Mire's Blight Rain). */
   lob(x, z, tx, tz, dmg, spec, burn) {
     if (!this.lobs || this.lobs.length >= 64) return null;
     const L = this.lobPool.pop() || {};
     L.x0 = x; L.z0 = z; L.tx = tx; L.tz = tz; L.x = x; L.y = 1.6; L.z = z; L.t = 0; L.fresh = true;
-    L.flight = spec.flight; L.r = spec.radius; L.h = spec.height; L.dmg = dmg; L.burn = !!burn;
+    L.flight = spec.flight; L.r = spec.radius; L.h = spec.height; L.dmg = dmg;
+    L.burn = burn === 'miasma' ? 'miasma' : !!burn; L.cloud = spec.cloud || 0; L.life = spec.life || 0;
+    L.col = L.burn === 'miasma' ? this.sporeCol : this.lobCol;
     this.lobs.push(L);
-    L.tele = this.run.hazards.circle(tx, tz, L.r, L.flight, this.lobTele, 1.8); // plus a ring closing in as the orb falls
+    L.tele = this.run.hazards.circle(tx, tz, L.r, L.flight, L.burn === 'miasma' ? this.sporeTele : this.lobTele, 1.8); // plus a ring closing in as the orb falls
     this.run.audio.sfx('lob', { volume: 0.8 });
     return L;
   }
 
   updateLobs(dt) {
     if (!this.lobs) return;
-    const parts = this.run.particles, c = this.lobCol, lobs = this.lobs, down = this.landed;
+    const parts = this.run.particles, lobs = this.lobs, down = this.landed;
     let w = 0;
     for (let i = 0; i < lobs.length; i++) {
       const L = lobs[i];
@@ -253,6 +257,7 @@ export class Projectiles {
       const u = L.t >= L.flight - 1e-6 ? 1 : L.t / L.flight;
       L.x = L.x0 + (L.tx - L.x0) * u; L.z = L.z0 + (L.tz - L.z0) * u;
       L.y = 1.6 * (1 - u) + 0.25 * u + 4 * L.h * u * (1 - u);
+      const c = L.col;
       if (Math.random() < 0.85) parts.emit(L.x, L.y, L.z, 0, 0.3, 0, 0.4, 0.45, 0.05, c[0], c[1], c[2], 0.85);
       if (u < 1) lobs[w++] = L; else down.push(L);
     }
@@ -267,8 +272,9 @@ export class Projectiles {
     const run = this.run, P = run.player, x = L.tx, z = L.tz;
     if ((P.x - x) ** 2 + (P.z - z) ** 2 < (L.r + P.radius) ** 2) P.hurt(L.dmg);
     run.legion.damageArea(x, z, L.r, L.dmg);
-    if (L.burn) run.hazards.burn(x, z, L.r, L.dmg);
-    run.particles.burst(x, 0.4, z, 26, this.lobCol, { speed: 5, life: 0.5, size: 0.55, up: 0.9 });
+    if (L.burn === 'miasma') run.hazards.lay('miasma', x, z, L.cloud, L.life);
+    else if (L.burn) run.hazards.burn(x, z, L.r, L.dmg);
+    run.particles.burst(x, 0.4, z, 26, L.col, { speed: 5, life: 0.5, size: 0.55, up: 0.9 });
     run.particles.burst(x, 0.3, z, 8, this.lobHot, { speed: 2, life: 0.35, size: 0.9, up: 0.4 });
     run.fx.shockwave(x, z, L.r * 1.25, 0xff7a2e, 0.3, 0.2);
     run.fx.light(x, z, 3.5, 1.4, this.lobLight, 0.35);

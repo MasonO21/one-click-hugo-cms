@@ -2,9 +2,9 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, UNIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL, HEROES, MASTERY, RITES } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, UNIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL, HEROES, MASTERY, RITES, ENDLESS, ACTS, CAMPAIGN_LENGTH } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
-import { BOSS_ART, CHAPTER_ART, skillArt } from './art.js';
+import { BOSS_ART, chapterArt, skillArt } from './art.js';
 import { RiteButton } from './riteui.js';
 import { StreakHUD, streakRow } from './streakui.js';
 import { showRunIntro } from './runintro.js';
@@ -30,6 +30,15 @@ function masteryRow(m) {
       ${m.items && m.items.length ? `<div class="rw-grid rm-rw">${m.items.map((it, i) => rewardTile(it, i)).join('')}</div>` : ''}
     </div>
   </div>`;
+}
+
+/** A first Normal clear that ends an act opens the next one (and Chapter 5 the Endless Abyss): say so on the results. */
+function actTip(result, outcome) {
+  const ch = +result.chapter;
+  if (!outcome.firstClear || outcome.difficulty !== 'normal' || result.trial || ch % 5) return '';
+  if (ch >= CAMPAIGN_LENGTH) return `<div class="res-tip res-act">The Hollow Moon is broken and the campaign is won, Shepherd. Nightmare and Torment wait on every chapter, and the Endless Abyss has no floor.</div>`;
+  const A = ACTS[ch / 5];
+  return `<div class="res-tip res-act" style="--ac:${A.css}">Act ${['', 'I', 'II', 'III', 'IV', 'V', 'VI'][A.n]} is open: <b>${A.name}</b>.${ch === 5 ? ' The Endless Abyss is open too.' : ''}</div>`;
 }
 
 export class RunUI {
@@ -364,7 +373,7 @@ export class RunUI {
     let doubled = false, adOpen = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">
-      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${CHAPTER_ART[rush ? CHAPTERS.length : this.run.chapter.id]})"><b>${rush ? (win ? 'COURT CLEARED' : 'FALLEN') : tut ? (win ? 'TRAINING COMPLETE' : 'TRAINING ENDED') : result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${rush ? `Boss Rush · ${result.bossKills} of ${nB} bosses` : tut ? 'The Waking · Tutorial' : result.endless ? `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
+      <div class="res-head has-art ${win || result.endless ? 'win' : 'lose'}" style="--art:url(${chapterArt(rush ? ENDLESS : this.run.chapter)})"><b>${rush ? (win ? 'COURT CLEARED' : 'FALLEN') : tut ? (win ? 'TRAINING COMPLETE' : 'TRAINING ENDED') : result.endless ? 'ABYSS DEPTH ' + (result.bossKills + 1) : win ? 'VICTORY' : 'DEFEAT'}</b><span>${rush ? `Boss Rush · ${result.bossKills} of ${nB} bosses` : tut ? 'The Waking · Tutorial' : result.endless ? `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain` : `Chapter ${result.chapter} · ${this.run.chapter.name}`}</span></div>
       <div class="res-badges">${diffPill(result.difficulty)}${result.bloodMoon ? '<span class="pill pill-hot">Blood Moon ×2</span>' : ''}${outcome.firstClear ? '<span class="pill pill-gold">First clear</span>' : ''}${outcome.newBest ? '<span class="pill pill-soul">New best</span>' : ''}${outcome.levelUps ? `<span class="pill pill-hot">Account level ${p.level}</span>` : ''}</div>
       <div class="res-stats">
         <div><b>${fmtTime(result.time)}</b><small>Survived</small></div>
@@ -383,7 +392,8 @@ export class RunUI {
       ${rush ? (outcome.milestones && outcome.milestones.length ? `<div class="res-tip">Event reward${outcome.milestones.length > 1 ? 's' : ''} unlocked: ${outcome.milestones.map((i) => (i + 1 === nB ? 'the Court cleared' : `${i + 1} ${i ? 'bosses' : 'boss'} beaten`)).join(', ')}.</div>` : win ? '' : '<div class="res-tip">Each boss beaten in one attempt unlocks an event reward. Talents, relics and a stronger hero carry you further.</div>')
         : tut ? `<div class="res-tip">You are ready, Shepherd. Spend your gold on <b>Talents</b>, then take on Chapter 1: survive 6:00 and slay ${BOSSES[bossFor(CHAPTERS[0])].name}.</div>`
         : result.endless ? '<div class="res-tip">A chapter boss rises every 5:00, the five in turn, stronger each time. How deep can your legion go?</div>'
-        : !win ? `<div class="res-tip">Tip: Talents and Relics make every run stronger. ${BOSSES[bossFor(this.run.chapter)].name} waits at 6:00.</div>` : ''}
+        : !win ? `<div class="res-tip">Tip: Talents and Relics make every run stronger. ${BOSSES[bossFor(this.run.chapter)].name} waits at 6:00.</div>`
+        : actTip(result, outcome)}
     </div>`);
     if (outcome.mastery && outcome.mastery.ranks.length) setTimeout(() => app.audio.sfx('levelup'), 650); // a Hero Mastery rank-up
     const actions = [];

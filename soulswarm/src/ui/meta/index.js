@@ -3,7 +3,7 @@
 import './meta.css';
 import { h, $, $$, fmt, modal } from '../dom.js';
 import { icon } from '../icons.js';
-import { ENERGY_MAX } from '../../game/data.js';
+import { ENERGY_MAX, CAMPAIGN_LENGTH } from '../../game/data.js';
 import { todayKey } from '../../meta/save.js';
 import { now as clockNow } from '../../meta/clock.js';
 import {
@@ -189,7 +189,7 @@ function openProfile(app) {
         <div><small class="t-label">Foes slain</small><b class="tnum">${fmt(s.kills)}</b></div>
         <div><small class="t-label">Souls raised</small><b class="tnum">${fmt(s.raised)}</b></div>
         <div><small class="t-label">Best legion</small><b class="tnum">${fmt(s.bestLegion)}</b></div>
-        <div><small class="t-label">Chapter</small><b class="tnum">${p.chapter.unlocked}</b></div>
+        <div><small class="t-label">Chapter</small><b class="tnum">${p.chapter.unlocked}<small class="t-dim"> / ${CAMPAIGN_LENGTH}</small></b></div>
       </div>
       <div class="mhint t-dim">${icon('info')} Each level-up grants 20 gems.</div>
     </div>`,

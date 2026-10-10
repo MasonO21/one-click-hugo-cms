@@ -35,14 +35,14 @@ function text(ctx, str, x, y, { font, color = '#fff', glow = null, blur = 18, al
 
 /** What the card says about this result. */
 export function cardCopy(result, run) {
-  const ch = CHAPTERS[(result.chapter || 1) - 1] || CHAPTERS[0], D = DIFFICULTY[result.difficulty];
+  const ch = CHAPTERS[(result.chapter || 1) - 1] || CHAPTERS[0], D = DIFFICULTY[result.difficulty]; // (a campaign result; rush and Endless return first)
   const diff = D && result.difficulty !== 'normal' ? ` · ${D.name}` : '';
-  if (result.rush) return { head: result.victory ? 'COURT CLEARED' : 'FELL IN THE COURT', sub: `Boss Rush · ${result.bossKills} of ${BOSS_ORDER.length} bosses`, art: CHAPTERS.length,
+  if (result.rush) return { head: result.victory ? 'COURT CLEARED' : 'FELL IN THE COURT', sub: `Boss Rush · ${result.bossKills} of ${BOSS_ORDER.length} bosses`, art: 'endless',
     bosses: BOSS_ORDER.slice(0, result.bossKills), color: 0xff2e55 };
-  if (result.endless) return { head: `ABYSS DEPTH ${result.bossKills + 1}`, sub: `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain`, art: CHAPTERS.length,
+  if (result.endless) return { head: `ABYSS DEPTH ${result.bossKills + 1}`, sub: `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain`, art: 'endless',
     bosses: Array.from({ length: Math.min(5, result.bossKills) }, (_, i) => BOSS_ORDER[i % BOSS_ORDER.length]), color: 0x8f6bff };
   const boss = run && run.bossDead ? (run.boss.id || ch.bossId) : null;
-  return { head: result.victory ? 'VICTORY' : 'FALLEN', sub: `${result.trial ? 'Daily Trial · ' : ''}Chapter ${ch.id} · ${ch.name}${diff}`, art: ch.id,
+  return { head: result.victory ? 'VICTORY' : 'FALLEN', sub: `${result.trial ? 'Daily Trial · ' : ''}Chapter ${ch.id} · ${ch.name}${diff}`, art: ch.art,
     bosses: boss ? [boss] : [], slew: boss ? `${BOSSES[boss].name}, ${BOSSES[boss].title}` : '', color: ch.rune || 0x4ef2ff };
 }
 

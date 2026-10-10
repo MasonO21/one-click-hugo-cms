@@ -1,10 +1,13 @@
-// The chapter bosses (BOSSES in data.js): Gravemaw, Pyrexa, Vaulkar, Azrathel and Vesperine share a three-phase fight
-// inside a sealed rune arena (tunables: BOSS_PHASES). I: ring slams, a gap ring and the boss's signature attack.
-// II: faster, rotating gap rings, waves from the edge. III: a spiral stream, the arena closes, Brutes join the waves.
-// Immune 2 s roars between phases. Each boss adds a twist to the shared attacks and a signature of its own:
-// Gravemaw raises the dead, Pyrexa's Cinder Rain, Vaulkar's Glacier Lances, Azrathel's Smite, Vesperine's Blood Lances.
+// The chapter bosses (BOSSES in data.js): Gravemaw, Pyrexa, Vaulkar, Azrathel and Vesperine (Act I), and Morwenna,
+// Gorrath, Mother Mire, Kaelthar and Nihl (Acts II–VI) share a three-phase fight inside a sealed rune arena (tunables:
+// BOSS_PHASES). I: ring slams, a gap ring and the boss's signature attack. II: faster, rotating gap rings, waves from the
+// edge. III: a spiral stream, the arena closes, Brutes join the waves. Immune 2 s roars between phases. Each boss adds a
+// twist to the shared attacks and a signature of its own: Gravemaw raises the dead, Pyrexa's Cinder Rain, Vaulkar's
+// Glacier Lances, Azrathel's Smite, Vesperine's Blood Lances, Morwenna's Tidal Lanes, Gorrath's Root Snare, Mother Mire's
+// Blight Rain, Kaelthar's Tempest, and Nihl, who borrows each of theirs in turn. A boss back in a later act fights at its
+// tier (BOSS_TIER): faster, with more rings and an earlier enrage.
 import * as THREE from 'three';
-import { BOSS, BOSSES, bossFor, BOSS_PHASES as BP, HITSTOP, TUTORIAL } from './data.js';
+import { BOSS, BOSSES, bossFor, BOSS_PHASES as BP, BOSS_TIER, ACTS, HITSTOP, TUTORIAL, chapterLevel, bossDmgScale } from './data.js';
 import { bossGeometry } from '../engine/models.js';
 import { makeCharMaterial } from '../engine/materials.js';
 import { foeModel, loadFoeModel, setGait } from '../engine/foemodels.js';
@@ -29,7 +32,9 @@ export class Boss {
     this.phase = 0;
     this.zones = [];   // lingering hazards: fire bands, frost shards (t < 0: erupting later, marked meanwhile)
     this.strikes = []; // Azrathel's Smite: pillars of light still to fall
-    this.rainQ = [];   // Pyrexa's Cinder Rain: lobs still to throw
+    this.rainQ = [];   // Pyrexa's Cinder Rain (and Mother Mire's spores): lobs still to throw
+    this.lanes = []; this.beams = null; this.well = null; // Morwenna's Tidal Lanes, Kaelthar's Tempest, Nihl's pull
+    this.tier = 1; this.tierRate = 1; this.dirgeAt = BP.dirge.at; this.epithet = '';
     this.pending = []; // telegraphed spawns at the arena edge
     this.slams = [];   // pooled ring-slam decals
     this.arena = { x: 0, z: 0, r: 0, from: 0, to: 0, closeT: 0, seal: 0, on: false, purged: false, drop: 0, hitA: 0, hitK: 0, sparkT: 0, hapT: 0 };
@@ -60,8 +65,14 @@ export class Boss {
     this.build();
     this.id = bossFor(ch, run.bossKills);
     const K = this.kit = BOSSES[this.id], hex = K.color;
+    this.tier = run.endless || run.rush || run.guide ? 1 : ch.tier || 1; // a boss back from an earlier act fights harder
+    const T = BOSS_TIER;
+    this.tierRate = 1 + T.rate * (this.tier - 1);
+    this.dirgeAt = Math.max(T.dirgeMin, BP.dirge.at - T.dirge * (this.tier - 1));
+    this.epithet = this.tier > 1 && ch.act ? ACTS[ch.act - 1].epithet : '';
     const x = P.x, z = P.z - 11;
-    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (ch.id - 1)) * (BOSS.tune[ch.id - 1] || 1) * (run.guide ? TUTORIAL.bossHp : run.tutorial ? BOSS.firstRun : 1) * scale * run.diff.bossHp, dmgMul: (1 + BOSS.chDmg * (ch.id - 1)) * Math.sqrt(scale) * run.diff.bossDmg });
+    const lvl = chapterLevel(ch), tune = ch.bossTune || BOSS.tune[lvl - 1] || 1;
+    const e = run.enemies.spawn('boss', x, z, { hpMul: ch.hpMul * (1 + BOSS.chHp * (lvl - 1)) * tune * (run.guide ? TUTORIAL.bossHp : run.tutorial ? BOSS.firstRun : 1) * scale * run.diff.bossHp, dmgMul: bossDmgScale(lvl) * Math.sqrt(scale) * run.diff.bossDmg });
     this.e = e;
     run.bossEnemy = e;
     this.color = new THREE.Color(hex);
@@ -80,6 +91,9 @@ export class Boss {
     this.mesh = new THREE.Mesh(pm ? pm.geometry.clone() : bossGeometry(), this.mat);
     run.scene.add(this.mesh);
     this.col = hdr(hex, 3.5);
+    // the chest and crown glows add the boss's colour over its body: a pale, bright colour (the act bosses' sea green, thorn,
+    // blight, storm and moonlight) would wash a dark painted body out to white, so they are dimmed toward Act I's luminance
+    { const C = this.color; this.glowK = Math.min(1, 0.36 / Math.max(0.01, 0.2126 * C.r + 0.7152 * C.g + 0.0722 * C.b)); }
     this.hot = hdr(new THREE.Color(hex).lerp(WHITE, 0.5).getHex(), 4);
     this.orb = { col: this.color.clone().lerp(WHITE, 0.3).multiplyScalar(3.4), glow: hdr(hex, 3.2), sc: 1.35, hr: 0.22, life: 4 };
     // fight state
@@ -90,8 +104,10 @@ export class Boss {
     // the boss's twist on the shared attacks: 2 fire rings, 3 frost shards, 4 extra ring, 5 early phase III
     this.twist = K.twist;
     this.thresholds = this.run.guide ? [-1, -1] // the tutorial's King: phase I only
-      : [BP.phases[1].from, this.run.tutorial ? -1 : this.twist === 5 ? BP.ch5Crown : BP.phases[2].from]; // first run: no phase III
+      : [BP.phases[1].from, this.run.tutorial ? -1 : this.twist === 5 || this.twist === 10 ? BP.ch5Crown : BP.phases[2].from]; // first run: no phase III
     this.nextWave = Infinity; this.zones.length = 0; this.pending.length = 0; this.shards.count = 0; this.strikes.length = 0; this.rainQ.length = 0;
+    this.lanes = []; this.beams = null; this.echoI = 0; this.wellT = this.twist === 10 ? BP.well.every[0] : Infinity; this.well = null;
+    run.hazards.thunder = this.twist === 9 ? BP.thunder.every : null; // Kaelthar: lightning falls through his fight
     for (const S of this.slams) { S.on = false; S.mesh.visible = false; }
     for (const m of [this.slams[0].mesh, this.slams[1].mesh, this.slams[2].mesh, this.fan, this.sigil]) m.material.uniforms.uColor.value.copy(this.danger);
     this.fan.visible = this.sigil.visible = false;
@@ -106,7 +122,7 @@ export class Boss {
     run.audio.sfx('arena');
     run.audio.playMusic('boss');
     run.ui.bossColor(hex);
-    run.ui.bossBar(true, `${K.name}, ${K.title}`, this.thresholds.filter((f) => f > 0));
+    run.ui.bossBar(true, `${this.epithet ? this.epithet + ' ' : ''}${K.name}, ${K.title}`, this.thresholds.filter((f) => f > 0));
     run.ui.bossImmune(true);
     run.fx.telegraph(x, z, 3.2, 1.4, hex);
     run.particles.burst(x, 0.5, z, 120, this.col, { speed: 10, life: 1.2, size: 0.7, up: 1.5 });
@@ -117,7 +133,8 @@ export class Boss {
     this.lastHp = e.hp;
     this.t += dt; this.cd -= dt; this.fightT += dt; this.phaseT += dt;
     if (this.immune > 0) this.immune -= dt;
-    if (!this.dirge && this.fightT >= BP.dirge.at) this.hollowDirge();
+    if (!this.dirge && this.fightT >= this.dirgeAt) this.hollowDirge();
+    if (this.twist === 10) this.updateWell(dt);
     if (this.held && this.phaseT >= BP.minPhase[this.phase]) { this.held = false; this.pendingPhase = this.phase + 1; this.immune = BP.transition.dur; this.lockHp = e.hp; }
     this.run.ui.bossWard(this.held ? BP.minPhase[this.phase] - this.phaseT : 0);
     // minions that strike him while he is immune (rising, roaring) are unharmed; held at a tick he still bites back
@@ -155,6 +172,10 @@ export class Boss {
     else if (st === 'lances') { if (this.t >= this.lanceEnd) this.recover(BP.lances.recover); }
     else if (st === 'smite') this.smiteStep(e);
     else if (st === 'fan') this.fanStep(e);
+    else if (st === 'tidal') this.tidalStep(e, dt);
+    else if (st === 'roots') { if (this.t >= this.lanceEnd) this.recover(BP.roots.recover); }
+    else if (st === 'spores') this.rainStep(e, BP.spores);
+    else if (st === 'storm') this.stormStep(e, dt);
     else if (st === 'roar') this.roarStep(e, dt, dx, dz, dist);
     // contact damage (never mid-air or mid-roar)
     if (dist < e.radius + P.radius && e.atkCd <= 0 && this.y < 0.5 && st !== 'roar') { e.atkCd = 1.0; P.hurt(this.dmg); }
@@ -182,7 +203,7 @@ export class Boss {
   }
 
   toChase(cd) { this.state = 'chase'; this.t = 0; this.cd = cd; }
-  recover(base) { this.toChase(base / (BP.phases[this.phase].rate * this.rate)); }
+  recover(base) { this.toChase(base / (BP.phases[this.phase].rate * this.rate * this.tierRate)); }
 
   /** The phase banner: the boss's own name for it and how to survive it. */
   phaseBanner(i) { const [name, sub] = this.kit.phases[i]; this.run.ui.banner(name, `Phase ${ROMAN[i]} · ${sub}`, 'boss'); }
@@ -201,7 +222,7 @@ export class Boss {
   can(k, dist) { return k === 'slam' ? dist < BP.slam.range : k !== this.last; }
 
   /** QA / profiling hook: force an attack ('slam' | 'ring' | 'rings' | 'spiral' | 'sig' | 'summon' | 'rain' | 'lances' |
-   *  'smite' | 'fan') or an edge 'wave'. */
+   *  'smite' | 'fan' | 'tidal' | 'roots' | 'spores' | 'storm') or an edge 'wave'. */
   force(k) {
     if (k === 'wave') return this.edgeWave();
     if (this.state !== 'enter' && this.state !== 'roar' && this.state !== 'dead') this.start(k);
@@ -211,6 +232,7 @@ export class Boss {
     const run = this.run, P = run.player, e = this.e, ph = BP.phases[this.phase], A = this.arena;
     this.last = kind; this.t = 0;
     if (kind === 'sig') kind = this.kit.sig;
+    if (kind === 'echo') kind = BP.echo[this.echoI++ % BP.echo.length]; // Nihl: each fallen boss's signature in turn
     if (kind === 'slam') {
       // Grave Slam: he leaps onto the Shepherd's spot; rings at 3 / 6 / 9 m go off one after another
       const S = this.slams.find((o) => !o.on) || this.slams[0];
@@ -230,7 +252,7 @@ export class Boss {
     } else if (kind === 'ring' || kind === 'rings') {
       // gap rings: telegraphed by a fan showing every wave's gaps; later waves turn by `turn`
       const R = BP.ring, spin = kind === 'rings';
-      this.waves = (spin ? BP.rings.waves : R.waves) + (this.twist === 4 ? BP.extraRing : 0);
+      this.waves = (spin ? BP.rings.waves : R.waves) + (this.twist === 4 ? BP.extraRing : 0) + (this.tier >= BOSS_TIER.waveFrom ? 1 : 0);
       this.waveI = 0;
       this.turn = BP.rings.turn * (Math.random() < 0.5 ? 1 : -1);
       this.gapA = Math.atan2(P.z - e.z, P.x - e.x) + (Math.random() < 0.5 ? 1 : -1) * rnd(0.3, 0.95); // a gap starts near the Shepherd
@@ -308,14 +330,130 @@ export class Boss {
       run.hazards.cone(e, e.state, P.x - e.x, P.z - e.z, 11, F.arc / 2 + 0.06, F.windup, this.danger);
       this.state = 'fan';
       run.audio.sfx('summon', { volume: 0.45, pitch: 1.2 });
+    } else if (kind === 'tidal') {
+      // Morwenna's Tidal Lanes: parallel lanes across the arena along her line to the Shepherd (one through him), each
+      // marked, then a wave runs down it one after another
+      const T = BP.tidal, n = T.lanes[this.phase], a = Math.atan2(P.z - e.z, P.x - e.x), dx = Math.cos(a), dz = Math.sin(a);
+      const pick = Math.floor(Math.random() * n), gap = (T.spread[1] - T.spread[0]) / Math.max(1, n - 1);
+      this.lanes.length = 0;
+      for (let i = 0; i < n; i++) {
+        const off = (i - pick) * Math.max(gap, T.w * 2.6), cx = P.x - dz * off, cz = P.z + dx * off;
+        this.lanes.push({ x0: cx - dx * T.len / 2, z0: cz - dz * T.len / 2, x1: cx + dx * T.len / 2, z1: cz + dz * T.len / 2, dx, dz, at: Math.max(BP.minTele, T.tele) + i * T.every, fired: false, live: 0 });
+      }
+      this.state = 'tidal';
+      run.audio.sfx('summon', { volume: 0.45, pitch: 0.9 });
+    } else if (kind === 'roots') {
+      // Gorrath's Root Snare: lines of thorns rip out toward the Shepherd, every spot marked until it erupts; a thorn
+      // that catches him holds him fast (a root)
+      const L = BP.roots, n = L.lanes[this.phase], base = Math.atan2(P.z - e.z, P.x - e.x), lim2 = (A.r - 0.6) ** 2;
+      for (let j = 0; j < n; j++) {
+        const a = base + (j - (n - 1) / 2) * L.arc;
+        for (let k = 0; k < L.spikes; k++) {
+          const d = L.from + k * L.step, x = e.x + Math.cos(a) * d, z = e.z + Math.sin(a) * d;
+          if ((x - A.x) ** 2 + (z - A.z) ** 2 > lim2) break;
+          const delay = Math.max(BP.minTele, L.tele) + k * L.every;
+          const tele = run.hazards.circle(x, z, L.r, delay, this.danger);
+          this.zones.push({ kind: 'frost', x, z, r0: 0, r1: 0, r: L.r, t: -delay, life: L.life, dmg: this.dmg * L.dmg, a: Math.random() * TAU, tele, root: L.root });
+        }
+      }
+      this.lanceEnd = Math.max(BP.minTele, L.tele) + L.spikes * L.every;
+      this.state = 'roots';
+      run.audio.sfx('summon', { volume: 0.5, pitch: 0.5 });
+    } else if (kind === 'spores') {
+      // Mother Mire's Blight Rain: spore pods lobbed onto marked circles (the first on the Shepherd's path) that burst
+      // into lingering miasma
+      const R = BP.spores, n = R.n[this.phase], Q = this.rainQ;
+      Q.length = 0;
+      for (let i = 0; i < n; i++) {
+        const p = { x: 0, z: 0, at: i * R.every };
+        if (i === 0) { p.x = P.x + P.vx * R.first; p.z = P.z + P.vz * R.first; }
+        else { const a = Math.random() * TAU, d = rnd(R.spread[0], R.spread[1]); p.x = P.x + Math.cos(a) * d; p.z = P.z + Math.sin(a) * d; }
+        this.clampIn(p, R.radius + 0.4);
+        Q.push(p);
+      }
+      this.rainI = 0;
+      this.state = 'spores';
+      run.audio.sfx('summon', { volume: 0.45, pitch: 1.1 });
+    } else if (kind === 'storm') {
+      // Kaelthar's Tempest: lightning beams from him, marked, then turning around him (the Shepherd starts between two)
+      const S = BP.storm, n = S.beams[this.phase];
+      this.beams = { n, a0: Math.atan2(P.z - e.z, P.x - e.x) + Math.PI / n, dir: Math.random() < 0.5 ? 1 : -1, hitT: 0 };
+      this.state = 'storm';
+      run.audio.sfx('summon', { volume: 0.5, pitch: 1.7 });
     }
   }
 
-  rainStep(e) {
-    const R = BP.rain, Q = this.rainQ;
+  /** Tidal Lanes: marks fill, then each wave runs down its lane: the Shepherd inside is struck and swept along it;
+   *  minions inside are hurt. */
+  tidalStep(e, dt) {
+    const T = BP.tidal, run = this.run, P = run.player, H = run.hazards, col = this.color;
+    let done = true;
+    for (const L of this.lanes) {
+      if (!L.fired) {
+        done = false;
+        H.line(L.x0, L.z0, L.x1, L.z1, T.w, Math.min(1, this.t / L.at), false, col);
+        if (this.t >= L.at) {
+          L.fired = true; L.live = 0.3;
+          const inside = (x, z, pad) => Math.abs((x - L.x0) * L.dz - (z - L.z0) * L.dx) < T.w + pad;
+          if (!P.dead && inside(P.x, P.z, P.radius * 0.5)) { P.hurt(this.dmg * T.dmg); P.knock(L.dx * T.knock, L.dz * T.knock); }
+          const ML = run.legion.list, md = this.dmg * T.dmg * T.minionDmg;
+          for (let i = 0; i < ML.length; i++) { const m = ML[i]; if (!m.gone && m.hp > 0 && inside(m.x, m.z, 0.2)) { m.hp -= md; m.flash = 1; } }
+          const c = this.hot, n = Math.round(30 * run.particles.budget);
+          for (let k = 0; k < n; k++) { const u = Math.random(); run.particles.emit(L.x0 + (L.x1 - L.x0) * u, 0.3, L.z0 + (L.z1 - L.z0) * u, L.dx * 6, 1.5 + Math.random() * 2, L.dz * 6, 0.5, 0.55, 0.08, c[0], c[1], c[2], 1, 2, 0); }
+          run.fx.shake(0.25);
+          run.audio.sfx('explosion', { volume: 0.45, pitch: 0.6 });
+        }
+      } else if (L.live > 0) { done = false; L.live -= dt; H.line(L.x0, L.z0, L.x1, L.z1, T.w, 1, true, col); }
+    }
+    if (done) this.recover(T.recover);
+  }
+
+  /** Tempest: the beams are marked for tele s, then turn around him for dur s; the Shepherd in a beam is struck (at most
+   *  once per hitCd s) and minions caught in one are seared. */
+  stormStep(e, dt) {
+    const S = BP.storm, B = this.beams, run = this.run, P = run.player, H = run.hazards, tele = Math.max(BP.minTele, S.tele);
+    const live = this.t >= tele, a = B.a0 + B.dir * S.spin * Math.max(0, this.t - tele);
+    B.hitT -= dt;
+    const ML = run.legion.list, md = this.dmg * S.dmg * 2 * dt;
+    for (let i = 0; i < B.n; i++) {
+      const ang = a + (i / B.n) * TAU, dx = Math.cos(ang), dz = Math.sin(ang);
+      const x0 = e.x + dx * S.inner, z0 = e.z + dz * S.inner, x1 = e.x + dx * S.len, z1 = e.z + dz * S.len;
+      H.line(x0, z0, x1, z1, S.w, live ? 1 : this.t / tele, live, this.color);
+      if (!live) continue;
+      const on = (x, z, pad) => { const t = (x - e.x) * dx + (z - e.z) * dz; return t > S.inner && t < S.len && Math.abs((x - e.x) * dz - (z - e.z) * dx) < S.w + pad; };
+      if (B.hitT <= 0 && !P.dead && on(P.x, P.z, P.radius * 0.4)) { P.hurt(this.dmg * S.dmg); B.hitT = S.hitCd; }
+      for (let k = 0; k < ML.length; k++) { const m = ML[k]; if (!m.gone && m.hp > 0 && on(m.x, m.z, 0.2)) m.hp -= md; }
+      if (Math.random() < 0.6) { const u = S.inner + Math.random() * (S.len - S.inner), c = this.hot; run.particles.emit(e.x + dx * u, 0.4, e.z + dz * u, 0, 1 + Math.random() * 2, 0, 0.25, 0.4, 0.05, c[0], c[1], c[2], 1); }
+    }
+    if (live && Math.random() < dt * 3) run.audio.sfx('explosion', { volume: 0.2, pitch: 2 });
+    if (this.t >= tele + S.dur) { this.beams = null; this.recover(S.recover); }
+  }
+
+  /** Nihl's twist: the dark gathers around it (a ring closing on it for warn s), then pulls the Shepherd toward it. */
+  updateWell(dt) {
+    const W = BP.well, run = this.run, P = run.player, e = this.e;
+    if (this.state === 'enter' || this.state === 'dead' || !e) return;
+    if (!this.well) {
+      if ((this.wellT -= dt) > 0) return;
+      this.well = { t: 0 };
+      run.hazards.circle(e.x, e.z, W.r, W.warn, this.danger, 1.0);
+      run.audio.sfx('summon', { volume: 0.5, pitch: 0.4 });
+      return;
+    }
+    const Wl = this.well;
+    Wl.t += dt;
+    if (Wl.t < W.warn) return;
+    const dx = e.x - P.x, dz = e.z - P.z, d = Math.hypot(dx, dz);
+    if (d < W.r && d > e.radius + 0.6 && !P.dead) { const f = W.strength * (1 - d / W.r) * dt; P.x += (dx / d) * f; P.z += (dz / d) * f; }
+    if (Math.random() < 0.7) { const a = Math.random() * TAU, rr = W.r * (0.4 + Math.random() * 0.6), c = this.col; run.particles.emit(e.x + Math.cos(a) * rr, 0.3, e.z + Math.sin(a) * rr, -Math.cos(a) * rr, 0.5, -Math.sin(a) * rr, 0.7, 0.35, 0.05, c[0], c[1], c[2], 0.9, 0, 0); }
+    if (Wl.t >= W.warn + W.pull) { this.well = null; this.wellT = rnd(W.every[0], W.every[1]); }
+  }
+
+  rainStep(e, R = BP.rain) {
+    const Q = this.rainQ, spores = R === BP.spores;
     while (this.rainI < Q.length && this.t >= Q[this.rainI].at) {
       const p = Q[this.rainI++];
-      this.run.projectiles.lob(e.x, e.z, p.x, p.z, this.dmg * R.dmg, R, true);
+      this.run.projectiles.lob(e.x, e.z, p.x, p.z, this.dmg * R.dmg, R, spores ? 'miasma' : true);
     }
     if (this.rainI >= Q.length && this.t >= (Q.length ? Q[Q.length - 1].at : 0) + R.flight) this.recover(R.recover);
   }
@@ -496,6 +634,7 @@ export class Boss {
     Z.length = w;
     for (const s of this.strikes) this.unmark(s.tele, s.x, s.z);
     this.strikes.length = 0; this.rainQ.length = 0;
+    this.lanes.length = 0; this.beams = null; this.well = null; // Tidal Lanes, Tempest and the dark's pull are withdrawn too
   }
   /** Ends a mark still showing (telegraphs are pooled: only if it is still the one placed at x, z). */
   unmark(t, x, z) { if (t && t.x === x && t.z === z && t.t < t.dur) t.t = t.dur; }
@@ -564,6 +703,11 @@ export class Boss {
       run.audio.sfx('explosion', { volume: 0.55, pitch: 0.55 + 0.1 * k });
     }
     // chapter twists leave the band dangerous
+    if (this.twist >= 6 && this.twist <= 8) { // tide pools, brambles or miasma along the band (Morwenna, Gorrath, Mother Mire)
+      const Z = this.twist === 6 ? BP.tide : this.twist === 7 ? BP.thorn : BP.rot, kind = this.twist === 6 ? 'tide' : this.twist === 7 ? 'bramble' : 'miasma';
+      const n = Z.n[k], off = Math.random() * TAU;
+      for (let i = 0; i < n; i++) { const a = off + (i / n) * TAU; run.hazards.lay(kind, S.x + Math.cos(a) * R, S.z + Math.sin(a) * R, Z.r, Z.life); }
+    }
     if (this.twist === 2) {
       S.burn[k] = BP.fire.life;
       this.zones.push({ kind: 'fire', x: S.x, z: S.z, r0: R - W, r1: R + W, r: 0, t: 0, life: BP.fire.life, dmg: this.dmg * BP.fire.dmg, a: 0 });
@@ -588,7 +732,10 @@ export class Boss {
       if (was < 0 && z.t >= 0) this.erupt(z); // a marked Glacier Lance spot goes off
       if (z.t < 0.2 || z.t > z.life - 0.3 || P.dead) continue; // brief grace while it ignites and as it fades
       const d = Math.hypot(P.x - z.x, P.z - z.z);
-      if (z.kind === 'fire' ? d > z.r0 - 0.15 && d < z.r1 + 0.15 : d < z.r + P.radius * 0.6) P.hurt(z.dmg);
+      if (z.kind === 'fire' ? d > z.r0 - 0.15 && d < z.r1 + 0.15 : d < z.r + P.radius * 0.6) {
+        P.hurt(z.dmg);
+        if (z.root && !z.rooted) { z.rooted = true; P.root(z.root); } // Gorrath's thorns hold him fast
+      }
     }
     Z.length = w;
   }
@@ -721,6 +868,7 @@ export class Boss {
   dropArena() {
     const A = this.arena, run = this.run;
     A.on = false; A.drop = 1;
+    run.hazards.thunder = null;
     this.cancelAttacks();
     this.zones.length = 0; this.pending.length = 0; this.shards.count = 0;
     const c = this.col;
@@ -750,7 +898,8 @@ export class Boss {
     this.mesh.rotation.y = e.rot;
     this.mesh.scale.setScalar(roar ? 1 + 0.1 * Math.sin(Math.min(1, this.t * 2) * Math.PI) : 1);
     const st = this.state, windup = st === 'ring' || st === 'summon' || st === 'lances' || (st === 'spiral' && this.t < this.tele)
-      || (st === 'fan' && this.t < BP.fan.windup) || (st === 'rain' && this.rainI < this.rainQ.length) || (st === 'smite' && this.smiteI < this.smiteN) ? 0.08 + 0.06 * Math.sin(this.t * 25) : 0;
+      || (st === 'fan' && this.t < BP.fan.windup) || ((st === 'rain' || st === 'spores') && this.rainI < this.rainQ.length) || (st === 'smite' && this.smiteI < this.smiteN)
+      || st === 'roots' || st === 'tidal' || (st === 'storm' && this.t < BP.storm.tele) ? 0.08 + 0.06 * Math.sin(this.t * 25) : 0;
     const shield = (this.immune > 0 && this.state !== 'enter') || this.held ? 0.25 + 0.15 * Math.sin(this.t * 30) : 0;
     // capped: hit constantly, the boss must keep its colour. A painted boss winds up by flaring its glowing paint (a white
     // flash would bleach the paint); the ward still flashes it, more softly
@@ -759,9 +908,9 @@ export class Boss {
     this.mat.uniforms.uTime.value += dt;
     this.mat.uniforms.uEmit.value = 3 + this.phase * 0.7 + (this.dirge ? 0.6 : 0);
     if (paint) this.mat.uniforms.uGlow.value = this.glow0 * (1 + this.phase * 0.25 + (this.dirge ? 0.2 : 0) + windup * 6); // crown, eyes and heart flare
-    const g = run.glow, k = 1 + this.phase * 0.25, h = this.h; // a glow at the chest and one at the crown, in the boss's colour
-    g.add(e.x, 0.5 * h + this.y, e.z + 0.9, 2.2 * k, this.col[0] * 0.5, this.col[1] * 0.5, this.col[2] * 0.5, 0.9);
-    g.add(e.x, 0.89 * h + this.y, e.z + 0.3, 3.0 * k, this.col[0] * 0.25, this.col[1] * 0.25, this.col[2] * 0.25, 0.8);
+    const g = run.glow, k = 1 + this.phase * 0.25, h = this.h, gk = this.glowK; // a glow at the chest and one at the crown, in the boss's colour
+    g.add(e.x, 0.5 * h + this.y, e.z + 0.9, 2.2 * k, this.col[0] * 0.5 * gk, this.col[1] * 0.5 * gk, this.col[2] * 0.5 * gk, 0.9);
+    g.add(e.x, 0.89 * h + this.y, e.z + 0.3, 3.0 * k, this.col[0] * 0.25 * gk, this.col[1] * 0.25 * gk, this.col[2] * 0.25 * gk, 0.8);
     if (shield) g.add(e.x, 2.4, e.z, 7.5, this.col[0] * 0.18, this.col[1] * 0.18, this.col[2] * 0.18, 0.8);
   }
 

@@ -221,7 +221,7 @@ export class Events {
   }
 
   thiefSlain(ev, e) {
-    const run = this.run, gold = TH.gold[0] + TH.gold[1] * run.chapter.id, xp = Math.max(8, Math.round(run.xpNeed * TH.xp));
+    const run = this.run, gold = TH.gold[0] + TH.gold[1] * run.lvl, xp = Math.max(8, Math.round(run.xpNeed * TH.xp));
     run.bonusGold += gold;
     for (let i = 0; i < 10; i++) run.pickups.dropGem(e.x, e.z, Math.ceil(xp / 10));
     run.particles.burst(e.x, 0.8, e.z, 70, this.col.gold, { speed: 9, life: 0.9, size: 0.45, up: 1.6, grav: 10 });

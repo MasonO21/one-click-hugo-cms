@@ -137,14 +137,14 @@ export class Weapons {
   roll(base) {
     const S = this.run.stats;
     const crit = Math.random() < S.crit;
-    return [base * S.dmgMul * (crit ? 2 : 1), crit];
+    return [base * S.dmgMul * S.weaponMul * (crit ? 2 : 1), crit];
   }
 
   /** Allocation-free roll: returns the damage and leaves the crit flag in this.crit. */
   hit(base) {
     const S = this.run.stats;
     this.crit = Math.random() < S.crit;
-    return base * S.dmgMul * (this.crit ? 2 : 1);
+    return base * S.dmgMul * S.weaponMul * (this.crit ? 2 : 1);
   }
 
   /** Fill the shared damage options (Enemies.damage reads them at once and keeps nothing). */

@@ -82,7 +82,7 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `chapter-3.jpg` | 2752×1536 | Nano Banana Pro | Frozen Ossuary: the same three places | `d60d3dfe-9e0a-4d3c-8cf1-b1ac7d733494` |
 | `chapter-4.jpg` | 2752×1536 | Nano Banana Pro | Abyssal Cathedral: the same three places | `6e36d14a-4a87-486e-b976-c6367eab9575` |
 | `chapter-5.jpg` | 2752×1536 | Nano Banana Pro | Crimson Throne: the same three places | `12b28c50-2a1d-42dd-9a29-b82235892a60` |
-| `chapter-6.jpg` | 2752×1536 | Nano Banana Pro | Endless Abyss (chapter id 6): the same three places | `5a314fea-7a1d-4c1e-ae6c-da46e9f75ca1` |
+| `chapter-endless.jpg` | 2752×1536 | Nano Banana Pro | Endless Abyss (chapter id 100; it was `chapter-6.jpg` until Update 13): the same three places | `5a314fea-7a1d-4c1e-ae6c-da46e9f75ca1` |
 | `foe-husk.jpg` | 1792×2400 | Nano Banana Pro | Husk's Bestiary entry | `5db2b5a4-d4cd-4508-bde4-2f2c1a8ab3d8` |
 | `foe-ghoul.jpg` | 1792×2400 | Nano Banana Pro | Ghoul's Bestiary entry | `61602183-968a-4c4f-94fb-7493db4ef1dd` |
 | `foe-brute.jpg` | 1792×2400 | Nano Banana Pro | Brute's Bestiary entry | `33bf340b-d945-4270-be3a-b67d103d704c` |
@@ -91,6 +91,41 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `foe-thief.jpg` | 1792×2400 | Nano Banana Pro | Soul Thief's Bestiary entry (the run event) | `53d3197b-9ed3-4ecc-98cc-c0b7f982d57f` |
 | `foe-wraith.jpg` | 1792×2400 | Nano Banana Pro (poster reference) | Grave Wraith's Bestiary entry (Update 5, 2026-10-09) | `d08dc00a-16e1-4c4b-950b-873659cd3228` |
 | `foe-priest.jpg` | 1792×2400 | Nano Banana Pro (poster reference) | Corpse Priest's Bestiary entry (Update 5, 2026-10-09) | `95309e67-92ca-4995-ba19-692edcb7eaa2` |
+| `chapter-6.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Sunken Choir: home chapter card, chapter map tile, run intro card, results header | `bfb5b105-9cf5-4aa1-827d-841b6c08ca91` |
+| `chapter-7.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Saltgrave Shore: home chapter card, chapter map tile, run intro card, results header | `fb360a30-98c4-4d82-b8aa-54b420374b41` |
+| `chapter-8.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Wreck of the Last Ark: home chapter card, chapter map tile, run intro card, results header | `1803b84a-0ba6-4665-ae50-db3ca13faf61` |
+| `chapter-9.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Lighthouse of Lost Souls: home chapter card, chapter map tile, run intro card, results header | `e349def7-d867-4200-91d3-d5c8b21c2b95` |
+| `chapter-10.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Abyssal Choir: home chapter card, chapter map tile, run intro card, results header | `e4555106-cb01-4911-a502-733cb73c0be5` |
+| `chapter-11.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Witherwood Edge: home chapter card, chapter map tile, run intro card, results header | `372b59f2-0895-45d4-b7bb-6ec113cc9e9c` |
+| `chapter-12.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Hanging Grove: home chapter card, chapter map tile, run intro card, results header | `a76ae344-87b6-405d-9936-43c9630fc782` |
+| `chapter-13.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Briar Labyrinth: home chapter card, chapter map tile, run intro card, results header | `63865ad6-e3f2-4b0f-ae82-5b88e88b7c6f` |
+| `chapter-14.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Rotheart Hollow: home chapter card, chapter map tile, run intro card, results header | `4473dec4-dbfb-4e91-ba0a-330cf2cc6903` |
+| `chapter-15.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Thorn Throne: home chapter card, chapter map tile, run intro card, results header | `bb0b2c8e-5491-441f-8617-e240e59e6131` |
+| `chapter-16.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Mirewood Fen: home chapter card, chapter map tile, run intro card, results header | `0ff88846-a5df-41ef-a89f-fbd243d6f6d0` |
+| `chapter-17.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Gallows Bog: home chapter card, chapter map tile, run intro card, results header | `21d5a4d9-ba2e-42d0-a75a-7932f1bdd52f` |
+| `chapter-18.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Leper's Crossing: home chapter card, chapter map tile, run intro card, results header | `d282c167-03d5-422f-a1e4-2541722bb609` |
+| `chapter-19.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Rotting Abbey: home chapter card, chapter map tile, run intro card, results header | `60402166-106e-4454-8c01-0b5b2ba21aef` |
+| `chapter-20.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Mother of Rot: home chapter card, chapter map tile, run intro card, results header | `5241b25f-434d-4148-87a8-c88f4b90d706` |
+| `chapter-21.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Thunderstep Pass: home chapter card, chapter map tile, run intro card, results header | `62571083-9271-4981-90f3-c9f71607b719` |
+| `chapter-22.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Shattered Bridges: home chapter card, chapter map tile, run intro card, results header | `0e4e5daa-f92a-4aef-b01d-e65129789c00` |
+| `chapter-23.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Galebreak Monastery: home chapter card, chapter map tile, run intro card, results header | `a87d1bed-97de-4c37-aa56-d5e1ff25a062` |
+| `chapter-24.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Eye of the Tempest: home chapter card, chapter map tile, run intro card, results header | `b788f845-be76-4fc9-8b28-c3a48d2e59d8` |
+| `chapter-25.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Storm Spire: home chapter card, chapter map tile, run intro card, results header | `180b26a4-8896-4146-83ac-545d299f6f5a` |
+| `chapter-26.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Moonfall Steps: home chapter card, chapter map tile, run intro card, results header | `c3ff37ba-87f5-4f96-9895-e1d9a4e6c912` |
+| `chapter-27.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Silent Sea: home chapter card, chapter map tile, run intro card, results header | `8453cc20-c2c2-427b-b766-64973f31bd72` |
+| `chapter-28.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | Orrery of Bones: home chapter card, chapter map tile, run intro card, results header | `867e128b-03b1-4d67-bbe1-a7daa2bd4d14` |
+| `chapter-29.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Last Cathedral: home chapter card, chapter map tile, run intro card, results header | `64f48a72-51a1-4080-b83d-b1091ef9eed1` |
+| `chapter-30.jpg` | 2752×1536 | Nano Banana Pro (Update 13) | The Hollow Moon: home chapter card, chapter map tile, run intro card, results header | `bcc0e4ea-42b8-4eda-a718-3cff43cc9107` |
+| `boss-morwenna.jpg` | 1792×2400 | Nano Banana Pro (Update 13; repainted clothed) | Chapter 10's boss, Morwenna, the Drowned Cantor: boss warning (`boss-band-morwenna.webp`) and Bestiary portrait (`foe-morwenna.webp`) | `e4d27d3c-0b98-485c-9644-69242d1afda7` |
+| `boss-gorrath.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Chapter 15's boss, Gorrath, the Briar King: boss warning (`boss-band-gorrath.webp`) and Bestiary portrait (`foe-gorrath.webp`) | `7a4642f8-4567-4750-a532-b0e3033b2c2f` |
+| `boss-mire.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Chapter 20's boss, Mother Mire, the Plague Bloom: boss warning (`boss-band-mire.webp`) and Bestiary portrait (`foe-mire.webp`) | `f0aa7c68-785f-4f17-9b22-71752f4f2019` |
+| `boss-kaelthar.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Chapter 25's boss, Kaelthar, the Storm Herald: boss warning (`boss-band-kaelthar.webp`) and Bestiary portrait (`foe-kaelthar.webp`) | `e154ef44-2899-448e-80cd-ef90ca229f99` |
+| `boss-nihl.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Chapter 30's boss, Nihl, the First Night: boss warning (`boss-band-nihl.webp`) and Bestiary portrait (`foe-nihl.webp`) | `76952536-21ff-469d-8bda-d67cf840ccac` |
+| `foe-siren.jpg` | 1792×2400 | Nano Banana Pro (Update 13; repainted clothed) | Drowned Siren's Bestiary entry | `2672b417-be9c-4336-898d-f8cb58dc6d0a` |
+| `foe-thornback.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Thornback's Bestiary entry | `a6d85e9f-71b0-41e3-bb00-29b8895b8c10` |
+| `foe-rat.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Plague Rat's Bestiary entry | `4aa0cb74-353f-474f-a032-0e961a780b23` |
+| `foe-caller.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Stormcaller's Bestiary entry | `ce065eba-4250-4a89-97f3-5fe63eaa6454` |
+| `foe-stalker.jpg` | 1792×2400 | Nano Banana Pro (Update 13) | Void Stalker's Bestiary entry | `4d17f90a-1501-43ca-a6a1-83d47aca88a8` |
 | `logo-transparent.png` | 2048×1360, alpha | GPT Image 2.5 | Boot screen, settings credits, ad end cards, store listing | `3cf6edf7-20d5-4d80-ac09-fd57074e79a9` |
 
 The hero and boss splashes were generated with the vertical poster as an image reference, which keeps the painterly style consistent across the set. So were the 12 chapter and Bestiary paintings (2K, poster job `5d35e791…` as the style reference): chapters as 16:9 landscapes, foes at 3:4 as full-body portraits on a dark vignette, like the hero cards.
@@ -190,11 +225,11 @@ Recorded on 2026-10-07 with Higgsfield text-to-speech (the ElevenLabs engine, `t
 - normalises to −16 LUFS (true peak −1.5 dB);
 - writes mono 64 kbps MP3.
 
-The 50 lines total 942 KB (the twelve for the four newer chapter bosses were recorded on 2026-10-08 in the same announcer voice, and Grimsby's and Osric's four that day too; Isolde's two on 2026-10-10). When and how the game plays them is in `GDD.md` §15.
+The 65 lines total 1.25 MB (the twelve for the four newer chapter bosses were recorded on 2026-10-08 in the same announcer voice, and Grimsby's and Osric's four that day too; Isolde's two on 2026-10-10, and the fifteen for Update 13's act bosses that day as well). When and how the game plays them is in `GDD.md` §15.
 
 | Speaker | Preset voice | Lines |
 |---|---|---|
-| Announcer | Gideon | 22 (streak tiers, Nova, elite, boss, outcomes, events, run start, evolution, revive) |
+| Announcer | Gideon | 22 (streak tiers, Nova, elite, boss, outcomes, events, run start, evolution, revive), plus the ten chapter bosses' 30 (arrival, return, death) |
 | Vael | Alistair | Rite call and greeting |
 | Nyx | Onyx | Rite call and greeting |
 | Seraphine | Vesper | Rite call and greeting |
@@ -256,6 +291,21 @@ The 50 lines total 942 KB (the twelve for the four newer chapter bosses were rec
 | `osric_greet` | My abbey is empty. My congregation... is not. | `a54a6036-6b4b-467a-b7aa-14c3f75f0c6d` |
 | `isolde_rite` | Drink deep, my guests! | `23643594-8a38-4335-aa26-230dcec8cbdc` |
 | `isolde_greet` | Welcome to my table. Do stay... forever. | `e7edc156-9e0e-454e-aba7-5fb67d77d6ac` |
+| `a_morwenna` | The Drowned Cantor approaches. | `4e90af6d-cda8-4b44-89a3-1cf6b190a4d2` |
+| `a_morwenna_return` | The Drowned Cantor returns. | `e388cd81-2361-41ef-9923-6d1d6e7a5035` |
+| `a_morwenna_slain` | The Drowned Cantor has fallen. | `83ee3e1d-fb7a-4525-9b12-4335e5d01ddd` |
+| `a_gorrath` | The Briar King approaches. | `ce9cb632-8df8-4f79-be66-1a4b24469702` |
+| `a_gorrath_return` | The Briar King returns. | `0ba6b85f-e9a3-458c-82f8-c75c2d178155` |
+| `a_gorrath_slain` | The Briar King has fallen. | `68a7e2e9-0c74-462e-bc8e-ee3d7d587e0f` |
+| `a_mire` | The Plague Bloom approaches. | `244a72db-8036-414e-b0c3-43fffcc1853e` |
+| `a_mire_return` | The Plague Bloom returns. | `325048ee-290d-47d7-8def-0992324360bf` |
+| `a_mire_slain` | The Plague Bloom has fallen. | `75d9a0ee-98bb-4a77-9978-6ce561d75491` |
+| `a_kaelthar` | The Storm Herald approaches. | `950ea5cb-0115-4121-8df2-7b564718a676` |
+| `a_kaelthar_return` | The Storm Herald returns. | `d4fc30c1-8d06-4ae1-8302-7bc99df2391c` |
+| `a_kaelthar_slain` | The Storm Herald has fallen. | `e483bea9-4614-4163-a30a-bbf355440e68` |
+| `a_nihl` | The First Night approaches. | `ae9609b9-fa04-47c9-85ea-5b2a4276b957` |
+| `a_nihl_return` | The First Night returns. | `c09c9e4a-e398-46fa-97dd-b60e7d354fe6` |
+| `a_nihl_slain` | The First Night has fallen. | `dee42d64-8700-4625-8c1c-5083bde0b689` |
 
 **Cost:** about 9 credits in total (50 lines, 3 re-takes and the 7 casting takes for the new heroes at 0.15 credits each, plus casting previews). Every take was transcribed with a speech-to-text pass before it was kept. Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.
 
@@ -346,6 +396,16 @@ Every chapter has its own painted floor and its own painted 3D props, made on 20
 | 4 Abyssal Cathedral | `cathedral`: carved gothic tracery flagstones | `25f4ea1b-1074-4d53-b2d1-1aad09e0e916` |
 | 5 Crimson Throne | `throne`: crimson marble with gold inlay | `4f87c936-dd89-4bc2-a134-4451b64ebd52` |
 | 6 Endless Abyss | `abyss`: obsidian slabs over starlight | `9e11c334-8837-4406-a577-570f60669621` |
+| 6, 9, 10 | `drowned`: drowned crypt flagstones under shallow black water | `885dcb9e-1326-4daa-a5d0-d398e177328a` |
+| 7, 8 | `shore`: black shingle, salt crust and wrack | `16a21c3d-4a76-4dde-92d9-85febfe9cca0` |
+| 11, 13, 15 | `thornwood`: root-split earth and bramble litter | `3b3af7cd-3fa0-41da-b3a8-88d86048d63e` |
+| 12, 14 | `grove`: rotting leaf mould under hanging roots | `af181fb7-49fb-45da-87c6-9480c7bab77b` |
+| 16–18 | `fen`: sodden peat, reeds and plague-green pools | `2cb21bd8-0305-4705-b22d-35cc998cfb6c` |
+| 19, 20 | `fungal`: an abbey floor overgrown with fungus | `22b50ad8-4772-48f5-b0c4-9799dbae0fc2` |
+| 21, 23, 25 | `slate`: storm-wet slate and iron runes | `87473482-c6e7-4f10-954e-a6d12f4c76d8` |
+| 22, 24 | `peak`: frost-shattered mountain rock | `aab54aa9-dd12-4435-9953-ba788a83081a` |
+| 26, 27 | `regolith`: pale moon dust and craters | `35d6da7c-5698-4a95-a0c1-78a8a61c8488` |
+| 28–30 | `starfloor`: black glass over a sea of stars | `85d835b5-024a-4070-8665-c0ba541e29ac` |
 
 **Props.** Each prop started as a Nano Banana Pro concept: one isolated hand-painted game asset, 3/4 view, on plain grey. Tripo H3.1 image-to-3D turned it into a model of about 3,800 triangles with a detailed texture (12 credits each). `scripts/props.sh` shrinks each texture to a 512 px WebP beside the model and quantizes the mesh. The 23 come to 2.7 MB.
 - `world.js` `PROPS` sets each prop's height, how often it turns up, its glow, and for flames and crystals the flickering pool of light it casts.
@@ -360,6 +420,11 @@ Every chapter has its own painted floor and its own painted 3D props, made on 20
 | 4 | `column` (`7795eb35` → `03e578a2`), `candelabra` (`19698466` → `61dcbfe8`), `gargoyle` (`c73dc022` → `88f6d317`), `altar` (`b6151d6a` → `d8af97c9`) |
 | 5 | `banner` (`f350bbea` → `eee80bf6`), `knight` statue (`672d3e79` → `96a718ae`), `candles` (`92dbaf48` → `5d5d8946`), `fountain` (`b755007b` → `657d678b`) |
 | 6 | `voidcrystal` (`bdca0665` → `68755fc9`), `obelisk` (`60f73aa9` → `759fc563`), `arch` (`9d44a040` → `677d1914`) |
+| II (drowned) | `anchor` (`32fb800b` → `57d8e8bf`), `hullribs` (`16f0e68c` → `1c7ad2a2`), `coralpillar` (`4b35f3da` → `dc3c7f4e`), plus Act I's `graves` |
+| III (thorn) | `gibbet` (`35290a56` → `6587b143`), `thornbush` (`7772fbf2` → `29063878`), `hollowstump` (`dbae4710` → `9ff14554`), plus Act I's `deadtree` |
+| IV (fen) | `plaguecart` (`7bc3edba` → `e0b3bc3c`), `fungus` (`733d0105` → `0243ef86`), `scarecrow` (`faa7a21b` → `bf10e0d0`), plus Act I's `skulls` |
+| V (storm) | `lightningrod` (`fbcce11c` → `e17d30cb`), `prayerbell` (`4bb4aa9c` → `b6af6f67`), `monolith` (`54a817e0` → `1bc64019`), plus Act I's `column` |
+| VI (moon) | `moonrock` (`237008ea` → `584fee47`), `orrery` (`fb93c121` → `03873ebf`), `eclipseshrine` (`d6e74129` → `0f70a410`), plus Act I's `voidcrystal` |
 
 **Weather** (`game/weather.js`). Each chapter has its own air:
 - Ashen Necropolis: drifting ash;
@@ -367,11 +432,14 @@ Every chapter has its own painted floor and its own painted 3D props, made on 20
 - Frozen Ossuary: falling snow;
 - Abyssal Cathedral: violet motes;
 - Crimson Throne: golden dust;
-- Endless Abyss: star motes.
+- Endless Abyss: star motes;
+- Update 13's realms: drizzle on the Drowned Coast, falling leaves in the Thornwood, drifting spores over the Plague Fens, driving rain on the Storm Spire, moon dust on the Hollow Moon.
 
 It is one draw call, with every flake moved in the vertex shader and wrapped around the Shepherd. The count follows the quality setting, and flakes fade into the lantern-sight fog.
 
 **Cost:** about 350 credits: 14 floor paintings (28), 23 prop concepts (46) and 23 prop models (276).
+
+**Update 13's realms** (2026-10-10, `GDD.md` §8.4). Five realms for Acts II–VI, two floors each (the floor table's second block; the chapter column names the chapters that walk on it) and three props each, plus one Act I prop that suits the realm (the prop table's second block, by act). Same prompts and pipeline as above: the ten floors come to 1.5 MB and the fifteen props to 2.0 MB. **Cost:** about 230 credits: 10 floors (20), 15 prop concepts (30) and 15 prop models (180).
 
 **A new chapter:**
 1. Paint its floor with the same prompt and add a line to `floors.sh`.
@@ -443,6 +511,30 @@ The seven horde foes, the Soul Thief and the five chapter bosses are textured 3D
 | `priest` | `95309e67-92ca-4995-ba19-692edcb7eaa2` | `ff654f02-ec1f-4949-8669-0a6c1268cc78` | `3865634a-dcc0-44b8-8eb3-54d7a43df8db` |
 
 **Cost:** 34 credits: 2 paintings (4), 3 concepts (6; a fourth request failed and was not charged) and 2 models (24).
+
+**Update 13's act foes and act bosses** (2026-10-10, `GDD.md` §8.4): the Drowned Siren, Thornback, Plague Rat, Stormcaller and Void Stalker, and Morwenna, Gorrath, Mother Mire, Kaelthar and Nihl.
+1. **Painting.** Nano Banana Pro painted each 3:4 portrait (Bestiary card; for the bosses the warning band too, §1) with Gravemaw's painting as the style reference. Morwenna's and the Siren's first takes came out bare-shouldered and were repainted clothed, to keep the store's age rating.
+2. **Concept.** The horde's concept prompt from each painting. Kaelthar's, Nihl's, the Siren's and the Stalker's kept some background (storm cloud, moon, mist) and were cut out first.
+3. **3D.** Tripo H3.1 with a detailed texture: 4,000 faces for the foes, 10,000 for the bosses. Simplified to their budgets (Rat 1,581 triangles, as it comes 90 at a time; Stalker 1,950; Siren 2,143; Thornback 2,358; Stormcaller 2,389; the bosses 5,289–5,404) with 512 px textures (the bosses 768). The ten come to 1.5 MB.
+4. **Facing.** The Thornback and the Rat were sculpted side-on, so `FOES` turns them with a `yaw` (−90° and −135°) to face their walk.
+5. **Light.** Their colours are paler than Act I's, so the chest and crown glows in the boss's colour are dimmed toward Act I's luminance (`boss.js` `glowK`); at full strength they washed Gorrath's and Mother Mire's dark bark and moss out to white.
+
+| Foe | Concept job | 3D job |
+|---|---|---|
+| `siren` | `9a76729c-7518-4ff2-a7ea-c7ec27fec495` (cut out: `343fafc5-fe25-44e4-8641-70c7c08c1b4a`) | `1f528aa3-086a-4c54-a815-3a2e8c13a26d` |
+| `thornback` | `63297436-685d-4f8b-af20-063b72347fe8` | `1fa5df28-2502-4d31-8f49-169a0d355bc3` |
+| `rat` | `ad687388-7379-49af-897b-2d3a580048e3` | `b56ef720-b606-4eab-a591-962d679faeec` |
+| `caller` | `a5b49a21-2d86-416a-83df-e7fe1a6e2c52` | `41a42312-1599-49d2-90fd-8fc35851f030` |
+| `stalker` | `ae7d6f07-f767-415d-9c72-2d430752e0ca` (cut out: `3945cf16-541d-41a5-ab3e-bcd44a82f1e3`) | `857a0e06-fbb8-4221-a8d0-9318d4b73b34` |
+| `morwenna` | `22ae59b5-60f5-4036-9802-6a93719a57c9` | `25d6faf8-f7c2-4aff-a198-7cdebb730b82` |
+| `gorrath` | `757c8e4d-b0c3-4b89-ba2e-fa6de437f9ad` | `82022faa-eb8e-4ab2-a15e-f0bb26334a7b` |
+| `mire` | `bb68f1fe-be3b-4d28-bbe6-a07a9d866f58` | `6afcbacf-dbcd-4027-b8c0-b16bbb1efdf8` |
+| `kaelthar` | `65783bb0-a77b-43a0-ae54-b5f36271bfea` (cut out: `336ebb59-b330-4174-bd66-16eac6bc6876`) | `eeb4b746-dcfc-4a3d-9db6-92a7f94ed2f0` |
+| `nihl` | `38f21988-32e1-41d7-8cf0-56829d4986ce` (cut out: `d2d67b29-6768-4c1d-a6a1-1bf531333985`) | `40ea04c5-612a-498f-a623-22c68e0ef85d` |
+
+Paintings: §1. Voices: §3. **Cost:** about 175 credits: 12 paintings with the two repaints (24), 10 concepts (20), 4 cutouts (7), 10 models (120) and 15 voice lines (2).
+
+All of Update 13's art (25 chapter paintings at 2 credits each, the realms, the foes and the bosses) cost about 450 credits.
 
 **A new foe:**
 1. Paint the concept from its Bestiary painting with the same prompt, and cut out any background.

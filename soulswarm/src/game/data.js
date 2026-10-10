@@ -180,6 +180,28 @@ export const ENEMIES = {
              dive: { range: 5, speedMul: 1.55, weave: 0.6 } },
   priest:  { name: 'Corpse Priest', hp: 45, speed: 2.1, dmg: 8,  radius: 0.5,  xp: 4, mass: 1.4, scale: 1.0, from: { ch: 3, minute: 3 }, cap: 3,
              keep: 10, flee: 7, raise: { cd: 6, channel: 1.2, n: 3, reach: 7, corpse: 10 } },
+  // Update 13's act foes (act: true = only where a chapter weights it, mods.weights):
+  //   siren: holds `keep` m off; every song.cd s (±20%) sings onto a circle around the Shepherd (`r` m, telegraph `tele`
+  //     s): minions inside are entranced for `entrance` s (they stop fighting and drift toward her); a stun or her
+  //     death breaks the song
+  //   thornback: within charge.range (beyond min) it lowers its head over a lane (`tele` s), then charges `dist` m at
+  //     `speed`: the Shepherd in its path takes dmgMul × damage and is thrown aside, minions are trampled; brambles grow
+  //     behind it; then `recover` s and `cd` s before the next
+  //   rat: comes in packs (`pack`) that flank like Ghouls; bites quickly (`bite` s between bites)
+  //   caller: holds `keep` m off; every bolt.cd s it marks a line toward where the Shepherd will be (`lead` s ahead):
+  //     `len` m long, `w` m either side, for `tele` s; then lightning runs along it (minions inside take minionDmg ×)
+  //   stalker: between blink.range m, every blink.cd s it marks a spot `dist` m beside the Shepherd (`tele` s), vanishes,
+  //     appears there and pounces (`pounce` m/s for `pounceT` s)
+  siren:   { name: 'Drowned Siren', hp: 26, speed: 2.4, dmg: 8, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, from: { ch: 6, minute: 1 }, cap: 6, act: true,
+             keep: 9, flee: 6, song: { cd: 7, tele: 1.1, r: 4.2, entrance: 2.5 } },
+  thornback: { name: 'Thornback', hp: 70, speed: 2.0, dmg: 16, radius: 0.75, xp: 4, mass: 4.0, scale: 1.0, from: { ch: 11, minute: 1 }, cap: 8, act: true,
+             charge: { range: 10, min: 3, tele: 1.0, speed: 13, dist: 11, w: 0.9, dmgMul: 1.4, knock: 10, recover: 1.0, cd: 4.5 } },
+  rat:     { name: 'Plague Rat', hp: 5, speed: 5.0, dmg: 3, radius: 0.3, xp: 1, mass: 0.4, scale: 1.0, from: { ch: 16, minute: 0.5 }, cap: 90, act: true,
+             pack: [9, 13], flank: 0.7, bite: 0.5 },
+  caller:  { name: 'Stormcaller', hp: 24, speed: 2.3, dmg: 11, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, from: { ch: 21, minute: 1 }, cap: 10, act: true,
+             keep: 9, flee: 6, bolt: { cd: 4, tele: 1.0, len: 12, w: 0.65, lead: 0.3, minionDmg: 0.6 } },
+  stalker: { name: 'Void Stalker', hp: 30, speed: 3.0, dmg: 12, radius: 0.45, xp: 2, mass: 1.0, scale: 1.0, from: { ch: 26, minute: 1 }, cap: 12, act: true,
+             blink: { range: [5, 15], cd: 5, tele: 1.0, dist: 2.4, pounce: 9, pounceT: 0.25 } },
 };
 // HP = hp × chapter hpMul × (1 + chHp × (c − 1)) × tune[c − 1] × Endless scale; damage = dmg × (1 + chDmg × (c − 1)) × √scale
 // tune evens the fight out at about a minute for a player with that chapter's typical progression (scripts/balance.mjs, GOD=1)
@@ -232,10 +254,14 @@ export const BOSS_RUSH = {
 // share the stats above and the three-phase frame below, and differ in look, names, a twist on the shared attacks and a
 // signature attack of their own (BOSS_PHASES.rain / lances / smite / fan), weighed into each phase's pick by sigW:
 //   twist: 1 none · 2 the slam bands burn · 3 frost shards erupt along the slam rings · 4 one extra ring per gap volley ·
-//          5 phase III from 50% HP
+//          5 phase III from 50% HP · 6 the slam bands leave tide pools · 7 brambles · 8 miasma clouds · 9 lightning falls
+//          through the fight · 10 phase III from 50% HP and the dark pulls (gravity pulses toward the boss)
 //   sig: summon (Husks and Ghouls rise around him) · rain (Cinder Rain: fire lobbed onto marked circles, leaving burning
 //        ground) · lances (Glacier Lances: lanes of frost shards rippling out toward the Shepherd) · smite (pillars of
-//        light fall where the Shepherd is, one after another) · fan (Blood Lances: aimed fans of blood orbs)
+//        light fall where the Shepherd is, one after another) · fan (Blood Lances: aimed fans of blood orbs) ·
+//        tidal (Tidal Lanes: marked lanes across the arena, then a wave runs down each) · roots (Root Snare: lines of thorns
+//        toward the Shepherd that hold him fast) · spores (Blight Rain: spore pods that burst into miasma) · storm
+//        (Tempest: lightning beams that turn around the boss) · echo (Nihl: every fallen boss's signature, one after another)
 // phases: [title, how to survive it] per phase · dirge: the soft enrage's banner · roar: his roar's pitch ·
 // voice: announcer lines `${voice}`, `${voice}_return` and `${voice}_slain` (src/assets/voice)
 export const BOSSES = {
@@ -254,8 +280,28 @@ export const BOSSES = {
   vesperine: { name: 'Vesperine', title: 'the Crimson Queen', color: 0xff2e55, twist: 5, sig: 'fan', sigW: [0.25, 0.25, 0.2], roar: 1.15, voice: 'a_vesperine',
     phases: [['COURT OF BLOOD', 'Slip between the blood lances'], ['CRIMSON WALTZ', 'Follow the gaps as the rings turn'], ['BLOOD ECLIPSE', 'Her eclipse comes early: circle with the spiral']],
     dirge: ['BLOODLUST', 'She thirsts: +50% damage and attack speed'] },
+  // Update 13: each later act ends with its own boss
+  morwenna: { name: 'Morwenna', title: 'the Drowned Cantor', color: 0x2fe6c8, twist: 6, sig: 'tidal', sigW: [0.25, 0.25, 0.2], roar: 1.25, voice: 'a_morwenna',
+    phases: [['LOW TIDE', 'Her slam rings leave tide pools: step out of the marked lanes before the wave runs'], ['DROWNING HYMN', 'Follow the gaps as the rings turn'], ['THE DEEP CHOIR', 'Circle with the spiral']],
+    dirge: ['HIGH TIDE', 'The sea rises: +50% damage and attack speed'] },
+  gorrath: { name: 'Gorrath', title: 'the Briar King', color: 0xc8e040, twist: 7, sig: 'roots', sigW: [0.25, 0.25, 0.2], roar: 0.7, voice: 'a_gorrath',
+    phases: [['THORN CROWN', 'His slam rings leave brambles: step around them'], ['ROOT SNARE', 'Step between the thorn lines or be held fast'], ['THE WILD HUNT', 'Circle with the spiral']],
+    dirge: ['OVERGROWTH', 'The forest wakes: +50% damage and attack speed'] },
+  mire: { name: 'Mother Mire', title: 'the Plague Bloom', color: 0x9cff3a, twist: 8, sig: 'spores', sigW: [0.25, 0.25, 0.2], roar: 0.85, voice: 'a_mire',
+    phases: [['SPORE SEASON', 'Her slam rings leave miasma: keep out of the clouds'], ['BLIGHT RAIN', 'Weave between the falling spore pods'], ['THE GREAT ROT', 'Circle with the spiral']],
+    dirge: ['PESTILENCE', 'The rot blooms: +50% damage and attack speed'] },
+  kaelthar: { name: 'Kaelthar', title: 'the Storm Herald', color: 0x7fd4ff, twist: 9, sig: 'storm', sigW: [0.25, 0.25, 0.2], roar: 1.05, voice: 'a_kaelthar',
+    phases: [['GATHERING STORM', 'Lightning falls around him: watch the marks'], ['TEMPEST', 'Outrun the turning lightning beams'], ['THE LAST THUNDER', 'Circle with the spiral']],
+    dirge: ['MAELSTROM', 'The storm breaks: +50% damage and attack speed'] },
+  nihl: { name: 'Nihl', title: 'the First Night', color: 0xd0b8ff, twist: 10, sig: 'echo', sigW: [0.3, 0.3, 0.25], roar: 0.6, voice: 'a_nihl',
+    phases: [['EVENTIDE', 'The dark pulls you in: walk against it'], ['ECHOES OF THE FALLEN', 'Every fallen realm returns: read each mark'], ['THE FIRST NIGHT', 'Its night comes at half its strength: circle with the spiral']],
+    dirge: ['ENDLESS NIGHT', 'The stars go out: +50% damage and attack speed'] },
 };
-export const BOSS_ORDER = ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine']; // chapters 1-5; Endless cycles from the first
+export const BOSS_ORDER = ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine']; // Act I's bosses; Endless and the Boss Rush cycle them
+export const LATE_BOSSES = ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl']; // the bosses of Acts II–VI (Update 13)
+// A returning boss (chapter tier > 1) fights harder: attack rate × (1 + rate × (tier − 1)), one more gap-ring wave from
+// tier 3, and its soft enrage `dirge` s sooner per tier (never before `dirgeMin` s). Its banner carries the act's epithet.
+export const BOSS_TIER = { rate: 0.06, waveFrom: 3, dirge: 12, dirgeMin: 120 };
 /** The boss a run faces next: its chapter's, or in the Endless Abyss the next in turn by depth. */
 export const bossFor = (ch, depth = 0) => (ch.endless ? BOSS_ORDER[depth % BOSS_ORDER.length] : ch.bossId || 'gravemaw');
 // The chapter bosses' three-phase fight (boss.js). Seconds, metres, radians; dmg values are × the boss's touch damage.
@@ -295,6 +341,17 @@ export const BOSS_PHASES = {
   frost: { life: 3.5, n: [4, 7, 10], r: 0.75, dmg: 0.35 },
   extraRing: 1,
   ch5Crown: 0.5,
+  // Update 13's signatures and twists ([a, b, c] = by phase)
+  tidal: { lanes: [2, 3, 4], w: 1.3, len: 30, spread: [-4, 4], tele: 1.2, every: 0.35, dmg: 0.6, knock: 8, minionDmg: 0.6, recover: 1.5 },
+  roots: { lanes: [2, 3, 4], arc: 0.38, spikes: 7, from: 2, step: 1.3, tele: 1.0, every: 0.1, r: 0.75, life: 1.6, dmg: 0.45, root: 0.6, recover: 1.4 },
+  spores: { n: [4, 6, 8], first: 0.35, spread: [2, 6], every: 0.18, flight: 1.15, radius: 1.3, height: 4.5, dmg: 0.5, cloud: 2.6, life: 6, recover: 1.5 },
+  storm: { beams: [2, 3, 4], len: 16, w: 0.7, tele: 1.2, dur: 3.2, spin: 0.62, dmg: 0.5, hitCd: 0.6, inner: 1.6, recover: 1.5 },
+  echo: ['rain', 'lances', 'smite', 'fan', 'tidal', 'roots', 'spores', 'storm'],
+  tide: { r: 2.2, life: 6, n: [4, 6, 8] },     // twist 6: tide pools left along the slam bands
+  thorn: { r: 1.1, life: 5, n: [5, 8, 11] },   // twist 7: brambles along the slam bands
+  rot: { r: 2.0, life: 6, n: [2, 3, 4] },      // twist 8: miasma clouds along the slam bands
+  thunder: { every: [2.6, 3.8] },              // twist 9: a lightning strike near the Shepherd this often (HAZARDS.lightning)
+  well: { every: [7, 9], warn: 1.2, pull: 1.4, strength: 4.5, r: 14 }, // twist 10: the dark pulls him toward the boss
 };
 export const ELITE = { hpMul: 6, scale: 1.35, dmgMul: 1.5, crown: 0xffd04a };
 
@@ -360,30 +417,119 @@ export const BLESSINGS = {
   call:   { name: 'Open Graves',   icon: 'raise',  desc: '+20% Raise Chance',                    raise: 0.2 },
 };
 
-// ---------------------------------------------------------------- Chapters
+// ---------------------------------------------------------------- The campaign (GDD §8)
+// Six acts of five chapters. Act I (the Waking Dark) is the first five; Update 13 (2026-10-10) added Acts II–VI. Each act
+// has its own realm (biome: painted floors, props and weather, world.js / weather.js), its own ground hazard and its own
+// foe, and ends with its own boss; its other chapters bring earlier bosses back stronger (`tier`), under the act's epithet.
+const PARADE = [45, 75, 110, 150, 185, 225, 255, 290]; // the doubled elite times of the parade chapters (5, 9, 20, 23, 29)
+export const ACTS = [
+  { n: 1, name: 'The Waking Dark',   from: 1,  to: 5,  epithet: '',            css: '#4ef2ff' },
+  { n: 2, name: 'The Drowned Coast', from: 6,  to: 10, epithet: 'Drowned',     css: '#2fe6c8' },
+  { n: 3, name: 'The Thornwood',     from: 11, to: 15, epithet: 'Thornbound',  css: '#c8e040' },
+  { n: 4, name: 'The Plague Fens',   from: 16, to: 20, epithet: 'Blighted',    css: '#9cff3a' },
+  { n: 5, name: 'The Storm Spire',   from: 21, to: 25, epithet: 'Stormforged', css: '#7fd4ff' },
+  { n: 6, name: 'The Hollow Moon',   from: 26, to: 30, epithet: 'Moonless',    css: '#d0b8ff' },
+];
+export const CAMPAIGN_LENGTH = 30;
+export const ENDLESS_ID = 100; // the Endless Abyss's id (records, art, difficulty); it was 6 while the campaign had five chapters
+export const actOf = (id) => ACTS[Math.min(ACTS.length, Math.max(1, Math.ceil(id / 5))) - 1];
+
+// Scaling by chapter level: a campaign chapter's level is its number; the Endless Abyss plays at level 6 (as it always
+// has). Chapters 1–5 keep their tuning. The Shepherd's side (minion damage, Soul Nova, Rites) grows by side per level and
+// keeps growing; from Chapter 6 his weapons grow with it (× side(c) / side(5)). The horde's HP grows with the same and
+// `press` more per chapter from Chapter 6, and its damage by `dmg` per level up to 6, then by `dmgLate` per chapter: the
+// press is what the Shepherd's own growth (talents, relics, stars, mastery) has to answer (scripts/balance.mjs).
+export const SCALE = { side: 0.45, dmg: 0.35, press: 1.015, dmgLate: 1.012, minionHp: 0.4, bossDmg: 0.3, rate: 0.016, rateMax: 2.0 };
+export const chapterLevel = (ch) => (ch && (ch.lvl || ch.id)) || 1;
+export const sideScale = (lvl) => 1 + SCALE.side * (lvl - 1);
+export const weaponScale = (lvl) => (lvl <= 5 ? 1 : sideScale(lvl) / sideScale(5));
+export const foeDmgScale = (lvl) => (lvl <= 6 ? 1 + SCALE.dmg * (lvl - 1) : (1 + 5 * SCALE.dmg) * SCALE.dmgLate ** (lvl - 6));
+export const minionHpScale = (lvl) => (lvl <= 6 ? 1 + SCALE.minionHp * (lvl - 1) : (1 + 5 * SCALE.minionHp) * SCALE.dmgLate ** (lvl - 6));
+export const bossDmgScale = (lvl) => (lvl <= 6 ? 1 + SCALE.bossDmg * (lvl - 1) : (1 + 5 * SCALE.bossDmg) * SCALE.dmgLate ** (lvl - 6));
+const lateHp = (c) => 7.5 * weaponScale(c) * SCALE.press ** (c - 5);
+const lateRate = (c) => Math.min(SCALE.rateMax, 1.6 + SCALE.rate * (c - 5));
+
 // Each chapter re-tints the world. Colors are hex ints for three.js. boss / bossId: its boss's colour and id (BOSSES);
-// Endless Abyss bosses take their own colours (bossFor).
+// tier: how many acts since the boss's own (1 in its own act; a returning boss is stronger, BOSS_TIER below).
+// biome: the realm's props and weather · floor: its painted floor (world.js FLOORS) · art: CHAPTER_ART key (ui/art.js)
 // mods = the chapter's identity, read by the director (run.js), enemies.js, hazards.js and player.js:
-//   tag: run-start banner line · weights: spawn-weight multiplier per enemy type · pack: Ghoul pack size [min, max]
-//   burn: Witch lobs leave burning ground · vents / ice / hands: ground hazards (tuning in HAZARDS below)
+//   tag: run-start banner line · weights: spawn-weight multiplier per enemy type (an act foe only spawns where it is
+//   weighted) · pack: Ghoul pack size [min, max]
+//   burn: Witch lobs leave burning ground · vents / ice / hands / tide / brambles / miasma / lightning / gravity: ground
+//   hazards (tuning in HAZARDS below)
 //   vignette: fog vignette strength for the run (engine default 1.0) · sight: metres before the ground fades to fog (default 22)
 //   elites: elite spawn times in seconds
 //   rotate (Endless): the chapter mods used at abyss depth 1, 2, 3… (cycles)
+const PAL = { // by act: ground, groundB, rune, fog, rim, enemy
+  2: [0x2a4a4e, 0x0e2026, 0x2fe6c8, 0x02090b, 0x8ff0e0, 0xff6a3a],
+  3: [0x3a4026, 0x181c0e, 0xc8e040, 0x060803, 0xdbe89a, 0xff5a2e],
+  4: [0x3a3046, 0x171222, 0x9cff3a, 0x070509, 0xcaff9a, 0xff7a2e],
+  5: [0x36404e, 0x141a24, 0x7fd4ff, 0x03060b, 0xbfe6ff, 0xff5a2e],
+  6: [0x44445a, 0x1a1828, 0xd0b8ff, 0x050409, 0xe2d8ff, 0xff6a4a],
+};
+const BIOME = { 2: 'drowned', 3: 'thorn', 4: 'fen', 5: 'storm', 6: 'moon' };
+const later = (id, name, bossId, tier, floor, mods) => {
+  const act = Math.ceil(id / 5), p = PAL[act];
+  return { id, act, name, ground: p[0], groundB: p[1], rune: p[2], fog: p[3], rim: p[4], enemy: p[5], boss: 0, bossId, tier,
+    hpMul: +lateHp(id).toFixed(2), rate: +lateRate(id).toFixed(3), biome: BIOME[act], floor, art: id, mods };
+};
 export const CHAPTERS = [
-  { id: 1, name: 'Ashen Necropolis', ground: 0x3a4658, groundB: 0x1c2330, rune: 0x2ad8ff, fog: 0x04070c, rim: 0x6fd8ff, enemy: 0xff5a2e, boss: 0xff3df0, bossId: 'gravemaw', hpMul: 1.0,  rate: 1.0,
-    mods: {} },
-  { id: 2, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff7a1a, bossId: 'pyrexa', hpMul: 1.9,  rate: 1.15,
-    mods: { tag: 'The witches’ fire lingers', weights: { witch: 1.8 }, burn: true, vents: true } },
-  { id: 3, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0x8f9cff, bossId: 'vaulkar', hpMul: 3.2,  rate: 1.3,
-    mods: { tag: 'Ghoul packs hunt on treacherous ice, and the Corpse Priests tend the dead', weights: { ghoul: 1.5, priest: 1.6 }, pack: [6, 8], ice: true } },
-  { id: 4, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xb070ff, bossId: 'azrathel', hpMul: 5.0,  rate: 1.45,
-    mods: { tag: 'Bloaters swarm, Wraiths drift in and the abyss reaches up', weights: { bloater: 2, wraith: 1.6 }, vignette: 1.25, sight: 17, hands: true } },
-  { id: 5, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff2e55, bossId: 'vesperine', hpMul: 7.5,  rate: 1.6,
-    mods: { tag: 'The gilded court rises: twice the elites', weights: { brute: 1.6 }, elites: [45, 75, 110, 150, 185, 225, 255, 290] } },
-  // Unlocked by clearing Chapter 5. No time limit; the run ends when you fall.
-  { id: 6, name: 'Endless Abyss', endless: true, ground: 0x2c2848, groundB: 0x120e22, rune: 0x6b7bff, fog: 0x05040c, rim: 0xa8b4ff, enemy: 0xff4a6a, boss: 0xff3df0, hpMul: 4.0, rate: 1.4,
-    mods: { rotate: [2, 3, 4, 5] } },
+  { id: 1, act: 1, name: 'Ashen Necropolis', ground: 0x3a4658, groundB: 0x1c2330, rune: 0x2ad8ff, fog: 0x04070c, rim: 0x6fd8ff, enemy: 0xff5a2e, boss: 0xff3df0, bossId: 'gravemaw', tier: 1, hpMul: 1.0,  rate: 1.0,
+    biome: 'necropolis', floor: 'necropolis', art: 1, mods: {} },
+  { id: 2, act: 1, name: 'Ember Wastes',     ground: 0x4a3226, groundB: 0x241510, rune: 0xff8a2a, fog: 0x0b0503, rim: 0xffb37a, enemy: 0xff3a3a, boss: 0xff7a1a, bossId: 'pyrexa', tier: 1, hpMul: 1.9,  rate: 1.15,
+    biome: 'ember', floor: 'ember', art: 2, mods: { tag: 'The witches’ fire lingers', weights: { witch: 1.8 }, burn: true, vents: true } },
+  { id: 3, act: 1, name: 'Frozen Ossuary',   ground: 0x51637c, groundB: 0x26324a, rune: 0x9fe4ff, fog: 0x060b14, rim: 0xbfeaff, enemy: 0xff4f6a, boss: 0x8f9cff, bossId: 'vaulkar', tier: 1, hpMul: 3.2,  rate: 1.3,
+    biome: 'ossuary', floor: 'ossuary', art: 3, mods: { tag: 'Ghoul packs hunt on treacherous ice, and the Corpse Priests tend the dead', weights: { ghoul: 1.5, priest: 1.6 }, pack: [6, 8], ice: true } },
+  { id: 4, act: 1, name: 'Abyssal Cathedral',ground: 0x3a2e4e, groundB: 0x1a1226, rune: 0xa35bff, fog: 0x06030c, rim: 0xd2a8ff, enemy: 0xff5a2e, boss: 0xb070ff, bossId: 'azrathel', tier: 1, hpMul: 5.0,  rate: 1.45,
+    biome: 'cathedral', floor: 'cathedral', art: 4, mods: { tag: 'Bloaters swarm, Wraiths drift in and the abyss reaches up', weights: { bloater: 2, wraith: 1.6 }, vignette: 1.25, sight: 17, hands: true } },
+  { id: 5, act: 1, name: 'Crimson Throne',   ground: 0x4a2228, groundB: 0x220e12, rune: 0xff2e55, fog: 0x0a0204, rim: 0xff9aaa, enemy: 0xffb02e, boss: 0xff2e55, bossId: 'vesperine', tier: 1, hpMul: 7.5,  rate: 1.6,
+    biome: 'throne', floor: 'throne', art: 5, mods: { tag: 'The gilded court rises: twice the elites', weights: { brute: 1.6 }, elites: PARADE } },
+  // Act II: the Drowned Coast. Tide pools drag at the Shepherd; Drowned Sirens sing the legion still.
+  later(6, 'Sunken Choir', 'gravemaw', 2, 'drowned', { tag: 'Tide pools drag at your feet, and Drowned Sirens sing your legion still', tide: true, weights: { siren: 1 } }),
+  later(7, 'Saltgrave Shore', 'pyrexa', 2, 'shore', { tag: 'Ghoul packs hunt the shore between the tide pools', tide: true, weights: { siren: 1, ghoul: 1.6 }, pack: [6, 8] }),
+  later(8, 'Wreck of the Last Ark', 'vaulkar', 2, 'shore', { tag: 'Witch fire burns on the wrecks, and the tide runs high', tide: true, burn: true, weights: { siren: 1.2, witch: 1.6 } }),
+  later(9, 'Lighthouse of Lost Souls', 'azrathel', 2, 'drowned', { tag: 'The lighthouse calls the gilded dead: twice the elites', tide: true, weights: { siren: 1.3 }, elites: PARADE }),
+  later(10, 'The Abyssal Choir', 'morwenna', 1, 'drowned', { tag: 'The whole choir sings: Sirens swarm the drowned nave', tide: true, weights: { siren: 2.2, wraith: 1.4 }, vignette: 1.15, sight: 19 }),
+  // Act III: the Thornwood. Brambles cut and slow; Thornbacks charge down marked lanes.
+  later(11, 'Witherwood Edge', 'vesperine', 2, 'thornwood', { tag: 'Brambles bite, and Thornbacks charge from the trees', brambles: true, weights: { thornback: 1 } }),
+  later(12, 'The Hanging Grove', 'gravemaw', 3, 'grove', { tag: 'Ghoul packs drop from the gallows boughs', brambles: true, weights: { thornback: 1, ghoul: 1.6 }, pack: [6, 8] }),
+  later(13, 'Briar Labyrinth', 'pyrexa', 3, 'thornwood', { tag: 'The maze closes in: short sight and thorns on every side', brambles: true, weights: { thornback: 1.3, priest: 1.4 }, vignette: 1.25, sight: 16 }),
+  later(14, 'Rotheart Hollow', 'morwenna', 2, 'grove', { tag: 'Bloaters swell on the rotting heart', brambles: true, weights: { thornback: 1.2, bloater: 1.8 } }),
+  later(15, 'The Thorn Throne', 'gorrath', 1, 'thornwood', { tag: 'The Briar King’s court: Thornbacks stampede', brambles: true, weights: { thornback: 2, brute: 1.4 } }),
+  // Act IV: the Plague Fens. Miasma clouds drift over the mire; Plague Rats come in swarms.
+  later(16, 'Mirewood Fen', 'vaulkar', 4, 'fen', { tag: 'Plague miasma drifts over the mire, and the rats come in swarms', miasma: true, weights: { rat: 1 } }),
+  later(17, 'Gallows Bog', 'azrathel', 4, 'fen', { tag: 'Wraiths drift through the fog of the gallows', miasma: true, weights: { rat: 1, wraith: 1.8 } }),
+  later(18, 'Leper’s Crossing', 'vesperine', 4, 'fen', { tag: 'The pyres burn: Witch fire lingers on the crossing', miasma: true, burn: true, weights: { rat: 1.2, witch: 1.6 } }),
+  later(19, 'The Rotting Abbey', 'gorrath', 2, 'fungal', { tag: 'Corpse Priests tend the plague dead in the abbey', miasma: true, weights: { rat: 1, priest: 2, bloater: 1.5 } }),
+  later(20, 'Mother of Rot', 'mire', 1, 'fungal', { tag: 'The Mother’s brood: rat swarms and twice the elites', miasma: true, weights: { rat: 2, bloater: 1.4 }, elites: PARADE }),
+  // Act V: the Storm Spire. Lightning falls on marked ground; Stormcallers bring it down in lines.
+  later(21, 'Thunderstep Pass', 'gravemaw', 5, 'slate', { tag: 'Lightning strikes where you stand, and Stormcallers bring it down', lightning: true, weights: { caller: 1 } }),
+  later(22, 'The Shattered Bridges', 'pyrexa', 5, 'peak', { tag: 'Ice on the bridges and lightning in the clouds', lightning: true, ice: true, weights: { caller: 1, ghoul: 1.4 } }),
+  later(23, 'Galebreak Monastery', 'vaulkar', 5, 'slate', { tag: 'The bells toll for the gilded dead: twice the elites', lightning: true, weights: { caller: 1.3 }, elites: PARADE }),
+  later(24, 'Eye of the Tempest', 'mire', 2, 'peak', { tag: 'The storm’s eye: ember vents and lightning', lightning: true, vents: true, weights: { caller: 1.4, witch: 1.4 } }),
+  later(25, 'The Storm Spire', 'kaelthar', 1, 'slate', { tag: 'The Herald’s choir of storms: Stormcallers everywhere', lightning: true, weights: { caller: 2.2, brute: 1.4 } }),
+  // Act VI: the Hollow Moon. Gravity wells pull the Shepherd in; Void Stalkers blink beside him.
+  later(26, 'Moonfall Steps', 'azrathel', 6, 'regolith', { tag: 'Gravity wells pull at you, and Void Stalkers blink close', gravity: true, weights: { stalker: 1 } }),
+  later(27, 'The Silent Sea', 'vesperine', 6, 'regolith', { tag: 'Abyssal hands reach from the dust', gravity: true, hands: true, weights: { stalker: 1.2, wraith: 1.4 } }),
+  later(28, 'Orrery of Bones', 'kaelthar', 2, 'starfloor', { tag: 'The orrery turns: the tides and thorns of fallen realms', gravity: true, tide: true, brambles: true, weights: { stalker: 1.2, siren: 1, thornback: 1 } }),
+  later(29, 'The Last Cathedral', 'morwenna', 5, 'starfloor', { tag: 'Every realm’s dead march: twice the elites', gravity: true, miasma: true, weights: { stalker: 1.3, rat: 1, caller: 1 }, elites: PARADE }),
+  later(30, 'The Hollow Moon', 'nihl', 1, 'starfloor', { tag: 'The First Night falls: gravity, lightning and the Stalkers', gravity: true, lightning: true, weights: { stalker: 2, caller: 1.2 }, vignette: 1.2, sight: 18 }),
 ];
+for (const c of CHAPTERS) if (!c.boss) c.boss = BOSSES[c.bossId].color;
+// Unlocked by clearing Chapter 5. No time limit; the run ends when you fall. It plays at chapter level 6.
+export const ENDLESS = { id: ENDLESS_ID, lvl: 6, act: 0, name: 'Endless Abyss', endless: true, ground: 0x2c2848, groundB: 0x120e22, rune: 0x6b7bff, fog: 0x05040c, rim: 0xa8b4ff, enemy: 0xff4a6a, boss: 0xff3df0, hpMul: 4.0, rate: 1.4,
+  biome: 'abyss', floor: 'abyss', art: 'endless', mods: { rotate: [2, 3, 4, 5] } };
+export const ENDLESS_UNLOCK = 6; // chapter.unlocked: a first Chapter 5 clear opens it
+// Campaign rewards past Act I (economy.applyRunResult): clear gems stop growing at Chapter 10; a Normal first clear pays
+// 40 + 18c gems and a Sigil in Act I, then `late` gems and a Sigil, and an act's last chapter (its own boss) `finale`
+// gems and `finaleSigils`; the boss's Normal hoard improves by act (rarity odds, rolled from the top down)
+export const CAMPAIGN_REWARDS = { clearGemsCap: 10, late: 100, finale: 250, finaleSigils: 3,
+  hoard: [[2, { common: 0.5, rare: 0.5 }], [10, { common: 0.325, rare: 0.325, epic: 0.35 }], [20, { rare: 0.5, epic: 0.5 }], [30, { rare: 0.3, epic: 0.67, legendary: 0.03 }]] };
+export const firstClearGems = (c) => (c <= 5 ? 40 + 18 * c : c % 5 === 0 ? CAMPAIGN_REWARDS.finale : CAMPAIGN_REWARDS.late);
+export const firstClearSigils = (c) => (c > 5 && c % 5 === 0 ? CAMPAIGN_REWARDS.finaleSigils : 1);
+export const normalHoard = (c) => CAMPAIGN_REWARDS.hoard.find(([to]) => c <= to)[1];
+/** A chapter by id (the Endless Abyss by ENDLESS_ID); an unknown id falls back to Chapter 1. */
+export const chapterById = (id) => (+id === ENDLESS_ID ? ENDLESS : CHAPTERS[(+id || 1) - 1] || CHAPTERS[0]);
 /** The modifier set active in a chapter; Endless rotates through other chapters' sets by abyss depth (0-based). */
 export const chapterMods = (ch, depth = 0) => {
   const rot = ch.mods && ch.mods.rotate;
@@ -400,6 +546,20 @@ export const HAZARDS = {
   vents: { cell: 15, chance: 0.32, radius: 1.6, period: [6.5, 9], warn: 1.2, puff: 0.5, dmg: 12 },
   ice: { cell: 12, chance: 0.5, radius: [2.6, 4.4], accel: 0.3, friction: 0.2, speed: 1.08 },
   hands: { every: [6, 9], lead: 0.6, radius: 1.3, warn: 1.0, root: 0.6, grab: 0.7 },
+  // Update 13's realms (dmg / dps values are chapter-1, minute-0 and scale like enemy damage):
+  //   tide: pools on a hash grid; in one the Shepherd moves at ×speed (Act II)
+  //   brambles: patches on a hash grid; in one he moves at ×speed and is cut for dps (Act III). A Thornback's charge
+  //     leaves short-lived patches (trail: radius, life) every `every` m
+  //   miasma: n poison clouds drift past him (radius range, drift m/s, placed near–far m ahead, life s); inside, dps (Act IV)
+  //   lightning: a strike every `every` s where he will be `lead` s ahead (± jitter m); telegraph `warn` s, then dmg to him
+  //     and foeHit × a Husk's HP (at the run's scaling) to foes within radius: it burns the horde too (Act V)
+  //   gravity: wells on a hash grid; each pulses every `period` s: `warn` s gathering, then `pull` s drawing him toward its
+  //     centre (strength m/s at the core, fading to 0 at radius); the core (coreR) hurts once a pulse (Act VI)
+  tide: { cell: 13, chance: 0.5, radius: [2.4, 4.0], speed: 0.72 },
+  brambles: { cell: 12, chance: 0.42, radius: [1.5, 2.6], speed: 0.85, dps: 5, trail: { r: 1.0, life: 4, every: 1.3 } },
+  miasma: { n: 3, radius: [2.6, 3.8], drift: 1.0, near: 6, far: 16, dps: 6, life: [14, 22] },
+  lightning: { every: [3.5, 5.5], lead: 0.5, jitter: 2.2, radius: 1.5, warn: 1.1, dmg: 14, foeHit: 1.6 },
+  gravity: { cell: 16, chance: 0.4, radius: 6, coreR: 1.3, period: [7, 9.5], warn: 1.2, pull: 1.6, strength: 5, dmg: 12 },
 };
 export const RUN_LENGTH = 360; // seconds until the boss arrives
 export const ENDLESS_BOSS_EVERY = 300; // Endless Abyss: a boss every 5:00 (the five in turn), stronger each time
@@ -723,6 +883,11 @@ export const VOICE = {
     a_vaulkar: { pri: 4, wait: 2 }, a_vaulkar_return: { pri: 4, wait: 2 }, a_vaulkar_slain: { pri: 4, wait: 2 },
     a_azrathel: { pri: 4, wait: 2 }, a_azrathel_return: { pri: 4, wait: 2 }, a_azrathel_slain: { pri: 4, wait: 2 },
     a_vesperine: { pri: 4, wait: 2 }, a_vesperine_return: { pri: 4, wait: 2 }, a_vesperine_slain: { pri: 4, wait: 2 },
+    a_morwenna: { pri: 4, wait: 2 }, a_morwenna_return: { pri: 4, wait: 2 }, a_morwenna_slain: { pri: 4, wait: 2 },
+    a_gorrath: { pri: 4, wait: 2 }, a_gorrath_return: { pri: 4, wait: 2 }, a_gorrath_slain: { pri: 4, wait: 2 },
+    a_mire: { pri: 4, wait: 2 }, a_mire_return: { pri: 4, wait: 2 }, a_mire_slain: { pri: 4, wait: 2 },
+    a_kaelthar: { pri: 4, wait: 2 }, a_kaelthar_return: { pri: 4, wait: 2 }, a_kaelthar_slain: { pri: 4, wait: 2 },
+    a_nihl: { pri: 4, wait: 2 }, a_nihl_return: { pri: 4, wait: 2 }, a_nihl_slain: { pri: 4, wait: 2 },
     a_cleared: { pri: 4, wait: 4 }, a_defeat: { pri: 4, wait: 1 },
     rite: { pri: 3, cd: 20 }, greet: { pri: 3, cd: 2 }, // {hero}_rite on a Rite cast, {hero}_greet on the hero screen
   },
@@ -811,7 +976,8 @@ export const WEEKLY_CHEST = { goal: 25, rewards: { sigils: 1, gems: 50, passXp: 
 export const BESTIARY = {
   goals: [100, 1000, 10000], rareGoals: [1, 10, 50], // a foe's own `goals` override both (the Corpse Priest: at most 3 alive)
   rewards: [{ gold: 2000 }, { sigils: 1 }, { gems: 50 }],
-  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest', 'thief', 'gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'],
+  order: ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest', 'siren', 'thornback', 'rat', 'caller', 'stalker', 'thief',
+    'gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine', 'morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'],
   foes: {
     husk: { name: 'Husk', role: 'Chaser', color: '#ff8a3d',
       lore: 'Once they were mourners. Now they remember only the long walk to the grave, and they walk it toward you.',
@@ -852,6 +1018,37 @@ export const BESTIARY = {
     vesperine: { name: 'Vesperine', role: 'The Crimson Queen · Crimson Throne', color: '#ff2e55', rare: true, boss: true,
       lore: 'She bought her crown with her kingdom\u2019s blood, and she has been thirsty ever since.',
       fights: 'Blood Lances: aimed fans of blood orbs, a beat apart. Her eclipse (the spiral) comes at half her health.' },
+    // Update 13: the act foes and the bosses of Acts II–VI
+    siren: { name: 'Drowned Siren', role: 'Enchanter · the Drowned Coast', color: '#2fe6c8', goals: [50, 500, 3000],
+      lore: 'The lighthouse keepers’ wives walked into the sea to call their husbands home. They are still calling.',
+      fights: 'Keeps her distance and sings onto a marked circle around you: minions inside forget the fight for a few seconds. Kill her first.' },
+    thornback: { name: 'Thornback', role: 'Charger · the Thornwood', color: '#c8e040', goals: [50, 500, 3000],
+      lore: 'The boars of the Witherwood ate the Briar King’s bark and grew his thorns. Now they run where he points.',
+      fights: 'Lowers its head over a marked lane, then charges straight down it, trampling minions and leaving brambles. Step out of the lane.' },
+    rat: { name: 'Plague Rat', role: 'Swarm · the Plague Fens', color: '#9cff3a', goals: [500, 5000, 50000],
+      lore: 'Mother Mire’s children. There are never fewer of them than there were yesterday.',
+      fights: 'Pours in by the dozen, fast and fragile, flanking like a Ghoul pack. Your legion eats them; just never stand still in a swarm.' },
+    caller: { name: 'Stormcaller', role: 'Caster · the Storm Spire', color: '#7fd4ff', goals: [50, 500, 3000],
+      lore: 'The monks of Galebreak prayed for the storm to spare them. It answered by making them its voice.',
+      fights: 'Keeps its distance and marks a line toward where you are going; a second later lightning runs down it. Step off the line.' },
+    stalker: { name: 'Void Stalker', role: 'Ambusher · the Hollow Moon', color: '#d0b8ff', goals: [50, 500, 3000],
+      lore: 'What the first night was made of, before there were stars to show its shape.',
+      fights: 'Marks a spot beside you, vanishes, then appears there and pounces. Move off the mark and it lands on nothing.' },
+    morwenna: { name: 'Morwenna', role: 'The Drowned Cantor · the Abyssal Choir', color: '#2fe6c8', rare: true, boss: true,
+      lore: 'She sang the drowned cathedral’s last mass as the sea came in, and the choir sang on beneath the waves.',
+      fights: 'Her slam rings leave tide pools. Tidal Lanes: marked lanes across the arena, then a wave runs down each one.' },
+    gorrath: { name: 'Gorrath', role: 'The Briar King · the Thorn Throne', color: '#c8e040', rare: true, boss: true,
+      lore: 'The oldest tree in the Thornwood was crowned by the things that hanged themselves from it.',
+      fights: 'His slam rings leave brambles. Root Snare: lines of thorns rip toward you and hold you fast if they catch you.' },
+    mire: { name: 'Mother Mire', role: 'The Plague Bloom · Mother of Rot', color: '#9cff3a', rare: true, boss: true,
+      lore: 'The plague had to come from somewhere. It came from her, and she has been so very proud of it.',
+      fights: 'Her slam rings leave miasma clouds. Blight Rain: spore pods fall on marked circles and burst into poison.' },
+    kaelthar: { name: 'Kaelthar', role: 'The Storm Herald · the Storm Spire', color: '#7fd4ff', rare: true, boss: true,
+      lore: 'He was sent to announce the end of the world. He has been announcing it, very loudly, ever since.',
+      fights: 'Lightning falls around him through the whole fight. Tempest: lightning beams sweep around him; keep ahead of them.' },
+    nihl: { name: 'Nihl', role: 'The First Night · the Hollow Moon', color: '#d0b8ff', rare: true, boss: true,
+      lore: 'Before the first star, there was Nihl. It would like things back the way they were.',
+      fights: 'The dark pulls you toward it. Its signature borrows every fallen boss’s in turn, and its last phase comes at half its strength.' },
   },
 };
 

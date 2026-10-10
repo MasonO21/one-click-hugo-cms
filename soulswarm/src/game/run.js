@@ -22,19 +22,32 @@ import { computeStats, rollChoices, applyChoice, banishesPerRun } from './skills
 import { Streak } from './streak.js';
 import { Tutorial } from './tutorial.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
+import { ENDLESS, ACTS, chapterLevel, foeDmgScale, sideScale } from './data.js';
 import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS, GRIMOIRE } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
-const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest'];
+const TYPES = ['husk', 'ghoul', 'brute', 'witch', 'bloater', 'wraith', 'priest', 'siren', 'thornback', 'rat', 'caller', 'stalker'];
 // the horde's mix by minute (TYPES order); Wraiths and Priests also wait for their chapter and minute (ENEMIES[t].from)
-// and their alive cap (ENEMIES[t].cap)
-const MIX = [[1, 0, 0, 0, 0, 0, 0], [0.75, 0.25, 0, 0, 0, 0, 0], [0.55, 0.25, 0, 0.1, 0.1, 0.05, 0], [0.45, 0.2, 0.13, 0.12, 0.1, 0.06, 0.03], [0.4, 0.2, 0.17, 0.13, 0.1, 0.07, 0.03]];
+// and their alive cap (ENEMIES[t].cap); an act's own foe (ENEMIES[t].act: siren … stalker) only joins where its chapter
+// weights it (CHAPTERS[].mods.weights), at that chapter's weight × these
+const MIX = [
+  [1, 0, 0, 0, 0, 0, 0,                0, 0, 0, 0, 0],
+  [0.75, 0.25, 0, 0, 0, 0, 0,          0.05, 0.04, 0.12, 0.05, 0.05],
+  [0.55, 0.25, 0, 0.1, 0.1, 0.05, 0,   0.07, 0.05, 0.16, 0.07, 0.07],
+  [0.45, 0.2, 0.13, 0.12, 0.1, 0.06, 0.03, 0.08, 0.06, 0.18, 0.08, 0.08],
+  [0.4, 0.2, 0.17, 0.13, 0.1, 0.07, 0.03,  0.08, 0.06, 0.2, 0.08, 0.08]];
+const PACKS = { ghoul: 1, rat: 1 }; // these bank up and arrive as packs
 const CORPSES = 48; // the horde's fallen kept for the Corpse Priests (oldest dropped first)
-const NEW_FOE = { // a one-time tip when each Update 5 foe first appears
+const NEW_FOE = { // a one-time tip when each Update 5 / Update 13 foe first appears
   wraith: 'A Grave Wraith drifts through your legion. Only YOU can strike it!',
   priest: 'A Corpse Priest raises the fallen. Hunt it down before it chants!',
+  siren: 'A Drowned Siren sings your minions still. Kill her first!',
+  thornback: 'A Thornback lowers its head: step out of its lane!',
+  rat: 'Plague Rats pour in by the dozen. Keep moving!',
+  caller: 'A Stormcaller marks a line: lightning follows. Step off it!',
+  stalker: 'A Void Stalker marks a spot beside you, then blinks in. Move off the mark!',
 };
 const CHAPTER_NAMES = CHAPTERS.map((c) => c.name);
 const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
@@ -57,7 +70,7 @@ export class Run {
     // Nightmare / Torment: always defined, Normal is the identity. Endless and the Daily Trial play Normal.
     this.diff = { ...(!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal };
     this.rush = !!rush; // Boss Rush: the five chapter bosses back to back in the Abyss (BOSS_RUSH)
-    let look = this.rush ? CHAPTERS[CHAPTERS.length - 1] : this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;
+    let look = this.rush ? ENDLESS : this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;
     if (this.diff.tint) look = difficultyLook(look, this.diff.tint); // over the Blood Moon sky too
     this.scene.background = new THREE.Color(look.fog);
     this.camera = new THREE.PerspectiveCamera(45, 0.5, 0.5, 220);
@@ -171,7 +184,8 @@ export class Run {
     const D = this.diff, dh = this.bossSpawned ? 1 : 1 + (D.hp - 1) * Math.min(1, D.ramp ? m / D.ramp : 1);
     return this.chapter.hpMul * (this.endless ? 1 + 0.32 * m + 0.025 * m * m : 1 + 0.28 * m + 0.04 * m * m) * dh;
   }
-  dmgMul() { return (1 + 0.1 * this.minute) * (1 + 0.35 * (this.chapter.id - 1)) * (this.bossSpawned ? 1 : this.diff.dmg); } // arena adds are plain adds: the boss carries the difficulty
+  get lvl() { return chapterLevel(this.chapter); } // the chapter's scaling level (data.js SCALE; the Endless Abyss plays at 6)
+  dmgMul() { return (1 + 0.1 * this.minute) * foeDmgScale(this.lvl) * (this.bossSpawned ? 1 : this.diff.dmg); } // arena adds are plain adds: the boss carries the difficulty
   recomputeStats() {
     this.stats = computeStats(this.loadout, this.skillLv, this.chapter, this.level);
     const ms = this.mut.stats, S = this.stats;
@@ -206,7 +220,7 @@ export class Run {
   // ---------------------------------------------------------------- director
   pickType() {
     const m = this.minute, w = this._mix || (this._mix = new Array(TYPES.length));
-    const row = MIX[Math.min(MIX.length - 1, Math.floor(m))], ch = this.chapter.id;
+    const row = MIX[Math.min(MIX.length - 1, Math.floor(m))], ch = this.lvl;
     // chapter modifiers re-weight the mix (e.g. Ember Wastes ×1.8 Witches); Daily Trial banes can too (Witching Hour)
     const mul = this.mods.weights, mw = this.mut.weights;
     let total = 0;
@@ -214,6 +228,7 @@ export class Run {
       const t = TYPES[i], d = ENEMIES[t];
       w[i] = row[i] * ((mul && mul[t]) || 1) * ((mw && mw[t]) || 1);
       if (d.from && (ch < d.from.ch || m < d.from.minute || this.enemies.counts[t] >= d.cap)) w[i] = 0;
+      if (d.act && !(mul && mul[t])) w[i] = 0; // an act's foe: only where its chapter calls for it
       total += w[i];
     }
     let r = Math.random() * total;
@@ -261,14 +276,14 @@ export class Run {
   }
 
   /** Ghouls arrive in packs from one direction (almost always ahead), each member flanking at its own angle across ±flank. */
-  spawnPack(n) {
-    const P = this.player, G = ENEMIES.ghoul;
+  spawnPack(n, type = 'ghoul') {
+    const P = this.player, G = ENEMIES[type];
     let c = this.spawnPoint();
     for (let k = 0; k < 2 && (c.x - P.x) * P.vx + (c.z - P.z) * P.vz < 0; k++) c = this.spawnPoint();
     const ax = c.x - P.x, az = c.z - P.z, l = Math.hypot(ax, az) || 1, px = -az / l, pz = ax / l;
     for (let i = 0; i < n && this.enemies.count < this.maxEnemies; i++) {
       const u = n > 1 ? (i / (n - 1)) * 2 - 1 : 0;
-      const e = this.spawnEnemy('ghoul', { at: { x: c.x + px * u * 1.8 + (Math.random() - 0.5) * 0.6, z: c.z + pz * u * 1.8 + (Math.random() - 0.5) * 0.6 } });
+      const e = this.spawnEnemy(type, { at: { x: c.x + px * u * 1.8 + (Math.random() - 0.5) * 0.6, z: c.z + pz * u * 1.8 + (Math.random() - 0.5) * 0.6 } });
       if (e) e.flank = -u * G.flank; // the left of the pack swings left, the right swings right
     }
   }
@@ -319,11 +334,12 @@ export class Run {
         this.spawnAcc -= 1;
         if (this.enemies.count >= this.maxEnemies) continue;
         const t = this.pickType();
-        if (t !== 'ghoul') { this.spawnEnemy(t); continue; }
-        // Ghouls bank up and arrive as a pack, so the mix per enemy stays the same
-        const pk = this.mods.pack || ENEMIES.ghoul.pack;
-        if (!this.packN) this.packN = pk[0] + Math.floor(Math.random() * (pk[1] - pk[0] + 1));
-        if (++this.packAcc >= this.packN) { this.spawnPack(this.packN); this.packAcc = this.packN = 0; }
+        if (!PACKS[t]) { this.spawnEnemy(t); continue; }
+        // Ghouls (and Plague Rats) bank up and arrive as a pack, so the mix per enemy stays the same
+        const B = this.packs || (this.packs = {}), b = B[t] || (B[t] = { acc: 0, n: 0 });
+        const pk = (t === 'ghoul' && this.mods.pack) || ENEMIES[t].pack;
+        if (!b.n) b.n = pk[0] + Math.floor(Math.random() * (pk[1] - pk[0] + 1));
+        if (++b.acc >= b.n) { this.spawnPack(b.n, t); b.acc = b.n = 0; }
       }
       if (this.trialBannerAt && this.time >= this.trialBannerAt) {
         this.trialBannerAt = 0;
@@ -363,11 +379,14 @@ export class Run {
     if (this.time >= this.nextBossAt) this.spawnBoss();
   }
 
-  /** The boss warning: the chapter's boss; in the Endless Abyss the next in turn, each one "returns" once all five have fallen. */
+  /** The boss warning: the chapter's boss; in the Endless Abyss the next in turn, each one "returns" once all five have
+   *  fallen; a campaign boss back from an earlier act (chapter tier > 1) returns too, under its act's epithet. */
   warnBoss() {
     this.warned = true;
-    const B = BOSSES[this.bossId], back = !this.rush && this.bossKills >= BOSS_ORDER.length;
-    const sub = this.rush ? `Boss ${this.bossKills + 1} of ${BOSS_ORDER.length}` : this.bossKills ? `Stronger than before (×${this.bossKills + 1})` : 'Gather your legion';
+    const B = BOSSES[this.bossId], tier = !this.endless && !this.rush ? this.chapter.tier || 1 : 1;
+    const back = (!this.rush && this.bossKills >= BOSS_ORDER.length) || tier > 1;
+    const sub = this.rush ? `Boss ${this.bossKills + 1} of ${BOSS_ORDER.length}` : this.bossKills ? `Stronger than before (×${this.bossKills + 1})`
+      : tier > 1 ? `${ACTS[this.chapter.act - 1].epithet} ${B.name}: stronger than before` : 'Gather your legion';
     this.ui.bossColor(B.color);
     this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, sub, 'boss');
     this.audio.sfx('warning');
@@ -552,7 +571,7 @@ export class Run {
     this.novaQueue = [{ x: P.x, y: 1, z: P.z, t: W, self: true }];
     for (let i = 0; i < pts.length; i++) { const p = pts[i]; p.t = W + (i / pts.length) * span; this.novaQueue.push(p); }
     this.novaT = 0;
-    this.novaDmg = (35 + size * 0.5) * this.stats.dmgMul * (1 + 0.45 * (this.chapter.id - 1));
+    this.novaDmg = (35 + size * 0.5) * this.stats.dmgMul * sideScale(this.lvl);
     this.projectiles.clearEnemyShots();
     const c = hdr(this.heroColor, 2.6), k = W > 0 ? Math.max(1, Math.round(this.particles.budget * 2)) : 0;
     for (const p of pts) for (let j = 0; j < k; j++) { // each soul streams into the Shepherd, arriving as the blast fires
@@ -618,7 +637,7 @@ export class Run {
     const span = Math.min(0.6, 0.12 + pts.length * 0.003);
     this.burstQueue = pts.map((p, i) => ({ ...p, t: (i / pts.length) * span }));
     this.burstT = 0;
-    this.burstDmg = 0.5 * (35 + legionSize * 0.5) * this.stats.dmgMul * (1 + 0.45 * (this.chapter.id - 1));
+    this.burstDmg = 0.5 * (35 + legionSize * 0.5) * this.stats.dmgMul * sideScale(this.lvl);
   }
 
   updateBursts(dt) {

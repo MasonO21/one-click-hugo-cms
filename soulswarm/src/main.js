@@ -17,7 +17,7 @@ import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
 import { RunUI } from './ui/runui.js';
 import { createMeta } from './ui/meta/index.js';
-import { CHAPTERS, CLOCK } from './game/data.js';
+import { CHAPTERS, CLOCK, ENDLESS_ID, ENDLESS_UNLOCK, chapterById } from './game/data.js';
 import { toast } from './ui/dom.js';
 
 const profile = loadProfile();
@@ -79,8 +79,9 @@ function startRun(chapterId, opts = {}) {
   if (opts.rush) return beginRush(profile) ? beginRun(CHAPTERS[0], { rush: true }) : false;
   let mutators = null;
   if (opts.trial) { const t = dailyTrial(profile); chapterId = t.chapter; mutators = [t.boon, t.bane]; }
-  const chapter = CHAPTERS[chapterId - 1];
-  if (!chapter || chapterId > profile.chapter.unlocked) return false;
+  chapterId = +chapterId;
+  const endless = chapterId === ENDLESS_ID, chapter = endless ? chapterById(ENDLESS_ID) : CHAPTERS[chapterId - 1];
+  if (!chapter || (endless ? profile.chapter.unlocked < ENDLESS_UNLOCK : chapterId > profile.chapter.unlocked)) return false;
   const difficulty = (!opts.trial && opts.difficulty) || 'normal';
   if (!difficultyUnlocked(profile, chapterId, difficulty)) return false;
   if (opts.trial ? !beginTrial(profile) : !spendEnergy(profile)) return false;

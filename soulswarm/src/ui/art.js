@@ -8,25 +8,6 @@ import liora from '../assets/art/hero-liora.webp';
 import grimsby from '../assets/art/hero-grimsby.webp';
 import osric from '../assets/art/hero-osric.webp';
 import isolde from '../assets/art/hero-isolde.webp';
-import ch1 from '../assets/art/chapter-1.webp';
-import ch2 from '../assets/art/chapter-2.webp';
-import ch3 from '../assets/art/chapter-3.webp';
-import ch4 from '../assets/art/chapter-4.webp';
-import ch5 from '../assets/art/chapter-5.webp';
-import ch6 from '../assets/art/chapter-6.webp';
-import husk from '../assets/art/foe-husk.webp';
-import ghoul from '../assets/art/foe-ghoul.webp';
-import brute from '../assets/art/foe-brute.webp';
-import witch from '../assets/art/foe-witch.webp';
-import bloater from '../assets/art/foe-bloater.webp';
-import wraith from '../assets/art/foe-wraith.webp';
-import priest from '../assets/art/foe-priest.webp';
-import thief from '../assets/art/foe-thief.webp';
-import gravemaw from '../assets/art/foe-gravemaw.webp';
-import pyrexa from '../assets/art/foe-pyrexa.webp';
-import vaulkar from '../assets/art/foe-vaulkar.webp';
-import azrathel from '../assets/art/foe-azrathel.webp';
-import vesperine from '../assets/art/foe-vesperine.webp';
 
 export { default as LOGO_ART } from '../assets/art/logo.webp';
 import eclipseVael from '../assets/art/skin-eclipse-vael.webp';
@@ -73,11 +54,20 @@ export const GEM_ART = Object.values(import.meta.glob('../assets/art/gems-*.webp
 const TALENT_ART = { might: 'might', vitality: 'vitality', raise: 'raiseDead', cap: 'legionCap', swift: 'haste' };
 export const talentArt = (id, fallback) => (id === 'greed' ? relicArt('coin') : skillArt(TALENT_ART[id], fallback));
 
-/** Painted chapter key art (16:9) by chapter id; Endless Abyss is chapter 6. */
-export const CHAPTER_ART = { 1: ch1, 2: ch2, 3: ch3, 4: ch4, 5: ch5, 6: ch6 };
+/** Painted chapter key art (16:9) by art key (CHAPTERS[].art: the chapter's number, or 'endless' for the Endless Abyss),
+ *  from src/assets/art/chapter-<key>.webp. */
+export const CHAPTER_ART = {};
+for (const [path, url] of Object.entries(import.meta.glob('../assets/art/chapter-*.webp', { eager: true, import: 'default' }))) {
+  CHAPTER_ART[path.slice(path.lastIndexOf('/chapter-') + 9, -5)] = url;
+}
+/** A chapter's painting (a chapter object, or an art key). */
+export const chapterArt = (ch) => CHAPTER_ART[ch && typeof ch === 'object' ? ch.art : ch] || CHAPTER_ART[1];
 
-/** Painted Bestiary portraits (3:4) by entry id (BESTIARY.order). */
-export const FOE_ART = { husk, ghoul, brute, witch, bloater, wraith, priest, thief, gravemaw, pyrexa, vaulkar, azrathel, vesperine };
+/** Painted Bestiary portraits (3:4) by entry id (BESTIARY.order), from src/assets/art/foe-<id>.webp. */
+export const FOE_ART = {};
+for (const [path, url] of Object.entries(import.meta.glob('../assets/art/foe-*.webp', { eager: true, import: 'default' }))) {
+  FOE_ART[path.slice(path.lastIndexOf('/foe-') + 5, -5)] = url;
+}
 
 /** Each chapter boss's painted band (the boss-warning banner) by boss id (BOSSES in data.js). */
 export const BOSS_ART = {};

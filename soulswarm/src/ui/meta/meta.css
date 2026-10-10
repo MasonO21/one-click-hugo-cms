@@ -1147,3 +1147,37 @@
 .rd-cost b { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; }
 .rd-cost b.short { color: #ff8a8a; }
 .rd-cost svg { width: 14px; height: 14px; }
+
+/* Update 13: the chapter label opens the campaign map (chapters.js); its dots are the five chapters of the current act */
+button.chap-no { margin: 0 auto; padding: 2px 8px; border: 0; background: none; cursor: pointer; font: inherit; letter-spacing: inherit; text-transform: inherit; }
+button.chap-no > svg { width: 13px; height: 13px; stroke-width: 2.4; margin-right: -3px; opacity: .9; }
+button.chap-no:active { transform: scale(.96); }
+.mm-chapters { max-width: 420px; }
+.cm { display: flex; flex-direction: column; gap: 14px; padding-bottom: 4px; }
+.cm-act { --ac: var(--soul); display: flex; flex-direction: column; gap: 6px; }
+.cm-act > header { display: flex; align-items: baseline; gap: 8px; padding: 0 2px; }
+.cm-act > header .t-label { flex: none; color: var(--ac); }
+.cm-act > header b { flex: 1; min-width: 0; font-size: 15px; letter-spacing: .04em; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 0 10px color-mix(in srgb, var(--ac) 60%, transparent); }
+.cm-act > header small { flex: none; font-size: 11px; font-weight: 800; color: var(--ink-dim); }
+.cm-act.lk > header b { color: #8d98ad; text-shadow: none; }
+.cm-grid { display: flex; flex-direction: column; gap: 4px; }
+.cm-ch { --cc: var(--soul); position: relative; isolation: isolate; display: flex; align-items: center; gap: 10px; min-height: 50px; padding: 6px 10px; border: 0; cursor: pointer; text-align: left; color: #fff; clip-path: var(--bevel-sm); background: #070a14; }
+.cm-art { position: absolute; inset: 0; z-index: -1; background: 50% 40% / cover no-repeat; opacity: .7; }
+.cm-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5,8,16,.92) 0%, rgba(5,8,16,.62) 55%, rgba(5,8,16,.86) 100%); }
+.cm-ch.on { box-shadow: inset 0 0 0 1.5px var(--cc), inset 0 0 18px color-mix(in srgb, var(--cc) 40%, transparent); }
+.cm-ch.on .cm-art { opacity: 1; }
+.cm-ch:active { transform: scale(.985); }
+.cm-no { flex: none; width: 26px; font-family: var(--f-display); font-weight: 900; font-size: 18px; text-align: center; color: color-mix(in srgb, var(--cc) 70%, #fff); text-shadow: 0 0 8px var(--cc), 0 1px 2px #000; }
+.cm-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cm-txt b { font-family: var(--f-display); font-weight: 900; font-size: 14px; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 3px #000; }
+.cm-txt small { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #c4cbe0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 2px #000; }
+.cm-txt small svg { flex: none; width: 11px; height: 11px; }
+.cm-pips { flex: none; display: inline-flex; gap: 4px; }
+.cm-pips i { width: 8px; height: 8px; transform: rotate(45deg); background: rgba(255,255,255,.12); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+.cm-pips i.on { background: var(--dc); box-shadow: 0 0 6px var(--dc); }
+.cm-ch.lk { cursor: default; }
+.cm-ch.lk .cm-art { filter: grayscale(.9) brightness(.45); }
+.cm-ch.lk .cm-no, .cm-ch.lk .cm-txt b { color: #7d869c; text-shadow: none; }
+.cm-ch.lk .cm-txt small { color: #ffb3bf; }
+.cm-wide { min-height: 58px; }
+.cm-wide .cm-txt b { font-size: 16px; }

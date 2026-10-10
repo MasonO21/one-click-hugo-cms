@@ -1,4 +1,5 @@
 dist-single/
+dist-artifact/
 ios/App/App/public/
 android/app/src/main/assets/public/
 node_modules
