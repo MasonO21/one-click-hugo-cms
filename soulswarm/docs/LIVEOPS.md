@@ -42,8 +42,8 @@
 | **S3** | 9 Aug – 5 Sep | The Drowned Choir | — | *Tidal Gravemaw*: slams leave water that slows | — | Hero loadout presets; replay sharing (10 s clip) |
 | **S4** | 6 Sep – 3 Oct | Bone Abbey | **Osric the Bone Abbot** (Legendary) | *Ossuary Rush*: Skull Halo pre-equipped for all | — | **Nightmare difficulty** (Ch1–5 remix; already in the prototype build, so S4 is its launch announcement). **Relic Ascension** (gold sink; also already in the prototype build, Update 11, GDD §12.1) |
 | **S5** | 4 Oct – 31 Oct | Harvest of Souls | **Grimsby Lanternjaw** (Epic) | *Pumpkin King*: Gravemaw in a jack-o'-lantern crown | **Night of a Thousand Souls** (Halloween, 21–31 Oct) | Halloween cosmetics (minion tints, gate skins) |
-| **S6** | 1 Nov – 28 Nov | The Hollow Court | — | *Court of Echoes*: 3 Gravemaw Echoes at once | Harvest weekend (Black Friday, 26–28 Nov). Honest bundles only, see §4.5. | **Clans ("Covens")**: 30 members, coven chat with filters, coven quests |
-| **S7** | 29 Nov – 26 Dec | Frostfall Vigil | **Isolde Frostveil** (Epic) | *Gravemaw in Ice*: frozen arena, ice patches | **Frostfall Vigil** winter event (17 Dec – 2 Jan) | Winter map variant of Ch3 |
+| **S6** | 1 Nov – 28 Nov | The Hollow Court | **Isolde, the Crimson Countess** (Legendary) | *Court of Echoes*: 3 Gravemaw Echoes at once | Harvest weekend (Black Friday, 26–28 Nov). Honest bundles only, see §4.5. | **Clans ("Covens")**: 30 members, coven chat with filters, coven quests |
+| **S7** | 29 Nov – 26 Dec | Frostfall Vigil | **Sigrun Frostveil** (Epic) | *Gravemaw in Ice*: frozen arena, ice patches | **Frostfall Vigil** winter event (17 Dec – 2 Jan) | Winter map variant of Ch3 |
 | **S8** | 27 Dec – 23 Jan | Year of the Abyss | — | *Abyss Marathon*: 10-minute Endless sprint | New Year login calendar (31 Dec – 6 Jan) | **Endless Abyss Season ranks** (ranked divisions across 2 seasons) |
 | **S9** | 24 Jan – 20 Feb | Lantern Legion | **Kaida Emberfang** (Legendary) | *Lantern Dance*: bullet rings form lantern patterns | **Lunar New Year** (from 26 Jan); **Bound Souls** Valentine weekend (12–14 Feb) | Coven gifting (sigils to coven mates, capped) |
 | **S10** | 21 Feb – 19 Mar | The Thorned Choir | — | *Thorn Crown*: reflected damage modifier | — | **Legion Raids v1** (asynchronous co-op): covens fight a shared raid boss over 3 days |
@@ -51,7 +51,7 @@
 | **S12** | 17 Apr – 14 May | Torment | — | *True Form*: Gravemaw with a 4th phase | — | **Torment difficulty** (already in the prototype build, so S12 is its launch announcement). Legion Raids v2 (real-time 2-player co-op, beta) |
 | **S13** | 15 May – 11 Jun | The First Shepherd | **Malachar, the First Shepherd** (Legendary) | *Shepherd's Trial*: every hero's signature weapon is available | **Anniversary** (7–20 Jun 2028, runs into S14) | Year-2 roadmap reveal |
 
-**Hero cadence check:** new heroes in S2, S4, S5, S7, S9, S11 and S13. That is 7 heroes in 13 seasons, and the gap is never more than 2 seasons (matches "a new hero every 1–2 seasons").
+**Hero cadence check:** new heroes in S2, S4, S5, S6, S7, S9, S11 and S13. That is 8 heroes in 13 seasons, and the gap is never more than 2 seasons (matches "a new hero every 1–2 seasons").
 
 ### 2.1 Year-1 heroes
 
@@ -60,12 +60,13 @@
 | Liora Bellwraith | Epic | Grave Pulse | Pulse-struck foes stay close and rise at ×2 Raise Chance for 3 s | **In the build** (pulled forward from S2): Epic Altar rolls. Planned for S2: featured banner + S2 premium pass (10 shards) |
 | Osric the Bone Abbot | Legendary | Skull Halo | Starts each run with 20 minions; Skull Halo kills rise ×2. Rite: **Bone Mass** | **In the build** (pulled forward from S4, 2026-10-08): Legendary Altar rolls (5 shards). Planned for S4: featured banner |
 | Grimsby Lanternjaw | Epic | **Witchfire Lantern** (a lantern that leaves burning trails; evolves into Hallow Pyre) | +N gates give 25% more; witchfire kills rise ×1.5. Rite: **Hallowfire** | **In the build** (pulled forward from S5, 2026-10-08): Epic Altar rolls (5 shards). Planned for S5: Halloween event track (10 shards free) + banner |
-| Isolde Frostveil | Epic | **Rime Shards** (new: freezing shards that shatter) | Frozen enemies have +15 pp Raise Chance | S7 premium pass + banner |
+| Isolde, the Crimson Countess | Legendary | Soul Leech (one more drain beam) | What her beams slay always rises. Rite: **Crimson Sabbath** (binds and blood-marks every foe within 7 m: the marked rise when they fall) | **In the build** (2026-10-10, ahead of S6): Legendary Altar rolls (5 shards). Planned for S6: featured banner, with *Court of Echoes* as her launch Boss Rush |
+| Sigrun Frostveil | Epic | **Rime Shards** (new: freezing shards that shatter) | Frozen enemies have +15 pp Raise Chance | S7 premium pass + banner |
 | Kaida Emberfang | Legendary | **Fox-Fire Fans** (new: boomerang fans) | Minions leave fox-fire trails (10 DPS) | Featured banner shards |
 | Thessaly of the Thorn | Rare | **Thorn Whip** (new: long line attack) | +15% max HP; reflects 10% of contact damage | Free via S11 event track; banner |
 | Malachar, the First Shepherd | Legendary | **Shepherd's Crook** (new: pull-and-slam) | Soul Gates' × values +0.5 | Featured banner shards |
 
-**Banner rule:** when a featured hero is live, their shards replace the standard hero shards on Legendary rolls (Mordrake/Seraphine/Osric) or Epic rolls (Nyx/Seraphine/Liora/Grimsby) for that banner only. The banner screen shows exactly which shards each rarity gives. Odds (60 / 28 / 10 / 2), the 10-pull guarantee and the 60-pull pity are identical on every banner. Pity carries over between banners.
+**Banner rule:** when a featured hero is live, their shards replace the standard hero shards on Legendary rolls (Mordrake/Seraphine/Osric/Isolde) or Epic rolls (Nyx/Seraphine/Liora/Grimsby) for that banner only. The banner screen shows exactly which shards each rarity gives. Odds (60 / 28 / 10 / 2), the 10-pull guarantee and the 60-pull pity are identical on every banner. Pity carries over between banners.
 
 **Power-creep rule:** a new hero may be best in one niche but must not beat the launch Legendary (Mordrake) on overall power by more than 5% at equal stars. Balance sims must pass before content lock.
 

@@ -56,8 +56,15 @@ export const HEROES = {
     hp: 135, speed: 6.0,
     lore: 'His abbey emptied the night the plague came. He kept saying Mass anyway, and in time the pews filled again.',
   },
+  isolde: { // Update 12: the eighth Shepherd, Soul Leech's own
+    id: 'isolde', name: 'Isolde', title: 'the Crimson Countess', rarity: 'legendary', weapon: 'soulLeech',
+    color: 0xff4d6d, css: '#ff4d6d', body: 0x3a1220, legion: 0x5b7cff, // her guests' blue blood: a crimson legion would read as the horde
+    passive: { leechBeams: 1, leechRaise: true }, passiveText: 'One more drain beam; what her beams slay always rises',
+    hp: 120, speed: 6.3,
+    lore: 'She threw the last feast her house ever held. The guests never left, and she never stopped pouring.',
+  },
 };
-export const HERO_ORDER = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric'];
+export const HERO_ORDER = ['vael', 'nyx', 'seraphine', 'liora', 'grimsby', 'mordrake', 'osric', 'isolde'];
 export const HERO_UNLOCK_SHARDS = 10;
 export const HERO_STAR_COST = [0, 10, 20, 40, 80]; // shards to go from star i to i+1 (index = current stars)
 export const HERO_MAX_STARS = 5;
@@ -115,6 +122,13 @@ export const RITES = {
     desc: 'Twelve bone monks rise to join your legion. For 6 s your whole legion deals +50% damage, your Skull Halo spins twice as fast and you take 40% less damage.',
     // Ascended: every `champEvery`-th monk rises as a Champion (gold, ×3 HP, ×2 damage)
     asc: { champEvery: 2 }, ascDesc: 'Every other monk rises as a Champion.' },
+  // a blood nova: foes within `r` m take dmg, are bound (stunned) `bind` s and blood-marked `mark` s: a marked foe that
+  // dies rises (Raise Chance 100%; the cap holds). She heals `heal` HP per foe struck (at most `healMax`). A boss is
+  // only staggered and never marked; Soul Thieves and Cursed Coffins are spared
+  isolde: { name: 'Crimson Sabbath', short: 'FEAST', cd: 18, r: 7, dmg: 70, bind: 1.2, mark: 6, heal: 2, healMax: 30, color: 0xff2448, // blood, not her sapphire legion
+    desc: 'A blood nova binds every foe within 7 m for 1.2 s and marks them for 6 s: the marked rise when they fall. Each foe struck heals you 2 HP.',
+    // Ascended: a marked foe that falls bursts into blood mist, marking up to `n` unmarked foes within `spread` m
+    asc: { spread: 3, n: 3 }, ascDesc: 'A marked foe that falls bursts into blood mist, marking up to 3 foes within 3 m.' },
 };
 
 // ---------------------------------------------------------------- Hero Mastery (meta/mastery.js, Update 9)
@@ -731,7 +745,7 @@ export const CLOCK = {
 export const ALTAR = {
   odds: { common: 0.60, rare: 0.28, epic: 0.10, legendary: 0.02 },
   cost1: 150, cost10: 1350, pityLegendary: 60,
-  shardDrops: { epic: { seraphine: 4, nyx: 6, liora: 5, grimsby: 5 }, legendary: { mordrake: 5, seraphine: 6, osric: 5 } },
+  shardDrops: { epic: { seraphine: 4, nyx: 6, liora: 5, grimsby: 5 }, legendary: { mordrake: 5, seraphine: 6, osric: 5, isolde: 5 } },
 };
 
 // ---------------------------------------------------------------- Soul Pass

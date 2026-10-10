@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Rebuilds the voice lines in src/assets/voice from their Higgsfield takes (ElevenLabs engine via Higgsfield
 # text2speech_v2; scripts, voices and job ids below and in docs/ART_AND_ADS.md §3): trims silence, adds a low shelf and a
-# short cathedral echo to the announcer, pitches Mordrake down 10% and the Bone Abbot down 7% (with a nave echo), normalises to -16 LUFS, mono 64 kbps MP3.
+# short cathedral echo to the announcer, pitches Mordrake down 10% and the Bone Abbot down 7% (with a nave echo), gives the Countess a velvet
+# ballroom echo, normalises to -16 LUFS, mono 64 kbps MP3.
 # usage: bash scripts/voice-master.sh   (needs curl and ffmpeg)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -16,9 +17,10 @@ while read -r key file; do
     a_*) FX="highpass=f=60,bass=g=3:f=110,aecho=0.85:0.9:55|110:0.22|0.12,apad=pad_dur=0.25" ;;
     mordrake_*) FX="highpass=f=60,asetrate=44100*0.9,aresample=44100,atempo=1.1111,bass=g=2:f=100,apad=pad_dur=0.1" ;;
     osric_*) FX="highpass=f=60,asetrate=44100*0.93,aresample=44100,atempo=1.0753,bass=g=2:f=110,aecho=0.85:0.85:70|140:0.18|0.09,apad=pad_dur=0.2" ;;
+    isolde_*) FX="highpass=f=70,bass=g=1.5:f=140,aecho=0.8:0.8:45|90:0.14|0.07,apad=pad_dur=0.15" ;; # a velvet ballroom echo
     *) FX="highpass=f=80,apad=pad_dur=0.1" ;;
   esac
-  ffmpeg -v error -y -i "$TMP/$key.mp3" -af "aresample=44100,$TRIM,$FX,loudnorm=I=-16:TP=-1.5:LRA=7,aresample=44100" -ac 1 -c:a libmp3lame -b:a 64k "$OUT/$key.mp3"
+  ffmpeg -nostdin -v error -y -i "$TMP/$key.mp3" -af "aresample=44100,$TRIM,$FX,loudnorm=I=-16:TP=-1.5:LRA=7,aresample=44100" -ac 1 -c:a libmp3lame -b:a 64k "$OUT/$key.mp3"
 done <<'LIST'
 a_carnage hf_20261007_164151_e2502239-bc3e-4500-bdde-79c1f3f1f5c7.mp3
 a_massacre hf_20261007_164151_d982fa62-4097-44c8-8def-749cb79d60e9.mp3
@@ -68,6 +70,8 @@ osric_rite hf_20261008_173645_c0ef5dcd-ac20-4501-a3ac-6018101d4fb7.mp3
 osric_greet hf_20261008_173645_a54a6036-6b4b-467a-b7aa-14c3f75f0c6d.mp3
 grimsby_rite hf_20261008_173645_26691c49-99ec-4ad3-b9db-c6bc6511d855.mp3
 grimsby_greet hf_20261008_173645_66000d56-8c12-446d-b248-b9261549113f.mp3
+isolde_rite hf_20261010_093402_23643594-8a38-4335-aa26-230dcec8cbdc.mp3
+isolde_greet hf_20261010_093438_e7edc156-9e0e-454e-aba7-5fb67d77d6ac.mp3
 LIST
 rm -rf "$TMP"
 echo "wrote $(ls "$OUT" | wc -l) lines to $OUT"

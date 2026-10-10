@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Moves the first embedded image out of a GLB: writes it to its own file and strips every image, texture and sampler
+"""Moves the painted (base colour) image out of a GLB: writes it to its own file and strips every image, texture and sampler
 from the GLB (the game textures the hero itself, so the web build never needs blob: URLs to decode one).
 usage: python3 scripts/glb-split-texture.py in.glb out.glb out-texture.webp
 Works on uncompressed GLBs (run it before meshopt / quantize)."""
@@ -19,8 +19,15 @@ bin_ = chunks[0x004E4942]
 views = gltf['bufferViews']
 
 images = gltf.get('images', [])
-assert images and 'bufferView' in images[0], 'no embedded image'
-img_view = images[0]['bufferView']
+# the first material's base colour (a rig with a normal and a roughness map may list those first); else the first image
+pick = 0
+mats = gltf.get('materials', [])
+bct = mats[0].get('pbrMetallicRoughness', {}).get('baseColorTexture') if mats else None
+if bct is not None:
+    t = gltf['textures'][bct['index']]
+    pick = t.get('extensions', {}).get('EXT_texture_webp', {}).get('source', t.get('source', 0))
+assert images and 'bufferView' in images[pick], 'no embedded image'
+img_view = images[pick]['bufferView']
 v = views[img_view]
 o = v.get('byteOffset', 0)
 open(tex, 'wb').write(bin_[o:o + v['byteLength']])

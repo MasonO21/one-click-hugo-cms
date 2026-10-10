@@ -3628,6 +3628,76 @@ errs = await session(async (page) => {
 });
 check('update 11: no runtime errors', !errs.length, errs[0] || '');
 
+// 46. Update 12, Isolde the Crimson Countess (Legendary, Soul Leech): one more drain beam and what her beams slay always
+//     rises; her Rite, Crimson Sabbath, binds and blood-marks every foe within 7 m (the marked rise when they fall) and
+//     heals her; Ascended, a marked foe's death marks up to 3 foes beside it.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js');
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.coach = ''; p.chapter.unlocked = 6; p.flags.bloodMoon = 'off';
+    const out = {};
+    // the roster and the Altar: the eighth hero, Legendary, locked until her shards are found; Legendary pulls drop them
+    { const t = save.newProfile(); const H = D.HEROES.isolde;
+      out.roster = { order: D.HERO_ORDER.length, last: D.HERO_ORDER[D.HERO_ORDER.length - 1], rarity: H.rarity, weapon: H.weapon, locked: !t.heroes.isolde.owned, shards: D.ALTAR.shardDrops.legendary.isolde, art: !!(await import('/src/ui/art.js')).HERO_ART.isolde }; }
+    const start = (rank = 1) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.heroes.isolde.owned = true; p.selectedHero = 'isolde'; p.mastery = { isolde: { xp: rank >= 5 ? 1900 : 0, paid: 10 } }; p.energy = 30; app.engine.manual = true; app.startRun(2); const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {}; r.player.hurt = () => {}; r.addXp = () => {}; r.urns.t = 1e9;
+      return r;
+    };
+    const ring = (r, n, rad, hp = 30, type = 'husk') => { const P = r.player, a = []; for (let i = 0; i < n; i++) { const t = (i / n) * 6.283; const e = r.enemies.spawn(type, P.x + Math.cos(t) * rad, P.z + Math.sin(t) * rad, { hpMul: hp }); e.speed = 0; e.spawnT = 2; a.push(e); } r.update(1 / 30); return a; };
+    // the passive: Soul Leech is her weapon, with one more beam; what the beams slay always rises
+    { const r = start(); ring(r, 6, 4, 60); r.weapons.arsenal.retargetT = 0; for (let i = 0; i < 10; i++) r.update(1 / 30);
+      const beams = r.weapons.arsenal.beams.length, base = D.SKILLS.soulLeech.beams(1);
+      const f = ring(r, 4, 3, 0.05); r.stats.raise = 0; const l0 = r.legion.count; for (const e of f) r.enemies.damage(e, 1e6, { source: 'leech' }); r.update(1 / 30);
+      out.passive = { weapon: Object.keys(r.skillLv).join(), beams, base, rose: r.legion.count - l0, model: r.player.mesh ? 'ok' : 'none' }; }
+    // the Rite: 7 m, binds (stun) and marks every foe in it, heals 2 a foe (30 at most); the marked rise when they fall;
+    // a foe 9 m off is spared; the boss is only staggered and never marked
+    { const r = start(); const foes = ring(r, 10, 4, 30), far = ring(r, 2, 9, 30); const P = r.player; P.hp = P.maxHp * 0.5; const h0 = P.hp;
+      r.rites.trigger(); const marked = foes.filter((e) => e.bloodUid === e.uid && e.bloodT > r.time).length;
+      out.rite = { marked, bound: foes.filter((e) => e.stunT > 0).length, far: far.filter((e) => e.bloodUid === e.uid).length, healed: +(P.hp - h0).toFixed(1), name: D.RITES.isolde.name, cd: r.rites.cdMax, btn: q('.rite')?.getAttribute('aria-label') };
+      r.stats.raise = 0; const l0 = r.legion.count; for (const e of foes.slice(0, 6)) r.enemies.damage(e, 1e6, { source: 'bolt' }); r.update(1 / 30);
+      out.rite.rose = r.legion.count - l0;
+      for (let i = 0; i < 6.5 * 30; i++) r.update(1 / 30); out.rite.expired = foes.filter((e) => e.active && e.bloodUid === e.uid && e.bloodT > r.time).length; }
+    { const r = start(); r.time = 359.9; for (let i = 0; i < 150 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) r.update(1 / 30);
+      const B = r.bossEnemy; if (B) { B.x = r.player.x + 3; B.z = r.player.z; r.boss.immune = 0; r.rites.cd = 0; r.rites.trigger(); }
+      out.boss = { marked: B ? B.bloodUid === B.uid : 'no boss', stun: B ? B.stunT || 0 : -1 }; }
+    // Ascended (Mastery 5): a marked foe's death marks up to 3 unmarked foes within 3 m (bosses never)
+    { const r = start(5); const [e0] = ring(r, 1, 4, 30); const pack = []; for (let i = 0; i < 5; i++) { const e = r.enemies.spawn('husk', e0.x + 12 + Math.cos(i) * 1.1, e0.z + Math.sin(i) * 1.1, { hpMul: 30 }); e.speed = 0; e.spawnT = 2; pack.push(e); }
+      r.update(1 / 30); r.rites.trigger(); const before = pack.filter((e) => e.bloodUid === e.uid).length;
+      e0.x = pack[0].x + 0.8; e0.z = pack[0].z; r.enemies.damage(e0, 1e6, { source: 'bolt' }); r.update(1 / 30);
+      out.asc = { before, after: pack.filter((e) => e.bloodUid === e.uid && e.bloodT > r.time).length, desc: D.RITES.isolde.ascDesc };
+      const r1 = start(1); const [e1] = ring(r1, 1, 4, 30); const p2 = []; for (let i = 0; i < 3; i++) { const e = r1.enemies.spawn('husk', e1.x + 12 + i * 0.5, e1.z, { hpMul: 30 }); e.speed = 0; e.spawnT = 2; p2.push(e); }
+      r1.update(1 / 30); r1.rites.trigger(); e1.x = p2[0].x + 0.8; r1.enemies.damage(e1, 1e6, { source: 'bolt' }); r1.update(1 / 30);
+      out.asc.plain = p2.filter((e) => e.bloodUid === e.uid).length; }
+    // the hero screen: her card, painted art, the Rite and the Ascended line; her voice lines load
+    if (app.run) app.exitRun(); app.engine.manual = false; document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+    p.heroes.isolde.owned = false; p.heroes.isolde.shards = 3; eco.commit(p); app.meta.refresh(); await wait(150);
+    q('[data-nav="heroes"]').click(); await wait(300);
+    const card = q('[data-act="hero"][data-id="isolde"]');
+    out.ui = { card: !!card, locked: !!card?.classList.contains('is-locked'), name: card?.querySelector('.hcard-name')?.textContent };
+    card?.click(); await wait(400);
+    out.ui.title = q('.mm-hero .hd-title')?.textContent; out.ui.rite = /Crimson Sabbath/.test(q('.mm-hero .hd-rite')?.textContent || ''); out.ui.src = /Legendary/.test(q('.mm-hero .hd-src')?.textContent || '');
+    out.ui.portrait = !!q('.mm-hero .hd-art img, .mm-hero .hd-art [style*="url"]') || /hero-isolde|data:image/.test(q('.mm-hero .hd-art')?.innerHTML || '');
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    out.voice = (await Promise.all(['isolde_rite', 'isolde_greet'].map((k) => fetch('/src/assets/voice/' + k + '.mp3').then((r) => (r.ok ? r.headers.get('content-type') : 'missing')).catch(() => 'missing')))).join();
+    return out;
+  });
+  check('isolde: the eighth Shepherd, a Legendary with Soul Leech, found as shards in Legendary Altar pulls; her painted card',
+    s.roster.order === 8 && s.roster.last === 'isolde' && s.roster.rarity === 'legendary' && s.roster.weapon === 'soulLeech' && s.roster.locked && s.roster.shards === 5 && s.roster.art, JSON.stringify(s.roster));
+  check('isolde: her passive gives Soul Leech one more beam, and what the beams slay always rises',
+    s.passive.weapon === 'soulLeech' && s.passive.beams === s.passive.base + 1 && s.passive.rose === 4, JSON.stringify(s.passive));
+  check('isolde: Crimson Sabbath binds and marks every foe within 7 m (not 9 m off), heals 2 HP each (20 for 10), and the marked rise; the marks fade after 6 s',
+    s.rite.marked === 10 && s.rite.bound === 10 && s.rite.far === 0 && s.rite.healed === 20 && s.rite.rose === 6 && s.rite.expired === 0 && s.rite.name === 'Crimson Sabbath' && s.rite.cd === 18 && /Crimson Sabbath/.test(s.rite.btn || ''), JSON.stringify(s.rite));
+  check('isolde: the boss is struck but never marked; Ascended, a marked foe\'s death marks 3 beside it (none before rank 5)',
+    s.boss.marked === false && s.asc.before === 0 && s.asc.after === 3 && s.asc.plain === 0, JSON.stringify({ b: s.boss, a: s.asc }));
+  check('isolde UI: her roster card (locked until her shards are found), her sheet with the title, the Rite and where her shards drop; her voice lines ship',
+    s.ui.card && s.ui.locked && /Isolde/.test(s.ui.name || '') && /Crimson Countess/.test(s.ui.title || '') && s.ui.rite && s.ui.src && s.ui.portrait && /^(audio\/mpeg),\1$/.test(s.voice || ''), JSON.stringify({ u: s.ui, v: s.voice }));
+});
+check('update 12: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

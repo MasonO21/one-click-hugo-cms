@@ -16,6 +16,7 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `hero-liora.jpg` | 1792×2400 | Nano Banana Pro | Liora's hero card (5th hero, Epic) | `0f2133d3-a67a-4317-9948-98231363c867` |
 | `hero-grimsby.jpg` | 1792×2400 | Nano Banana Pro (the poster as the style reference) | Grimsby Lanternjaw's hero card (6th hero, Epic; 2026-10-08) | `af2bb3e1-cfab-48c0-8555-0c6c4651b648` |
 | `hero-osric.jpg` | 1792×2400 | Nano Banana Pro (the poster as the style reference) | Osric the Bone Abbot's hero card (7th hero, Legendary; 2026-10-08) | `1d1958b3-3de9-40ea-920c-1b154765ac96` |
+| `hero-isolde.jpg` | 1792×2400 | Nano Banana 2 (the poster as the style reference) | Isolde the Crimson Countess's hero card (8th hero, Legendary; 2026-10-10) | `9c996975-27a6-4a21-8cfe-bc854dd274a0` |
 | `skin-eclipse-vael.jpg` | 1792×2400 | Nano Banana Pro (Vael's splash as the reference) | Eclipse Vael, the Soul Pass skin: the premium card and Vael's portrait while the skin is equipped | `1f5e90b9-5d57-40d0-b258-376619880bab` |
 | `relic-lantern.jpg` | 1024×1024 | Nano Banana Pro (the poster as the style reference) | Lantern of the Lost icon; the style master for the other seven relic icons | `e80af38f-e5e2-4329-822d-265761ac8a88` |
 | `relic-crown.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Crown of Thorns icon | `a18fb124-9abf-42c1-b04a-168889c22483` |
@@ -185,10 +186,11 @@ Recorded on 2026-10-07 with Higgsfield text-to-speech (the ElevenLabs engine, `t
 - trims silence;
 - gives the announcer a low shelf and a short cathedral echo;
 - pitches Mordrake down 10%, and Osric down 7% with a short nave echo;
+- gives Isolde a soft velvet ballroom echo;
 - normalises to −16 LUFS (true peak −1.5 dB);
 - writes mono 64 kbps MP3.
 
-The 48 lines total 892 KB (the twelve for the four newer chapter bosses were recorded on 2026-10-08 in the same announcer voice, and Grimsby's and Osric's four that day too). When and how the game plays them is in `GDD.md` §15.
+The 50 lines total 942 KB (the twelve for the four newer chapter bosses were recorded on 2026-10-08 in the same announcer voice, and Grimsby's and Osric's four that day too; Isolde's two on 2026-10-10). When and how the game plays them is in `GDD.md` §15.
 
 | Speaker | Preset voice | Lines |
 |---|---|---|
@@ -200,6 +202,7 @@ The 48 lines total 892 KB (the twelve for the four newer chapter bosses were rec
 | Mordrake | Caspian (pitched down) | Rite call and greeting |
 | Grimsby | Knox | Rite call and greeting (cast by measured pitch against Desmond: Knox keeps the cackle and the pause) |
 | Osric | Sterling (pitched down 7%, nave echo) | Rite call and greeting (cast against Vlad, whose takes ran 6–8 s for one short line) |
+| Isolde | Sloane (velvet ballroom echo) | Rite call and greeting (cast by measured pitch and listening against Elena and Tallulah: Sloane, at a 151 Hz median, the lowest and most languid of the three, carries the hostess's menace; Elena, at 184 Hz, read too bright for a Countess) |
 
 | Line (file) | Script | Higgsfield job |
 |---|---|---|
@@ -251,12 +254,14 @@ The 48 lines total 892 KB (the twelve for the four newer chapter bosses were rec
 | `grimsby_greet` | Mind the lantern, friend. It bites. | `66000d56-8c12-446d-b248-b9261549113f` |
 | `osric_rite` | Brothers, rise! Sing the mass! | `c0ef5dcd-ac20-4501-a3ac-6018101d4fb7` |
 | `osric_greet` | My abbey is empty. My congregation... is not. | `a54a6036-6b4b-467a-b7aa-14c3f75f0c6d` |
+| `isolde_rite` | Drink deep, my guests! | `23643594-8a38-4335-aa26-230dcec8cbdc` |
+| `isolde_greet` | Welcome to my table. Do stay... forever. | `e7edc156-9e0e-454e-aba7-5fb67d77d6ac` |
 
-**Cost:** about 8 credits in total (48 lines, 3 re-takes and the 4 casting takes for the new heroes at 0.15 credits each, plus casting previews). Every take was transcribed with a speech-to-text pass before it was kept. Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.
+**Cost:** about 9 credits in total (50 lines, 3 re-takes and the 7 casting takes for the new heroes at 0.15 credits each, plus casting previews). Every take was transcribed with a speech-to-text pass before it was kept. Adding a line for a new hero or event costs 0.15 credits: record it in the same preset voice, add it to the list in `scripts/voice-master.sh`, then add its rules to `VOICE` in `data.js`.
 
 ## 4. 3D hero models (`src/assets/models/`)
 
-The seven Shepherds and the Eclipse Vael skin are textured, rigged and animated 3D models built from their painted art, made on 2026-10-07 (Grimsby and Osric on 2026-10-08). Each one runs while the hero moves and idles while it stands, in a run and on the home screen. The old procedural models (`engine/models.js`) stand in only while a model loads, or for a skin without one.
+The eight Shepherds and the Eclipse Vael skin are textured, rigged and animated 3D models built from their painted art, made on 2026-10-07 (Grimsby and Osric on 2026-10-08, Isolde on 2026-10-10). Each one runs while the hero moves and idles while it stands, in a run and on the home screen. The old procedural models (`engine/models.js`) stand in only while a model loads, or for a skin without one.
 
 **How they were made:**
 1. **Turnaround sheet.** Nano Banana Pro painted each hero from its splash as the reference: front, left side and back views in one image, in a neutral pose on a plain grey ground, without the splash's ghosts, glows and particles. The masters are `store/art/turnaround-*.jpg`.
@@ -267,6 +272,7 @@ The seven Shepherds and the Eclipse Vael skin are textured, rigged and animated 
    - **Vael:** his model was made both ways for comparison. The multi-view one was clearly closer to the art in profile.
    - **Grimsby:** both sheets drew his side and back views so close that the two poles met in one arch over the lantern, and no crop could split them. His side and back views were painted as separate images instead (his first sheet as the reference), with the front from that first sheet.
    - **Osric:** his sheet came back in the order side, front, back with stray view labels under the hems, which were painted out before cropping.
+   - **Isolde:** her first sheet (`7931e15d-…`) gave her a goblet in the side view only, so it was re-painted without one (a prop in one view alone makes the generator invent the others). Her model came at 2 million triangles with three textures (normal, base colour, roughness), against about 29k and one for the others: `hero-models.sh` keeps 0.5% of hers (9.9k triangles), and `glb-split-texture.py` now takes the material's base colour rather than the first image (which was her normal map). She holds nothing, so she needs no pin.
 4. **Turn and rig.** The generator's models face +X, but the rigging service assumes the glTF convention (+Z) and otherwise builds a sideways skeleton (the first rigs had their "left and right" thighs at the front and back, and two failed outright). So each model was turned to face +Z (`scripts/glb-turn.py in.glb out.glb -90`), uploaded, and auto-rigged with Higgsfield 3D rigging: a 24-bone humanoid skeleton with skin weights.
    - Nyx's rig was ordered with the run clip (`run_fast_10_inplace`, a 0.8 s loop) and Vael's with the idle (`Idle_3`, a 10 s loop). The others came bare (5 credits each, against 8 with a clip). Grimsby's first rig failed; the same upload rigged on the retry.
 5. **Clips for everyone.** `scripts/glb-retarget.py` copies the run and the idle onto every rig by bone name. The auto-rigger places bones loosely (Nyx's thighs rest 40° forward in a model standing straight) and bakes that into its clips, and its own clips force the mocap's arm directions (Vael's staff turned upside down). So every bone moves around the clip's *average* pose, and each hero keeps the stance it was sculpted in:
@@ -276,12 +282,12 @@ The seven Shepherds and the Eclipse Vael skin are textured, rigged and animated 
    - the arms add only the clip's swing, relative to the chest: at half strength, and a fifth on a weapon arm;
    - the hands stay as sculpted on the forearm;
    - staffs and spears are pinned to the hand that holds them. The rigger had weighted a staff's foot to a leg and its head to the head bone, so it whipped about. A capsule along each shaft rebinds it, fading out where a staff's foot is fused with a robe's hem so the hem bends instead of tearing. Osric's crozier and Grimsby's pole are in the left hand; a box around the crozier's hook and around the lantern hanging from the pole keeps them with it.
-6. **Optimise.** `scripts/hero-models.sh` downloads the eight rigs, gives each its clips and processes it:
+6. **Optimise.** `scripts/hero-models.sh` downloads the nine rigs, gives each its clips and processes it:
    - simplifies the mesh to about a quarter, 7.6k–10.7k triangles from about 29k (on 2026-10-08, from half: at the game's camera distance the extra detail did not show, and it saved 1 MB in the single-file web build);
    - shrinks the 4096 px texture to a 1024 px WebP and moves it beside the model (`scripts/glb-split-texture.py`), so the web build never needs `blob:` URLs;
    - quantizes the geometry (KHR_mesh_quantization, which three.js reads without a decoder). Skins and clips survive every step.
 
-   The eight models come to 3.7 MB in all, textures included (rebuilding them on 2026-10-08 reproduced the first six byte for byte).
+   The nine models come to 4.3 MB in all, textures included (rebuilding them on 2026-10-08 reproduced the first six byte for byte, and on 2026-10-10 the first eight).
 7. **In game.** `engine/heromodels.js` handles the model:
    - loads it once, and keeps its bind pose as a plain mesh standing on the ground at a height close to the procedural model's (Nyx's dash afterimages copy it);
    - gives every user (the hero in a run, the home showcase) its own skeleton and mixer (`HeroRig`), sharing the geometry, texture and clips;
@@ -298,8 +304,9 @@ The seven Shepherds and the Eclipse Vael skin are textured, rigged and animated 
 | `eclipse_vael` | `bd4735ec-aca6-4fe4-8680-625963f50c49` (Vael's sheet and the Eclipse splash as references) | `6adb084d-ed13-4c73-bb5b-fadc55f4456e` | front, side, back | `59e99133-fac7-404c-baec-bbcade22336d` |
 | `grimsby` | `6aeb0600-f25a-4984-a27c-88037e7d07e4` (front); side `5994bb2b-92d6-4530-bccd-f6f6db98cc3c` and back `94dde2f4-3ed4-445a-9d7a-fcc684a04daf` painted alone (`787d9544-78c9-43b1-9d82-464e75eaac2f`, the wider re-take, merged its poles too) | `73e4280d-1159-436c-a4f7-ed8726936b39` | front, side, back | `d6918eb4-8ac3-4e6b-a32f-614ee02ef0e8` |
 | `osric` | `62dd2236-961d-4349-b5b9-f15d49cad38a` | `11b6aa56-301f-434a-9d61-0980aa0667ec` | front, side, back | `220f55c9-c6b3-42a4-bc97-bfe4426c1a4b` |
+| `isolde` | `3659aa0c-e12e-421e-8ba5-78b61c6923d7` (re-painted from `7931e15d-…`, her card as the reference) | `975eae70-06ca-4b65-b9f6-fd7f12a7f375` | front, side, back | `ce856368-9519-40e4-b297-528c92f0f361` |
 
-**Cost:** about 140 credits for the first models (7 sheets and 7 models, including the re-taken Nyx sheet and Vael's front-only comparison model), and 57 for the rigs: the final six (36), plus a first round on the unturned models (21) that revealed the sideways skeletons. Grimsby and Osric added about 50 (4 sheets and single views, 2 models, 3 rigs).
+**Cost:** about 140 credits for the first models (7 sheets and 7 models, including the re-taken Nyx sheet and Vael's front-only comparison model), and 57 for the rigs: the final six (36), plus a first round on the unturned models (21) that revealed the sideways skeletons. Grimsby and Osric added about 50 (4 sheets and single views, 2 models, 3 rigs), Isolde about 30 (a card, 2 sheets, 1 model, 1 rig).
 
 **A new hero or skin:**
 1. Paint the sheet from its splash with the same prompt.

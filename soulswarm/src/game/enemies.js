@@ -127,6 +127,7 @@ export class Enemies {
     e.aff = null; e.ev = null; // elite affixes (affixes.js) and run-event ownership (events.js)
     e.stunT = 0; e.riteId = 0; e.riteT = 0; // Hero Rites: stun timer, per-cast hit mark, per-foe hit cooldown
     e.fearT = 0; // Grimsby's Hallowfire: seconds left fleeing
+    e.bloodT = 0; // Isolde's Crimson Sabbath: blood-marked until this run time (keyed to bloodUid)
     e.reborn = false; // raised by a Corpse Priest: drops no soul shard and leaves no corpse
     if (type === 'priest') { e.shootCd = d.raise.cd * (0.4 + Math.random() * 0.4); e.chant = null; }
     this.active.push(e);

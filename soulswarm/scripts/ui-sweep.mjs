@@ -887,9 +887,9 @@ async function economyPhase() {
   check('gacha: every 10-pull has an Epic or better; the guarantee never adds Legendaries', G.noEpic === 0 && G.legendaryRateIn10 < 3.6, `no-Epic batches ${G.noEpic}/${G.tens}, Legendary rate ${G.legendaryRateIn10}%`);
   const chiEq = (ks) => { const v = ks.map((k) => G.shards[k] || 0), m = v.reduce((a, b) => a + b, 0) / v.length; return v.reduce((a, x) => a + (x - m) ** 2 / m, 0); };
   const epicKeys = Object.keys(G.shards).filter((k) => k.startsWith('epic:')), legKeys = Object.keys(G.shards).filter((k) => k.startsWith('legendary:'));
-  // p > 0.001: 4 Epic-pull shard pools (3 df: Nyx, Seraphine, Liora, Grimsby) and 3 Legendary-pull pools (2 df: Seraphine, Mordrake, Osric)
+  // p > 0.001: 4 Epic-pull shard pools (3 df: Nyx, Seraphine, Liora, Grimsby) and 4 Legendary-pull pools (3 df: Seraphine, Mordrake, Osric, Isolde)
   const shardChi = [chiEq(epicKeys), chiEq(legKeys)].map((x) => +x.toFixed(2));
-  check('gacha: relic types and hero shards are equally likely (as the odds sheet says)', G.typeChi2 < 24.32 && shardChi[0] < 16.27 && shardChi[1] < 13.82 && epicKeys.length === 4 && legKeys.length === 3 && !T('gacha').length, `relic χ²=${G.typeChi2} shard χ²=${shardChi} ${JSON.stringify(G.shards)}`);
+  check('gacha: relic types and hero shards are equally likely (as the odds sheet says)', G.typeChi2 < 24.32 && shardChi[0] < 16.27 && shardChi[1] < 16.27 && epicKeys.length === 4 && legKeys.length === 4 && !T('gacha').length, `relic χ²=${G.typeChi2} shard χ²=${shardChi} ${JSON.stringify(G.shards)}`);
   check('economy: pass tiers claim once, only when reached, only real tiers, premium only with the pass', !T('pass').length, T('pass').join(' | '));
   check('economy: quests rotate by day, reset, and pay once; late quests stay gated', !T('quest').length, T('quest').join(' | '));
   check('economy: the weekly chest opens once and resets on Monday', !T('weekly').length, T('weekly').join(' | '));

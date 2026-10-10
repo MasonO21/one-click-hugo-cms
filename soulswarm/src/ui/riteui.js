@@ -13,6 +13,7 @@ const ICONS = {
   mordrake: '<path d="M2.5 21 5 11l2.5 10M8.5 21 12 5l3.5 16M16.5 21 19 11l2.5 10"/><path d="M1.5 21.5h21"/>', // bone spikes
   grimsby: '<path d="M9 2.5h6M12 2.5v2"/><path d="M8 6.5h8l-1 8H9z"/><path d="M12 9c-1.2 1.4-1 2.6 0 3.5 1-.9 1.2-2.1 0-3.5z"/><path d="M3 21.5c2-2.5 4-2.5 6 0s4 2.5 6 0 4-2.5 6 0"/>', // a lantern over a river of fire
   osric: '<circle cx="12" cy="9" r="4"/><path d="M10.5 9.5h.01M13.5 9.5h.01M10.5 12h3"/><ellipse cx="12" cy="4.5" rx="7" ry="2"/><path d="M5 21.5c0-3.5 3-5.5 7-5.5s7 2 7 5.5"/>', // a skull crowned by its halo
+  isolde: '<path d="M7 3.5h10l-.8 5.2a4.2 4.2 0 0 1-8.4 0z"/><path d="M12 13v5M8.5 21h7"/><path d="M12 6.2c-.9 1.1-.9 2 0 2.6.9-.6.9-1.5 0-2.6z"/><path d="M2 6.5c1.2-1.4 2.6-1.4 3.3.2M22 6.5c-1.2-1.4-2.6-1.4-3.3.2"/>', // a goblet of blood, bat wings at its rim
 };
 export const riteIcon = (id, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[id] || ICONS.vael}</svg>`;
 

@@ -671,6 +671,14 @@ const SFX = {
     tone(o, t, { f: 80 * p, to: 40, glide: 0.8, d: 1.0, v: 0.45 });
     return 2.8;
   } },
+  rite_isolde: { gap: 500, max: 1, vol: 0.9, rev: 0.6, big: true, duck: [0.4, 1.2], play(o, t, p) { // Crimson Sabbath: a heartbeat, a dark choir swells, a storm of bat wings
+    tone(o, t, { f: 72 * p, to: 40, glide: 0.25, d: 0.32, v: 0.55 }); tone(o, t + 0.26, { f: 64 * p, to: 36, glide: 0.25, d: 0.32, v: 0.45 }); // lub-dub
+    choir(o, [45, 48, 52, 57], t + 0.12, 1.2, { vowel: 'oo', v: 0.15, a: 0.2, r: 1.0 }); // a minor chord in the dark
+    bell(o, t + 0.12, mtof(57) * p, 0.06, 2.2);
+    for (let k = 0; k < 22; k++) { const s = t + 0.14 + k * 0.035 + rand(0, 0.02); noise(o, s, { type: 'bandpass', f: rand(500, 1300) * p, q: 2, d: 0.05, v: 0.16 }); } // wings
+    noise(o, t, { buf: brownBuf, type: 'lowpass', f: 900, to: 200, a: 0.05, d: 0.9, v: 0.3 });
+    return 2.4;
+  } },
   rite_ready: { gap: 800, max: 1, vol: 0.75, rev: 0.4, play(o, t, p) { // the Rite is ready again: a soft rising chime
     [69, 76, 81].forEach((n, k) => tone(o, t + k * 0.07, { type: 'triangle', f: mtof(n) * p, a: 0.01, h: 0.04, d: 0.35, v: 0.12 }));
     bell(o, t + 0.14, mtof(88) * p, 0.04, 0.9);

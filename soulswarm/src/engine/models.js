@@ -128,6 +128,22 @@ export function heroGeometry(id, body = 0x1b2a44) {
       P(Ico(0.06), 0, { p: [-0.36, 2.38, 0.1], e: 1 }),
       ...mirror((x) => P(Cone(0.2, 0.6, 6), robe, { p: [0.4 * x, 1.05, 0.08], r: [0.1, 0, 0.35 * x] })), // bell sleeves
     );
+  } else if (id === 'isolde') {
+    const gown = 0x7a1022, lace = 0x1a0c12, skin = 0xe8dce4, silver = 0xc8c4d0, hair = 0x0e0a10;
+    parts.push(
+      P(Cone(0.62, 1.45, 10), gown, { p: [0, 0.72, 0] }),                                     // the crimson gown
+      P(Cone(0.3, 1.1, 8), lace, { p: [0, 0.62, 0.22], s: [1, 1, 0.4] }),                      // black lace panel
+      P(Cyl(0.6, 0.66, 0.06, 10), silver, { p: [0, 0.04, 0] }),                                // silver hem
+      P(Sph(0.27, 7, 5), gown, { p: [0, 1.32, 0], s: [1.1, 0.85, 0.9] }),                      // bodice and shoulders
+      P(Cone(0.26, 0.34, 8, true), lace, { p: [0, 1.6, -0.04], r: [0.2, 0, 0] }),             // the high collar
+      P(Sph(0.18, 7, 5), skin, { p: [0, 1.66, 0.03] }),                                        // pale face
+      P(Cone(0.24, 1.0, 7), hair, { p: [0, 1.3, -0.12], r: [-0.08, 0, 0], s: [1, 1, 0.6] }),   // long black hair
+      ...mirror((x) => P(Sph(0.035, 5, 3), 0, { p: [0.06 * x, 1.68, 0.18], e: 1 })),           // crimson eyes
+      P(Cone(0.14, 0.14, 5, true), silver, { p: [0, 1.84, 0.02] }),                            // the tiara
+      ...mirror((x) => P(Cone(0.12, 0.62, 6), gown, { p: [0.36 * x, 1.06, 0.06], r: [0.1, 0, 0.3 * x] })), // sleeves
+      P(Cyl(0.06, 0.03, 0.14, 6), silver, { p: [0.46, 0.86, 0.2] }),                          // the goblet
+      P(Sph(0.05, 5, 3), 0, { p: [0.46, 0.94, 0.2], e: 1 }),                                    // its blood glows
+    );
   } else { // mordrake
     const bone = 0xcfc6a8;
     parts.push(

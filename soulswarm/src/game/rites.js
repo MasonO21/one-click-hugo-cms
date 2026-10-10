@@ -6,6 +6,7 @@
 //   Mordrake  Ossuary Wall  a ring of bone spikes hurls the horde out and mends the legion inside
 //   Grimsby   Hallowfire    his jaw blazes: the horde nearby flees in terror; he runs faster, trailing a river of witchfire
 //   Osric     Bone Mass     twelve bone monks rise; the legion fights harder and the Skull Halo spins faster
+//   Isolde    Crimson Sabbath a blood nova binds the foes around her and marks them: the marked rise when they fall
 // Hero Mastery (meta/mastery.js) shortens the cooldown (loadout.mastery.riteCdMul) and, from rank 5, ascends the Rite
 // (RITES[id].asc): Vael's call raises Champions, Nyx steps twice, a second Ashfall wave, a second toll, the Wall shatters
 // outward, Hallowfire's terror leaves foes vulnerable, half of Osric's monks rise as Champions. Rank 10 adds an aura.
@@ -25,7 +26,7 @@ const SPARK = { speed: 2.2, life: 0.7, size: 0.4, up: 3.2, drag: 1.5 }, DUST = {
 const IMPACT = { speed: 5, life: 0.45, size: 0.45, up: 1.2 }, IMPACT_RING = { life: 0.3, size: 0.4, y: 0.3 };
 const BONE = { speed: 6, life: 0.4, size: 0.3, up: 1.6, grav: 14, drag: 1 }, HEAL = { speed: 1.4, life: 0.6, size: 0.35, up: 2.2 };
 const WHITE = [3, 3, 3.2], ASH = [1.4, 0.75, 0.4], FLAME = hdr(0xffa040, 3.4), EMBER = hdr(0xff6a1e, 3), MARROW = hdr(0x6dff9a, 2.6), BONE_HDR = hdr(0xfff0d2, 1.8);
-const WITCH = hdr(0xc6ff3d, 3), GOLD = hdr(0xf5c35c, 2.2);
+const WITCH = hdr(0xc6ff3d, 3), GOLD = hdr(0xf5c35c, 2.2), BLOOD = hdr(0xff2448, 2.6), DUSK = [0.5, 0.06, 0.12];
 
 const additive = (uniforms, vert, frag, side = THREE.FrontSide) => new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side });
 
@@ -102,8 +103,9 @@ export class Rites {
     this.castId = 0;
     this.t = 0; // Rite clock (run time), drives the shaders
     this.o = { kx: 0, kz: 0, knock: 0, crit: false, source: 'rite', silent: false }; // shared damage options
-    this.color = new THREE.Color(run.heroColor);
-    this.hc = hdr(run.heroColor, 3); this.soft = hdr(run.heroColor, 1.2);
+    const rc = (this.def && this.def.color) || run.heroColor; // the legion's colour, unless the Rite keeps its own (Isolde's blood)
+    this.color = new THREE.Color(rc);
+    this.hc = hdr(rc, 3); this.soft = hdr(rc, 1.2);
     this.lightT = 0; this.sfxT = 0; this.shown = 0;
     this.graveT = 0; this.pullT = 0; this.beatT = 0;                              // Vael
     this.dashLeft = 0; this.trail = 1; this.hasteT = 0; this.hasteS = null; this.hasteBase = 0; this.ghostT = 0; // Nyx
@@ -112,6 +114,7 @@ export class Rites {
     this.wallT = 0; this.wallAge = -1;                                             // Mordrake
     this.blazeT = 0; this.blazeB = { S: null, base: 0 };                           // Grimsby
     this.massT = 0; this.massB = { S: null, base: 0 };                             // Osric
+    this.marked = []; this.sabT = -1;                                              // Isolde
     this.runeT = -1; this.runeLife = 1; this.runeR = 1; this.runeFollow = false;
     // pre-bound query callbacks: the per-frame loops create no closures
     this._cut = (e) => this.cutHit(e);
@@ -119,6 +122,8 @@ export class Rites {
     this._shatter = (e) => this.shatterHit(e);
     this._knell = (e) => this.knellHit(e);
     this._blaze = (e) => this.blazeHit(e);
+    this._sabbath = (e) => this.sabbathHit(e);
+    this._marked = (e) => (e.bloodUid === e.uid && e.bloodT > this.run.time) || e.type === 'boss' || !!e.ev; // Enemies.nearest skips these
     this._silence = (e) => { if (e.type === 'witch' && e.stunT <= 0) { this.run.enemies.stun(e, this.def.stun); this.run.particles.burst(e.x, 2.2, e.z, 4, this.hc, IMPACT); } };
     this._seen = (e) => { if (e.riteId === this.castId) return; if (this.onScreen(e)) { this.cand.push(e); } };
     this._struck = (e) => e.riteId === this.castId;
@@ -168,7 +173,7 @@ export class Rites {
   /** Grave Call is up: every kill rises (run.onEnemyKilled reads it). */
   get graveCall() { return this.graveT > 0; }
   /** A lasting effect is running (the HUD button glows). */
-  get active() { return this.graveT > 0 || this.dashLeft > 0 || this.wallT > 0 || this.bellT >= 0 && this.bellT < 0.6 || this.strikeN > 0 || this.blazeT > 0 || this.massT > 0; }
+  get active() { return this.graveT > 0 || this.dashLeft > 0 || this.wallT > 0 || this.bellT >= 0 && this.bellT < 0.6 || this.strikeN > 0 || this.blazeT > 0 || this.massT > 0 || this.sabT >= 0 && this.sabT < 0.6; }
 
   /** Rite damage: base × the run's damage multiplier × chapter scaling (as Soul Nova); rolls crits like a weapon. */
   dmg(base, crit = true) {
@@ -650,6 +655,74 @@ export class Rites {
     this.holdStat(this.massB, 'minionDmg', this.massT > 0, 1 + D.fury);
   }
 
+  // ---------------------------------------------------------------- Isolde: Crimson Sabbath
+  isolde(D, P) {
+    const run = this.run;
+    this._kx = P.x; this._kz = P.z; this._kd = this.dmg(D.dmg, false); this._shown = 0; this._hitN = 0;
+    run.enemies.query(P.x, P.z, D.r, this._sabbath);
+    const heal = Math.min(D.healMax, this._hitN * D.heal);
+    if (heal > 0 && !P.dead) P.heal(heal);
+    this.sabT = 0;
+    run.fx.shockwave(P.x, P.z, D.r, 0xff2448, 0.5, 0.08);
+    run.fx.shockwave(P.x, P.z, D.r * 0.55, 0xffb0bc, 0.3, 0.16);
+    run.fx.light(P.x, P.z, D.r + 3, 2.2, this.color, 0.8);
+    run.fx.flash(0.16); run.fx.shake(0.35); run.fx.slowMo(0.55, 0.25); run.fx.aberration(0.35);
+    run.particles.ring(P.x, P.z, D.r, 70, BLOOD, { life: 0.5, size: 0.65, speed: 2.5 });
+    // a cloud of bats bursts out of her cloak: dark, quick, fluttering motes that fan outward and climb
+    const n = Math.round(46 * run.particles.budget);
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * TAU, v = 5 + Math.random() * 6;
+      run.particles.emit(P.x, 1.3 + Math.random() * 0.6, P.z, Math.cos(a) * v, 1.5 + Math.random() * 2.5, Math.sin(a) * v, 0.55 + Math.random() * 0.3, 0.45, 0.15, DUSK[0], DUSK[1], DUSK[2], 1, 0, 0);
+    }
+    run.particles.burst(P.x, 1.4, P.z, 20, BLOOD, { speed: 4, life: 0.5, size: 0.45, up: 2 });
+    this.showRune(P.x, P.z, D.r, 1.2, false);
+  }
+
+  sabbathHit(e) {
+    if (e.ev) return; // a Soul Thief or Cursed Coffin keeps its own script
+    const run = this.run, D = this.def;
+    this._hitN++;
+    run.enemies.stun(e, D.bind); // bound by the blood (a boss only staggers)
+    run.enemies.damage(e, this._kd, this.opts(e.x - this._kx, e.z - this._kz, 2, this._shown++ >= 8));
+    if (e.active && e.type !== 'boss') this.markBlood(e, D.mark);
+  }
+
+  /** Blood-mark a foe for t s: if it falls, it rises (run.onEnemyKilled). Keyed to its uid, so a pooled foe never inherits it. */
+  markBlood(e, t) {
+    e.bloodUid = e.uid; e.bloodT = Math.max(e.bloodT || 0, this.run.time + t);
+    if (!this.marked.includes(e)) this.marked.push(e);
+    this.run.particles.burst(e.x, 1.1 * e.scale, e.z, 4, BLOOD, IMPACT);
+  }
+
+  /** A blood-marked foe fell (run.onEnemyKilled): a crimson mist; Ascended, it marks up to n unmarked foes within spread m. */
+  bloodBurst(e) {
+    const run = this.run, A = this.asc && this.hero === 'isolde' ? this.asc : null;
+    run.particles.burst(e.x, 0.9, e.z, 10, BLOOD, { speed: 3, life: 0.5, size: 0.55, up: 1.2 });
+    if (!A) return;
+    let k = 0;
+    while (k < A.n) {
+      const o = run.enemies.nearest(e.x, e.z, A.spread, this._marked);
+      if (!o) break;
+      this.markBlood(o, Math.max(1, (e.bloodT || run.time) - run.time)); // the mark carries what was left of it
+      k++;
+    }
+    if (k) run.fx.shockwave(e.x, e.z, A.spread, 0xff2448, 0.3, 0.12);
+  }
+
+  updateIsolde(dt) {
+    if (this.sabT >= 0) { this.sabT += dt; if (this.sabT > 1.2) this.sabT = -1; }
+    const M = this.marked, t = this.run.time;
+    let w = 0;
+    for (let i = 0; i < M.length; i++) { const e = M[i]; if (e.active && e.bloodUid === e.uid && e.bloodT > t) M[w++] = e; }
+    M.length = w;
+  }
+
+  renderIsolde(g, t) {
+    const M = this.marked, c = BLOOD, n = Math.min(80, M.length);
+    for (let i = 0; i < n; i++) { const e = M[i], f = 0.75 + 0.25 * Math.sin(t * 7 + i); g.add(e.x, 1.1 * e.scale, e.z, 1.3 * f * e.scale, c[0] * 0.22, c[1] * 0.22, c[2] * 0.22, 0.9); } // the blood mark
+    if (this.sabT >= 0 && this.sabT < 0.6) { const P = this.run.player, a = 1 - this.sabT / 0.6; g.add(P.x, 1.3, P.z, 4 * a, c[0] * 0.2, c[1] * 0.2, c[2] * 0.2, a); }
+  }
+
   // ---------------------------------------------------------------- frame
   update(dt) {
     const D = this.def;
@@ -672,6 +745,7 @@ export class Rites {
     else if (this.hero === 'mordrake') this.updateMordrake(dt, D);
     else if (this.hero === 'grimsby') this.updateGrimsby(dt, D);
     else if (this.hero === 'osric') this.updateOsric(dt, D);
+    else if (this.hero === 'isolde') this.updateIsolde(dt);
     if (this.pillars) this.updatePillars(dt);
   }
 
@@ -695,6 +769,7 @@ export class Rites {
     else if (this.hero === 'mordrake') this.renderMordrake(g, t);
     else if (this.hero === 'grimsby') this.renderGrimsby(g, P, t);
     else if (this.hero === 'osric') this.renderOsric(g, t);
+    else if (this.hero === 'isolde') this.renderIsolde(g, t);
     if (this.pillars) this.renderPillars(g, c, t);
     if (this.aura && !P.dead) { // Hero Mastery rank 10: the Soulbound aura, a slow gold ring of light at his feet
       const G = GOLD, f = 0.85 + 0.15 * Math.sin(t * 2.4);

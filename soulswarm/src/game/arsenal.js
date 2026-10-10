@@ -149,7 +149,7 @@ export class Arsenal {
     const run = this.run, P = run.player, E = run.enemies, B = this.beams;
     if (!level || P.dead) { B.length = 0; return; }
     const vc = !!run.evolved.vampiricCommunion;
-    const n = vc ? VC.beams : SL.beams(level), range = vc ? VC.range : SL.range(level);
+    const n = (vc ? VC.beams : SL.beams(level)) + (run.loadout.hero.passive.leechBeams || 0), range = vc ? VC.range : SL.range(level); // Isolde: one more beam
     // drop beams whose target died or slipped out of reach
     for (let i = B.length - 1; i >= 0; i--) {
       const b = B[i];

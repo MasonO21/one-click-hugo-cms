@@ -90,6 +90,7 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune, rush, p
         : hero === 'liora' ? !!lob || close >= 3 || near >= 8 || boss                      // Death Knell: silence the falling fire, or ring as they close in
         : hero === 'grimsby' ? close >= 3 || near >= 8 || boss                             // Hallowfire: scatter them as they close in
         : hero === 'osric' ? wide >= 10 || boss                                            // Bone Mass: the legion fights harder where there is a fight
+        : hero === 'isolde' ? near >= 8 || close >= 3 || boss || (low && near >= 3)        // Crimson Sabbath: bind a crowd (it heals her), or the boss
         : close >= 2 || near >= 5 || boss;                                                 // Ossuary Wall: as soon as they gather round
       if (go) {
         if (hero === 'nyx') { // straight away from the crowd, or out of the fire circle

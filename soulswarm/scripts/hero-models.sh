@@ -13,7 +13,8 @@
 #     arms add only the clip's swing (gains: left,right; a weapon arm swings less); staffs and spears are pinned to
 #     the hand that holds them (the rigger weighted their ends to a leg or the head; Grimsby's lantern hangs from his pole,
 #     so it is pinned with it);
-#  2. simplifies the mesh to about a quarter (7.6k–10.7k triangles), shrinks its painted texture to a 1024 px WebP and moves it beside
+#  2. simplifies the mesh to about a quarter (7.6k–10.7k triangles; Isolde's model came at 2M triangles, so hers keeps 0.5%),
+#     shrinks its painted (base colour) texture to a 1024 px WebP and moves it beside
 #     the model (so the web build never needs blob: URLs to decode it), and quantizes the geometry
 #     (KHR_mesh_quantization, which three.js reads without a decoder; skins and clips survive every step).
 # usage: bash scripts/hero-models.sh   (needs curl, python3 and npx access to @gltf-transform/cli)
@@ -33,6 +34,7 @@ mordrake hf_20261007_200316_a677c6d2-ae41-49a4-9313-c0b95aa5e608.glb 0.5,0.2 Rig
 eclipse_vael hf_20261007_200318_59e99133-fac7-404c-baec-bbcade22336d.glb 0.5,0.2 RightHand:-0.265,0,0.230,-0.397,1.55,0.283,0.045,0.45 RightHand:-0.75,-0.29,1.5,2.05,0.19,0.45
 grimsby hf_20261008_175558_d6918eb4-8ac3-4e6b-a32f-614ee02ef0e8.glb 0.2,0.5 LeftHand:0.317,0,-0.02,0.48,1.62,-0.29,0.05 LeftHand:0.45,0.75,1.2,1.95,-0.55,-0.2
 osric hf_20261008_175359_220f55c9-c6b3-42a4-bc97-bfe4426c1a4b.glb 0.2,0.5 LeftHand:0.206,0,0.338,0.432,1.75,0.144,0.06,0.45 LeftHand:0.36,0.58,1.72,2.0,0.04,0.24
+isolde hf_20261010_094148_ce856368-9519-40e4-b297-528c92f0f361.glb 0.5
 '
 # every rig first: the run and idle sources must be the untouched downloads
 while read -r id file _; do
@@ -44,7 +46,8 @@ while read -r id file gains pins; do
   for p in $pins; do args+=(--pin "$p"); done
   python3 -I scripts/glb-retarget.py "$TMP/$id.glb" "$TMP/$id-0.glb" ${args[@]+"${args[@]}"} \
     --clip "run=$TMP/nyx.glb@$gains~8" --clip "idle=$TMP/vael.glb" --drop-native
-  $GT optimize "$TMP/$id-0.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size 1024 --simplify-ratio 0.27 --simplify-error 0.003 > /dev/null
+  case $id in isolde) SR=0.005 SE=0.01 ;; *) SR=0.27 SE=0.003 ;; esac # her detailed-geometry model: 2M triangles, against 29k
+  $GT optimize "$TMP/$id-0.glb" "$TMP/$id-1.glb" --compress false --texture-compress webp --texture-size 1024 --simplify-ratio $SR --simplify-error $SE > /dev/null
   python3 -I scripts/glb-split-texture.py "$TMP/$id-1.glb" "$TMP/$id-2.glb" "$OUT/$id.webp"
   $GT quantize "$TMP/$id-2.glb" "$OUT/$id.glb" > /dev/null
 done <<< "$LIST"

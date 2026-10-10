@@ -434,6 +434,8 @@ export class Run {
       if (this.tutorial && this.counters.raised < 5) chance = 1; // first run: the first five kills always rise
       if (this.guide) chance = Math.max(chance, TUTORIAL.raise); // the tutorial's legion grows fast enough to teach it
       if (this.rites.graveCall) chance = 1; // Vael's Grave Call: every kill rises (the cap still holds)
+      if (HP.leechRaise && source === 'leech') chance = 1; // Isolde: what her beams drain dry always rises
+      if (e.bloodUid === e.uid && e.bloodT > this.time) { chance = 1; this.rites.bloodBurst(e); } // Isolde's Crimson Sabbath: the marked rise (Ascended: their mist marks the next)
       if (Math.random() < chance) {
         if (this.legion.count < this.stats.cap) {
           // the minion keeps the identity of what it was (variant by type; elites rise as Champions)
