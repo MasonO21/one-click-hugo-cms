@@ -5,7 +5,7 @@
  * playing (daily gift, free season track, events) are unaffected. See docs/MOBILE.md §9.
  */
 import type { DataRegistry } from '../../data';
-import type { ProductDef, Reward } from '../../data/schema';
+import type { ProductDef, Reward, SeasonDef } from '../../data/schema';
 
 /** Store countries (ISO 3166-1 alpha-2 and alpha-3) where paid random items are not offered. */
 export const PAID_RANDOM_RESTRICTED: readonly string[] = ['BE', 'BEL'];
@@ -38,4 +38,14 @@ export function withoutRandomItems(data: DataRegistry, r: Reward): Reward {
   if (Object.keys(items).length) out.items = items;
   else delete out.items;
   return out;
+}
+
+/**
+ * The season as the paid track pays it here: where paid random items are restricted every premium level's caches
+ * are their Nova (as LiveOpsSystem.claimSeason grants them), so the Season panel never shows a cache it won't hand
+ * out. The free track is untouched (earned caches stay caches). Unrestricted: the season itself.
+ */
+export function seasonAsPaid(data: DataRegistry, season: SeasonDef, paidRandomAllowed: boolean): SeasonDef {
+  if (paidRandomAllowed) return season;
+  return { ...season, levels: season.levels.map((l) => ({ ...l, premium: withoutRandomItems(data, l.premium) })) };
 }

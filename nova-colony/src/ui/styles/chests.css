@@ -1720,6 +1720,11 @@
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
+/* "Open yours" / "Open one (n owned)": a full-size touch target like the buttons above it */
+.nv-root .chest-card .btn[data-open] {
+  min-height: 44px;
+  margin-top: 0.35em;
+}
 .nv-root .chest-earn {
   padding: 0.65em 0.85em;
   font-size: 0.8em;

@@ -16,6 +16,7 @@ import { artOrEmoji, chestArt, hudArt, shopArt } from '../art';
 import { highlightChips, rewardHero, seasonHighlights } from '../logic/season';
 import { claimSeasonBonus, seasonBonusView } from '../../sim/seasonBonus';
 import { cosmeticIcon } from './wardrobe/cards';
+import { seasonAsPaid } from '../../sim/meta/lootRegion';
 
 export class SeasonPanel extends Panel {
   readonly name = 'season';
@@ -55,9 +56,11 @@ export class SeasonPanel extends Panel {
 
     // track
     const track = h('div', { class: 'season-track', data: { scroll: 'track' } });
+    // the premium column as this storefront pays it (caches turn into Nova where paid random items are restricted)
+    const paid = this.paidSeason();
     s.levels.forEach((lv, i) => {
       const n = i + 1;
-      track.appendChild(this.column(n, lv.free, lv.premium, level, st));
+      track.appendChild(this.column(n, lv.free, paid.levels[i]?.premium ?? lv.premium, level, st));
     });
     if (bonus.enabled) track.appendChild(this.bonusColumn());
     wrap.appendChild(h('div', { class: 'track-legend' }, h('span', { text: 'FREE' }), h('span', { text: 'PREMIUM' })));
@@ -72,9 +75,14 @@ export class SeasonPanel extends Panel {
     }
   }
 
+  /** The season as its premium track pays out in this storefront (sim/meta/lootRegion.ts). */
+  private paidSeason() {
+    return seasonAsPaid(this.data, this.data.season, this.game.sys.liveops.paidRandomAllowed());
+  }
+
   /** What the premium track holds (computed from the data), with a way to unlock it. */
   private premiumCard(owned: boolean): HTMLElement {
-    const hl = seasonHighlights(this.data);
+    const hl = seasonHighlights(this.data, this.paidSeason());
     const chips = highlightChips(hl);
     const strip = h('div', { class: 'sp-strip', data: { scroll: 'strip' } });
     // the cosmetics in level order, then one of each chest tier (best last)

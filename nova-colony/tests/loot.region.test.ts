@@ -4,7 +4,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import { createDataRegistry } from '../src/data';
-import { productHasRandomItems, regionRestrictsPaidRandom, rewardHasRandomItems, withoutRandomItems } from '../src/sim/meta/lootRegion';
+import { productHasRandomItems, regionRestrictsPaidRandom, rewardHasRandomItems, seasonAsPaid, withoutRandomItems } from '../src/sim/meta/lootRegion';
+import { highlightChips, seasonHighlights } from '../src/ui/logic/season';
 import { claimSeasonBonus, seasonTrackXp } from '../src/sim/seasonBonus';
 import { makeGame } from './meta.helpers';
 
@@ -28,6 +29,23 @@ describe('paid random items by region', () => {
     expect(r.nova).toBe(10 + 1100 + 2 * 30);
     expect(r.rp).toBe(5);
     expect(withoutRandomItems(data, { items: { chest_relic: 1 } })).toEqual({ nova: 500 });
+  });
+
+  it('the Season panel shows the premium track as it pays: Nova instead of caches where restricted, free track untouched', () => {
+    const season = data.season;
+    expect(seasonAsPaid(data, season, true)).toBe(season);
+    const paid = seasonAsPaid(data, season, false);
+    expect(paid.levels).toHaveLength(season.levels.length);
+    for (let i = 0; i < season.levels.length; i++) {
+      expect(rewardHasRandomItems(data, paid.levels[i].premium), `level ${i + 1}`).toBe(false);
+      expect(paid.levels[i].free).toBe(season.levels[i].free);
+    }
+    const here = seasonHighlights(data, paid);
+    const there = seasonHighlights(data, season);
+    expect(there.chests.length).toBeGreaterThan(0);
+    expect(here.chests).toEqual([]);
+    expect(here.nova).toBeGreaterThan(there.nova);
+    expect(highlightChips(here).join(' ')).not.toMatch(/chest|cache/i);
   });
 
   it('in Belgium the cache bundle is not offered, the paid track pays Nova instead of caches; elsewhere unchanged', () => {
