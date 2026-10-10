@@ -253,7 +253,10 @@ export const BOSS_RUSH = {
   // Chapters 10, 15, 20, 25 and 30, from a stronger start. Same tries, milestones and rewards. profile.flags.rushCourt
   // overrides (QA).
   courts: {
-    hollow: { name: 'The Hollow Court', bosses: ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'], chapters: [1, 2, 3, 4, 5], unlockAt: 2 },
+    // its first boss a little gentler (hp): with the shared table a player who had just cleared Chapter 1 never beat one
+    // (balance.mjs RUSH=1, 0 of 4 runs); now about half the time, so the first milestone is in reach from the start
+    hollow: { name: 'The Hollow Court', bosses: ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'], chapters: [1, 2, 3, 4, 5], unlockAt: 2,
+      hp: [0.7, 0.85, 0.7, 0.6, 0.55] },
     // a stronger seasoned start for bosses at Chapters 10-30 (balance.mjs RUSH=1 COURT=fallen: with the shared start no
     // player cleared it; with this, a player at Chapter 20-30 progression clears about half the time, one at 11 beats one)
     fallen: { name: 'The Fallen Court', bosses: ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'], chapters: [10, 15, 20, 25, 30], unlockAt: 11,

@@ -401,7 +401,7 @@ export class Run {
   spawnBoss() {
     this.bossSpawned = true;
     this.gates.despawn();
-    this.boss.spawn(this.rush ? BOSS_RUSH.hp[this.bossKills] : 1 + 0.6 * this.bossKills);
+    this.boss.spawn(this.rush ? (this.court.hp || BOSS_RUSH.hp)[this.bossKills] : 1 + 0.6 * this.bossKills);
   }
 
   swarmRing() {

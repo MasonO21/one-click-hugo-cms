@@ -2568,7 +2568,7 @@ errs = await session(async (page) => {
     for (let k = 0; k < 5; k++) {
       for (let i = 0; i < 30 * 12 && !(r.bossEnemy && r.boss.state !== 'enter'); i++) go(1 / 30);
       const e = r.bossEnemy; if (!e) break;
-      const C = D.CHAPTERS[k], want = D.BOSS.hp * C.hpMul * (1 + D.BOSS.chHp * k) * (D.BOSS.tune[k] || 1) * D.BOSS_RUSH.hp[k];
+      const C = D.CHAPTERS[k], want = D.BOSS.hp * C.hpMul * (1 + D.BOSS.chHp * k) * (D.BOSS.tune[k] || 1) * (D.BOSS_RUSH.courts.hollow.hp || D.BOSS_RUSH.hp)[k]; // the Hollow Court's own table
       out.bosses.push({ id: r.boss.id, hp: Math.abs(e.maxHp - want) < 2 });
       out.hud.push(document.querySelector('.hud-timer small')?.textContent);
       if (k === 1) { r.player.hp = 10; }
