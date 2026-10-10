@@ -24,7 +24,7 @@ import { mergeCopies } from '../core/GeoBuilder';
 import { tierStyle, themedStyle, skinnedStyle, type LookTint, type TierStyle } from '../core/palette';
 import { buildModel, modelCached, retainModel, releaseModel, pruneModels, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey, WALL_H, ROOF_Y, type PieceGeoKey } from '../models/pieces';
-import { acrossOnly, wallEdgeShift } from '../models/wallSnap';
+import { acrossOnly, lineAlong, roofCover, snapsToEdge, wallEdgeShift } from '../models/wallSnap';
 import type { BuildingInstance, Id } from '../../core/state';
 import type { BuildingDef } from '../../data/schema';
 import { CELL, WORLD_CELLS, cellIndex, cellMin, cellCenter, footprintCenter, rotatedSize, inWorld } from '../../core/constants';
@@ -619,12 +619,11 @@ export class Buildings {
       return;
     }
     if (piece === 'door' || piece === 'window' || piece === 'gate') {
-      const nx = connects(this.neighbourKind(b.x + 1, b.z), true) || connects(this.neighbourKind(b.x - 1, b.z), true);
-      const nz = connects(this.neighbourKind(b.x, b.z + 1), true) || connects(this.neighbourKind(b.x, b.z - 1), true);
-      const along = nx && !nz ? 0 : nz && !nx ? Math.PI / 2 : b.rot % 2 === 0 ? 0 : Math.PI / 2;
+      const kindAt = (dx: number, dz: number) => this.neighbourKind(b.x + dx, b.z + dz);
+      const along = lineAlong((dx, dz) => connects(kindAt(dx, dz), true), b.rot);
       if (piece !== 'gate') this.pushSlot(entry, this.pieceBatch('floor', style), x, y, z, 0, color);
-      // in a wall line on a floor's edge: moves out with it, across its own length only
-      const [ox, oz] = acrossOnly(this.edgeShift(b.x, b.z), along);
+      // in a wall line on a floor's edge: moves out with it, across its own length only (a gate in a fence stays put)
+      const [ox, oz] = snapsToEdge(piece, kindAt) ? acrossOnly(this.edgeShift(b.x, b.z), along) : [0, 0];
       this.pushSlot(entry, this.pieceBatch(piece as PieceGeoKey, style), x + ox, y, z + oz, along, color);
       entry.height = piece === 'gate' ? WALL_H + 0.6 : WALL_H;
       return;
@@ -666,16 +665,11 @@ export class Buildings {
       return best < 0 ? ctx.game.state.colony.tier : best;
     };
     for (const room of rooms) {
-      const cells = new Set<number>(room.cells);
-      // also cover the wall cells around the room so roofs sit flush on the walls
-      for (const ci of room.cells) {
-        const cx = ci % WORLD_CELLS;
-        const cz = (ci / WORLD_CELLS) | 0;
-        for (const [dx, dz] of DIRS) {
-          const k = this.neighbourKind(cx + dx, cz + dz);
-          if (k && WALL_LIKE.has(k)) cells.add(cellIndex(cx + dx, cz + dz));
-        }
-      }
+      // also cover the wall cells around the room, corners included, so roofs sit flush on the walls
+      const cells = roofCover(room.cells, WORLD_CELLS, (cx, cz) => {
+        const k = this.neighbourKind(cx, cz);
+        return !!k && WALL_LIKE.has(k);
+      });
       if (cells.size === 0) continue;
       let tier = tierOf(room.buildings);
       if (room.buildings.length === 0) {
