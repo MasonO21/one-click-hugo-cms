@@ -17,7 +17,7 @@ import { chestsBadge, chestsSignature, chestsTab } from '../shop/ChestsTab';
 type Tab = 'chests' | 'crystals' | 'packs' | 'nova' | 'vip' | 'season' | 'cosmetics';
 
 const TAG_TEXT: Record<string, string> = { best_value: 'BEST VALUE', popular: 'POPULAR', limited: 'LIMITED', new: 'NEW' };
-const SECTION_ICON: Record<string, string> = { chests: '🧰', crystals: '💎', packs: '🎁', bundles: '📦', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
+const SECTION_ICON: Record<string, string> = { chests: '🧰', crystals: '💎', packs: '🧳', bundles: '📦', nova: '✨', vip: '👑', season: '🏆', cosmetics: '👕' };
 
 export class ShopPanel extends Panel {
   readonly name = 'shop';

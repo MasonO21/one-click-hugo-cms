@@ -621,7 +621,7 @@ export class ExpeditionsPanel extends Panel {
           { class: 'exp-rung' + (m.claimed ? ' done' : m.reached ? ' ready' : '') },
           h('b', { class: 'num', text: String(m.count) }),
           h('div', { class: 'grow' }, h('div', { class: 'rt', text: m.title }), rewardChips(this.data, m.reward)),
-          h('span', { class: 'rs', text: m.claimed ? '✔' : m.reached ? '🎁' : '🔒' }),
+          h('span', { class: 'rs', text: m.claimed ? '✔' : m.reached ? '📦' : '🔒' }),
         ),
       );
     }

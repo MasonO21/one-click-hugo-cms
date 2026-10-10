@@ -154,7 +154,7 @@ export class SettingsPanel extends Panel {
         h('div', { class: 'h3', text: 'Nova Colony' }),
         h('div', { class: 'mute', text: 'A cozy little colony on a beautiful alien world.' }),
         h('div', { class: 'mute', style: 'margin-top:.4em', text: 'Desktop keys: WASD move · Q/E turn · Space interact · B build · M map · Esc close' }),
-        h('div', { class: 'mute', style: 'margin-top:.4em', text: 'Made with ♥ for cozy builders everywhere.' }),
+        h('div', { class: 'mute', style: 'margin-top:.4em', text: 'Built with care for frontier builders everywhere.' }),
       ),
     );
     fill(this.body, wrap);

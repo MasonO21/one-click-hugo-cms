@@ -243,7 +243,7 @@ export class WardrobePanel extends Panel {
         goLabel = 'Season';
         break;
       case 'chest':
-        row.append(h('span', { class: 'wd-srow-ic', text: '🎁' }), h('span', { class: 'grow', text: s.label }));
+        row.append(h('span', { class: 'wd-srow-ic', text: '🧰' }), h('span', { class: 'grow', text: s.label }));
         go = () => this.ctx.open('shop', { tab: 'chests' });
         goLabel = 'Caches';
         break;

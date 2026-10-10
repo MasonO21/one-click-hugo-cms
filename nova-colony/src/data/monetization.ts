@@ -244,17 +244,18 @@ export const DAILY_REWARDS: Reward[] = [
   { nova: 60, colonist: 'legendary', boost: { kind: 'production', mult: 2, minutes: 30 }, items: { mystery_crate: 2, chest_explorer: 1 } },
 ];
 
+// earthy frontier tones like the painted prize wheel in the Lucky Spin banner (not candy brights)
 export const SPIN_SEGMENTS: SpinSegment[] = [
   { label: 'Wood', color: '#b5793f', weight: 18, reward: { resources: { wood: 150 } } },
-  { label: 'Stone', color: '#9aa3ad', weight: 18, reward: { resources: { stone: 120 } } },
-  { label: 'Food & Water', color: '#4fb3f6', weight: 16, reward: { resources: { food: 100, water: 100 } } },
-  { label: 'Iron Haul', color: '#c9a48b', weight: 10, reward: { resources: { iron: 60, copper: 40, coal: 40 } } },
-  { label: '10 Nova', color: '#b48cff', weight: 8, reward: { nova: 10 } },
-  { label: '2× Boost', color: '#ffd84a', weight: 8, reward: { boost: { kind: 'production', mult: 2, minutes: 15 } } },
-  { label: 'Research', color: '#8fa8ff', weight: 12, reward: { rp: 30 } },
-  { label: 'Mystery Crate', color: '#ff9e5e', weight: 6, reward: { items: { mystery_crate: 1 } } },
-  { label: 'Rare Colonist', color: '#5ef2ff', weight: 3, reward: { colonist: 'rare' } },
-  { label: '50 Nova', color: '#ff6f91', weight: 2, reward: { nova: 50 } },
+  { label: 'Stone', color: '#7d8b96', weight: 18, reward: { resources: { stone: 120 } } },
+  { label: 'Food & Water', color: '#3f7f7a', weight: 16, reward: { resources: { food: 100, water: 100 } } },
+  { label: 'Iron Haul', color: '#b5603a', weight: 10, reward: { resources: { iron: 60, copper: 40, coal: 40 } } },
+  { label: '10 Nova', color: '#7d5a8c', weight: 8, reward: { nova: 10 } },
+  { label: '2× Boost', color: '#c99a45', weight: 8, reward: { boost: { kind: 'production', mult: 2, minutes: 15 } } },
+  { label: 'Research', color: '#5f7486', weight: 12, reward: { rp: 30 } },
+  { label: 'Mystery Crate', color: '#a8875a', weight: 6, reward: { items: { mystery_crate: 1 } } },
+  { label: 'Rare Colonist', color: '#7f8f4a', weight: 3, reward: { colonist: 'rare' } },
+  { label: '50 Nova', color: '#5e3f6e', weight: 2, reward: { nova: 50 } },
 ];
 
 export const STARTER_KIT = {

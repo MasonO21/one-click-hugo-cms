@@ -123,8 +123,9 @@
   box-shadow: 0 0.22em 0 var(--nova-d), 0 0.5em 0.9em rgba(30, 10, 50, 0.22);
 }
 .nv-root .btn.ad {
-  background: linear-gradient(135deg, #ff6f91, #b46cff);
-  box-shadow: 0 0.22em 0 #7a3fc4, 0 0.5em 0.9em rgba(30, 10, 50, 0.22);
+  /* reward-ad buttons: brass to deep teal, in the frontier palette (was candy pink to violet) */
+  background: linear-gradient(135deg, #c9973f, #2f7a72);
+  box-shadow: 0 0.22em 0 #1f514c, 0 0.5em 0.9em rgba(30, 10, 50, 0.22);
 }
 .nv-root .btn.ghost {
   color: var(--ink);

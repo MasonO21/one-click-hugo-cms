@@ -223,8 +223,8 @@ describe('notify plan: offline cap, daily gift, "we miss you"', () => {
     const p = planNotifications(snap({ flows: [], daily: claimed }), { utcOffset: UTC });
     const d = p.find((n) => n.kind === 'daily')!;
     expect(d.at).toBe(at(8, 0, 9));
-    expect(d.title).toBe('Your daily gift is ready! 🎁');
-    expect(d.body).toBe('Good morning! Your day 4 gift is waiting in New Hope. Come and unwrap it!');
+    expect(d.title).toBe('Your daily supplies are in 📦');
+    expect(d.body).toBe('Good morning! Your day 4 supply drop is waiting in New Hope. Come and collect it!');
     expect(d.panel).toBe('daily');
     expect(d.id).toBe(NOTIFY_IDS.daily);
     // waiting right now: no reminder
@@ -240,11 +240,11 @@ describe('notify plan: offline cap, daily gift, "we miss you"', () => {
   it('one "we miss you" a day later and nothing beyond it', () => {
     const p = planNotifications(snap({ flows: [] }), { utcOffset: UTC });
     expect(p).toHaveLength(1);
-    expect(p[0]).toMatchObject({ kind: 'miss', id: NOTIFY_IDS.miss, at: MORNING + MISS_YOU_AFTER_MS, title: 'New Hope misses you 💛', panel: 'daily' });
-    expect(p[0].body).toBe("Your colonists keep looking up at the sky, hoping you'll visit. Pop in and say hello! A daily gift is waiting too. 🎁");
+    expect(p[0]).toMatchObject({ kind: 'miss', id: NOTIFY_IDS.miss, at: MORNING + MISS_YOU_AFTER_MS, title: 'New Hope is waiting 🏕️', panel: 'daily' });
+    expect(p[0].body).toBe('Your settlers have kept the lamps lit and the kettle on. Drop by and see how the colony is doing. A supply drop is waiting too. 📦');
     const lonely = planNotifications(snap({ flows: [], colonists: 0, colonyName: '', daily: { claimable: true, offered: false, nextDay: 1 } }), { utcOffset: UTC })[0];
-    expect(lonely.title).toBe('Your colony misses you 💛');
-    expect(lonely.body).toBe('Your little colony is waiting for you. Pop in and say hello!');
+    expect(lonely.title).toBe('Your colony is waiting 🏕️');
+    expect(lonely.body).toBe('Your camp is quiet without you. Drop by and see how it is doing.');
     expect(lonely.panel).toBeUndefined();
     // whatever the colony, nothing is planned past the day-after reminder (+ its quiet-hours move)
     for (let h = 0; h < 24; h++) {
@@ -282,7 +282,7 @@ describe('notify plan: quiet hours, merging, cap, ids', () => {
     const p = planNotifications(s, { utcOffset: UTC });
     expect(p[0]).toMatchObject({ kind: 'offline', id: NOTIFY_IDS.offline, at: at(8, 0, 9), panel: 'daily' });
     expect(p[0].kinds.sort()).toEqual(['daily', 'offline', 'storage']);
-    expect(p[0].body).toBe('Good morning! Your colonists have been busy for 8 hours. Come collect! Your daily gift is ready too. 🎁');
+    expect(p[0].body).toBe('Good morning! Your colonists have been busy for 8 hours. Come collect! Your daily supplies are in too. 📦');
     expect(p.map((n) => n.kind)).toEqual(['offline', 'miss']);
   });
 

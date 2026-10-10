@@ -250,7 +250,7 @@ function resourceList(ids: string[], names: Readonly<Record<string, string>>): s
   return words.join(' and ');
 }
 
-const DAILY_TOO = 'Your daily gift is ready too. 🎁';
+const DAILY_TOO = 'Your daily supplies are in too. 📦';
 const SQUAD_TOO = 'Your expedition squad is home too. 🧭';
 
 /** The squads back by the expedition reminder's time (at least the first one), earliest first. */
@@ -286,11 +286,11 @@ function copyFor(kind: NotifyKind, snap: NotifySnapshot, storage: StorageForecas
       return { title: 'Time to collect! 🧺', body: `${who} been busy for ${hours} hours. Come collect!` };
     }
     case 'daily':
-      return { title: 'Your daily gift is ready! 🎁', body: `Your day ${snap.daily.nextDay} gift is waiting${colony ? ` in ${colony}` : ''}. Come and unwrap it!` };
+      return { title: 'Your daily supplies are in 📦', body: `Your day ${snap.daily.nextDay} supply drop is waiting${colony ? ` in ${colony}` : ''}. Come and collect it!` };
     case 'miss': {
       const body =
-        snap.colonists > 0 ? "Your colonists keep looking up at the sky, hoping you'll visit. Pop in and say hello!" : 'Your little colony is waiting for you. Pop in and say hello!';
-      return { title: `${colony || 'Your colony'} misses you 💛`, body: snap.daily.offered ? `${body} A daily gift is waiting too. 🎁` : body };
+        snap.colonists > 0 ? 'Your settlers have kept the lamps lit and the kettle on. Drop by and see how the colony is doing.' : 'Your camp is quiet without you. Drop by and see how it is doing.';
+      return { title: `${colony || 'Your colony'} is waiting 🏕️`, body: snap.daily.offered ? `${body} A supply drop is waiting too. 📦` : body };
     }
   }
 }

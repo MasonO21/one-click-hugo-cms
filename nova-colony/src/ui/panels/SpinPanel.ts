@@ -229,7 +229,7 @@ export class SpinPanel extends Panel {
     // outer rim
     c.beginPath();
     c.arc(0, 0, R - 2, 0, Math.PI * 2);
-    c.fillStyle = '#ffcf4a';
+    c.fillStyle = '#c9a24a'; // brass rim
     c.fill();
     segs.forEach((s, i) => {
       const a0 = -Math.PI / 2 + i * a;
@@ -240,7 +240,7 @@ export class SpinPanel extends Panel {
       c.fillStyle = s.color;
       c.fill();
       c.lineWidth = 5;
-      c.strokeStyle = 'rgba(255,255,255,0.9)';
+      c.strokeStyle = 'rgba(255,244,222,0.85)';
       c.stroke();
       // light overlay on alternate segments
       if (i % 2) {

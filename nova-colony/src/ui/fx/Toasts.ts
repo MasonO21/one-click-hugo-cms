@@ -39,7 +39,7 @@ interface Active {
 /** Hands a touch that began on a toast to the world: (pointer, type, start x/y/time, current x/y). False: it was lost. */
 export type ToastHandoff = (id: number, type: string, x0: number, y0: number, t0: number, x: number, y: number) => boolean;
 
-const DEFAULT_ICON: Record<ToastKind, string> = { info: '💬', success: '✅', warning: '⚠️', reward: '🎁', danger: '❗' };
+const DEFAULT_ICON: Record<ToastKind, string> = { info: '💬', success: '✅', warning: '⚠️', reward: '📦', danger: '❗' };
 const MAX_VISIBLE = 4;
 
 export class Toasts {

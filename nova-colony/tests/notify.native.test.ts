@@ -68,7 +68,7 @@ import type { NotificationsService } from '../src/platform/types';
 const NOW = Date.UTC(2026, 9, 8, 9, 0);
 const plan: PlannedNotification[] = [
   { id: NOTIFY_IDS.storage, kind: 'storage', kinds: ['storage'], at: NOW + 2 * 3_600_000, title: 'Your storehouses are bursting! 📦', body: 'Come spend your wood.' },
-  { id: NOTIFY_IDS.daily, kind: 'daily', kinds: ['daily'], at: NOW + 23 * 3_600_000, title: 'Your daily gift is ready! 🎁', body: 'Day 2', panel: 'daily' },
+  { id: NOTIFY_IDS.daily, kind: 'daily', kinds: ['daily'], at: NOW + 23 * 3_600_000, title: 'Your daily supplies are in 📦', body: 'Day 2', panel: 'daily' },
 ];
 
 const tick = () => new Promise((r) => setTimeout(r, 0));

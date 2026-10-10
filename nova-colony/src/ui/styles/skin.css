@@ -302,7 +302,7 @@
   box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
 }
 .nv-root .btn.ad {
-  --edge: #7a3fc4;
+  --edge: #1f514c;
   box-shadow: 0 0.26em 0 var(--edge), 0 0.55em 0.9em rgba(30, 10, 50, 0.22), inset 0 0 0 0.09em rgba(255, 255, 255, 0.22);
 }
 .nv-root .btn.ghost {

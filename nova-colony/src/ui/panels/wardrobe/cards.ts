@@ -33,7 +33,7 @@ export function novaLabel(n: number): HTMLElement {
 /** A small line saying where a locked cosmetic comes from. */
 export function sourceLine(src: CosmeticSource | null): HTMLElement | null {
   if (!src || src.kind === 'nova') return null;
-  const icon = src.kind === 'season' ? '🏆' : src.kind === 'chest' ? '🎁' : src.kind === 'pack' ? '🛍️' : '🎯';
+  const icon = src.kind === 'season' ? '🏆' : src.kind === 'chest' ? '🧰' : src.kind === 'pack' ? '🛍️' : '🎯';
   return h('div', { class: `wd-src k-${src.kind}` }, h('span', { class: 'wd-src-ic', text: icon }), h('span', { text: src.label }));
 }
 

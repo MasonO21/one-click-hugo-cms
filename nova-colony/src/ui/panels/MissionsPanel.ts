@@ -108,7 +108,7 @@ export class MissionsPanel extends Panel {
           cls: 'good block',
           onClick: () => {
             const n = ms.claimAllIn(this.tab);
-            if (n) this.ctx.toast(`${n} rewards claimed!`, 'reward', '🎁');
+            if (n) this.ctx.toast(`${n} rewards claimed!`, 'reward', '📦');
             this.rerender();
           },
         }),

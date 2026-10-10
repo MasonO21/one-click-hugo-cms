@@ -106,7 +106,7 @@ export class JournalPanel extends Panel {
             const n = a.claimAll();
             if (n) {
               this.ctx.haptic('success');
-              this.ctx.toast(`${n} rewards claimed!`, 'reward', '🎁');
+              this.ctx.toast(`${n} rewards claimed!`, 'reward', '📦');
             }
             this.rerender();
           },

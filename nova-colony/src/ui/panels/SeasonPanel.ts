@@ -216,7 +216,7 @@ export class SeasonPanel extends Panel {
       return;
     }
     if (b.ready <= 0) {
-      this.ctx.toast(`Next bonus ${thing} in ${fmt(Math.max(0, b.xpPer - b.xpInto))} XP`, 'info', '🎁');
+      this.ctx.toast(`Next bonus ${thing} in ${fmt(Math.max(0, b.xpPer - b.xpInto))} XP`, 'info', '✨');
       return;
     }
     const n = claimSeasonBonus(this.game);
