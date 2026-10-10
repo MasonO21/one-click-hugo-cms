@@ -25,6 +25,8 @@ export class PetActor {
   private readonly parts: Batch;
   private readonly partsL: Batch;
   private key = '';
+  private id: string | undefined = '\u0000';
+  private moteColor = '#ffd27a';
   private spec: PetSpec | null = null;
   readonly motion: PetMotion = newPetMotion();
   private moteT = 0;
@@ -46,12 +48,16 @@ export class PetActor {
 
   /** Swap models when the equipped pet (or its colours) changes; null hides the pet. */
   private setPet(id: string | undefined): void {
+    if (id === this.id) return;
+    this.id = id;
     const def = id ? this.ctx.game.data.cosmetic(id) : undefined;
     const key = def && PETS[def.id] ? `${def.id}|${def.color}|${def.accent}` : '';
     if (key === this.key) return;
     this.key = key;
     const geo = def && key ? petGeometry(def.id, def.color ?? '#c8c8c8', def.accent ?? '#ffffff') : null;
     this.spec = geo && def ? PETS[def.id] : null;
+    const motes = this.spec?.motes;
+    this.moteColor = (motes?.color === 'accent' ? def?.accent : def?.color) ?? '#ffd27a';
     this.body.geometry = geo?.body ?? EMPTY;
     this.legs.setGeometry(geo?.leg ?? EMPTY);
     this.parts.setGeometry(geo?.part ?? EMPTY);
@@ -204,8 +210,7 @@ export class PetActor {
       if (this.moteT > 1) {
         this.moteT -= 1 + Math.random() * 0.5;
         _v.set(motes.at[0], motes.at[1], motes.at[2]).applyMatrix4(_root);
-        const def = ctx.game.data.cosmetic(this.key.split('|')[0]);
-        const col = (motes.color === 'accent' ? def?.accent : def?.color) ?? '#ffd27a';
+        const col = this.moteColor;
         ctx.particles.emit('glow', _v.x + (Math.random() - 0.5) * 0.15, _v.y, _v.z + (Math.random() - 0.5) * 0.15, (Math.random() - 0.5) * 0.2, 0.35 + Math.random() * 0.3, (Math.random() - 0.5) * 0.2, 1.2, 0.07, col, { curve: 'grow' });
       }
     }

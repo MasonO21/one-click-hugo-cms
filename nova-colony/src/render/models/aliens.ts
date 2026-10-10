@@ -296,8 +296,10 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
         ellipsoid(d, 0.1, 0.06, 0.05, s * 0.2, 3.98, 0.78, '#ffcf5a', 10, { rz: s * 0.25, slot: SLOT_GLOW });
         d.sphere(0.035, s * 0.2, 3.98, 0.82, '#fff2c0', 6, { slot: SLOT_GLOW });
         // lava cracks running over the chest plate and shoulders
-        sweep(d, [s * 0.08, 3.25, 0.9, 0.03, s * 0.24, 3.08, 0.92, 0.034, s * 0.2, 2.9, 0.93, 0.03, s * 0.38, 2.72, 0.9, 0.026, s * 0.52, 2.62, 0.84, 0.0], 5, '#ff7a3d', { slot: SLOT_GLOW });
-        sweep(d, [s * 0.2, 2.9, 0.93, 0.02, s * 0.06, 2.78, 0.95, 0.018, s * 0.1, 2.68, 0.95, 0.0], 4, '#ff7a3d', { slot: SLOT_GLOW });
+        // (asymmetric, so the chest never reads as a face)
+        const o = s > 0 ? 0 : -0.28;
+        sweep(d, [s * 0.08, 3.25 + o, 0.9, 0.03, s * 0.24, 3.08 + o, 0.92, 0.034, s * 0.2, 2.9 + o, 0.93, 0.03, s * 0.38, 2.72 + o, 0.9, 0.026, s * 0.52, 2.62 + o, 0.84, 0.0], 5, '#ff7a3d', { slot: SLOT_GLOW });
+        if (s > 0) sweep(d, [s * 0.2, 2.9, 0.93, 0.02, s * 0.06, 2.78, 0.95, 0.018, s * 0.1, 2.68, 0.95, 0.0], 4, '#ff7a3d', { slot: SLOT_GLOW });
         sweep(d, [s * 0.95, 3.72, 0.22, 0.026, s * 1.12, 3.5, 0.46, 0.03, s * 1.3, 3.42, 0.42, 0.0], 5, '#ff7a3d', { slot: SLOT_GLOW });
       });
       // head: brow, jaw, crest
@@ -306,7 +308,6 @@ const MODELS: Record<string, { build: (b: GeoBuilder, d: GeoBuilder, boss: boole
       ellipsoid(b, 0.4, 0.2, 0.32, 0, 3.66, 0.62, MID, 12); // jaw
       for (let i = 0; i < 3; i++) ellipsoid(b, 0.17 - i * 0.03, 0.1, 0.24, 0, 4.28 - i * 0.12, 0.22 - i * 0.3, W, 10, { rx: -0.6 }); // crest
       // glowing core showing through the chest
-      ellipsoid(d, 0.16, 0.12, 0.08, 0.05, 2.42, 0.86, '#ffb04a', 10, { slot: SLOT_GLOW, rz: 0.4 });
       if (boss) {
         // a crown of glowing crystal shards
         for (let i = 0; i < 7; i++) {

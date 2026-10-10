@@ -105,7 +105,7 @@ export const HATS: Record<string, HatSpec> = {
       mirror((s) => {
         // ear cups with cushions
         b.add(new THREE.CylinderGeometry(0.07, 0.07, 0.05, 14), c, s * 0.226, 0.238, -0.004, { rz: Math.PI / 2 });
-        ellipsoid(b, 0.03, 0.068, 0.068, s * 0.252, 0.238, -0.004, shade(c, 1.15), 12);
+        ellipsoid(b, 0.03, 0.068, 0.068, s * 0.252, 0.238, -0.004, a, 12); // painted cup shells read at play zoom
         b.add(new THREE.TorusGeometry(0.06, 0.016, 6, 14), a, s * 0.2, 0.238, -0.004, { ry: Math.PI / 2 });
       });
       // mic boom to the mouth
@@ -198,7 +198,7 @@ export const HATS: Record<string, HatSpec> = {
         // one drone at angle 0 of its orbit (+X); the orbit turns about +Y, so it travels toward -Z
         const R = 0.31;
         const y = 0.57;
-        ellipsoid(b, 0.06, 0.03, 0.05, R, y, 0, c, 10);
+        ellipsoid(b, 0.07, 0.034, 0.058, R, y, 0, c, 10);
         ellipsoid(b, 0.026, 0.014, 0.026, R, y - 0.026, 0, a, 6, { slot: SLOT_GLOW });
         b.sphere(0.011, R, y + 0.004, -0.05, a, 4, { slot: SLOT_GLOW }); // nose light
         mirror((s) => {
@@ -208,7 +208,7 @@ export const HATS: Record<string, HatSpec> = {
         // light trail along the orbit behind it
         for (let k = 1; k <= 8; k++) {
           const ang = k * 0.11;
-          b.sphere(0.017 * (1 - k / 9.5), Math.cos(ang) * R, y - 0.012, Math.sin(ang) * R, a, 5, { slot: SLOT_GLOW });
+          b.sphere(0.021 * (1 - k / 9.5), Math.cos(ang) * R, y - 0.012, Math.sin(ang) * R, a, 5, { slot: SLOT_GLOW });
         }
       },
     },

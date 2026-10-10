@@ -312,10 +312,13 @@ export const PETS: Record<string, PetSpec> = {
         const edge = mix(c, '#ffffff', 0.35);
         // fore and hind wing lobes (thin, soft-edged), glowing eyespots
         ellipsoid(b, 0.22, 0.008, 0.12, 0.2, 0, 0.05, c, 14, { ry: -0.35 });
-        ellipsoid(b, 0.23, 0.005, 0.13, 0.205, -0.002, 0.052, edge, 14, { ry: -0.35, sx: 1, sy: 0.6 });
+        // the soft glow: a pale luminous rim around each wing, brighter eyespots
+        ellipsoid(b, 0.232, 0.005, 0.132, 0.205, -0.002, 0.052, a, 14, { ry: -0.35, slot: SLOT_GLOW });
+        ellipsoid(b, 0.156, 0.005, 0.106, 0.132, -0.006, -0.09, a, 12, { ry: 0.45, slot: SLOT_GLOW });
+        ellipsoid(b, 0.12, 0.009, 0.06, 0.16, 0.002, 0.03, edge, 10, { ry: -0.35 });
         ellipsoid(b, 0.15, 0.008, 0.1, 0.13, -0.004, -0.09, c, 12, { ry: 0.45 });
-        ellipsoid(b, 0.045, 0.012, 0.035, 0.24, 0.006, 0.08, a, 10, { ry: -0.35, slot: SLOT_GLOW });
-        ellipsoid(b, 0.028, 0.012, 0.022, 0.15, 0.006, -0.1, a, 8, { ry: 0.45, slot: SLOT_GLOW });
+        ellipsoid(b, 0.055, 0.012, 0.042, 0.24, 0.006, 0.08, a, 10, { ry: -0.35, slot: SLOT_GLOW });
+        ellipsoid(b, 0.035, 0.012, 0.028, 0.15, 0.006, -0.1, a, 8, { ry: 0.45, slot: SLOT_GLOW });
         ellipsoid(b, 0.014, 0.014, 0.012, 0.24, 0.012, 0.08, shade(c, 0.5), 6, { ry: -0.35 });
       },
     },

@@ -185,11 +185,14 @@ export class Characters {
   private hatGlass: THREE.Mesh;
   private hatOrbit: Batch;
   private hatKey = '';
+  /** Equipped hat id last synced (compared first, so no key string is built per frame). */
+  private hatId: string | undefined = '\u0000';
+  private vehModel = '';
+  private vehSkin: string | undefined = '\u0000';
   private hatTrim = false;
   private hatOrbitSpeed = 0;
   private glassMat: THREE.Material;
   private vehicle: THREE.Mesh;
-  private vehicleKey = '';
   private pet: PetActor;
   private px = 0;
   private pz = 0;
@@ -594,11 +597,11 @@ export class Characters {
     this.vehicle.visible = false;
     if (vehModel && !down) {
       const skinId = cosm.vehicle_skin;
-      const key = `${vehModel}|${skinId ?? ''}`;
-      if (key !== this.vehicleKey) {
+      if (vehModel !== this.vehModel || skinId !== this.vehSkin) {
+        this.vehModel = vehModel;
+        this.vehSkin = skinId;
         const skin = skinId ? ctx.game.data.cosmetic(skinId) : undefined;
-        this.vehicle.geometry = skin?.color ? vehicleGeometry(vehModel, paintFromSkin(skin.color, skin.accent ?? skin.color), skin.id) : vehicleGeometry(vehModel);
-        this.vehicleKey = key;
+        this.vehicle.geometry = skin?.kind === 'vehicle_skin' && skin.color ? vehicleGeometry(vehModel, paintFromSkin(skin.color, skin.accent ?? skin.color), skin.id) : vehicleGeometry(vehModel);
       }
       const hover = vehicleHovers(vehModel);
       const vy = ground + (hover ? 0.35 + Math.sin(t * 3) * 0.08 : 0);
@@ -663,6 +666,8 @@ export class Characters {
 
   /** Hat cosmetic → meshes (geometry swapped only when the equipped hat changes). */
   private syncHat(id: string | undefined): void {
+    if (id === this.hatId) return;
+    this.hatId = id;
     const def = id ? this.ctx.game.data.cosmetic(id) : undefined;
     const spec = def?.kind === 'hat' ? hatSpec(def.id) : undefined;
     const key = spec && def ? `${def.id}|${def.color}|${def.accent}` : '';
