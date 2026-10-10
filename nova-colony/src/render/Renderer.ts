@@ -32,6 +32,9 @@ import { Festival } from './fx/Festival';
 import './models'; // registers all procedural building models
 import type { WorldGen } from '../sim/world';
 
+/** Shortest frame time drawn while a panel covers the world (≈ 30 fps; a little slack for rAF jitter). */
+const COVERED_FRAME_S = 1 / 32;
+
 const _ndc = new THREE.Vector2();
 const _v3 = new THREE.Vector3();
 const _ray = new THREE.Raycaster();
@@ -228,9 +231,10 @@ export class Renderer implements RendererApi {
       env.terrainVersion++;
     }
 
-    // panels open: halve the frame rate; the skipped frame's time is carried into the next drawn one so particles,
-    // characters and buildings behind the sheet keep their real speed instead of moving at half speed
-    if (game.view.panelOpen && this.frame % 2 === 1) {
+    // behind a sheet / modal the world draws at most ~30 fps (the loop itself drops to 30 there, core/loopPolicy.ts;
+    // this also holds when it does not, e.g. a 60 fps loop in the frame a panel opens). A skipped frame's time is
+    // carried into the next drawn one so particles, characters and buildings behind the sheet keep their real speed.
+    if (game.view.panelOpen && this.heldDt + dt < COVERED_FRAME_S) {
       this.heldDt += dt;
       return;
     }

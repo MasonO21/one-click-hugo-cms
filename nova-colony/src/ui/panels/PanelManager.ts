@@ -81,6 +81,24 @@ export class PanelManager {
     return null;
   }
 
+  /**
+   * The top-most open panel is a sheet whose card hides the whole screen (a portrait bottom sheet at full height: the
+   * Research tree, the Crew list…), so the 3D world behind it need not be drawn at all. Layout offsets, so the slide-in
+   * transform does not matter; a closing sheet never counts (the world draws again as it slides away). Allowed: the
+   * safe-area strip at the top (up to 6% of the height), dimmed behind the backdrop, which then simply holds still.
+   */
+  worldHidden(viewW: number, viewH: number): boolean {
+    for (let i = this.open_.length - 1; i >= 0; i--) {
+      const o = this.open_[i];
+      if (o.closing) continue;
+      const p = o.panel;
+      if (p.kind !== 'sheet' || !p.card?.isConnected) return false;
+      const c = p.card;
+      return c.offsetWidth >= viewW - 2 && c.offsetLeft <= 1 && c.offsetTop <= viewH * 0.06 && c.offsetTop + c.offsetHeight >= viewH - 2;
+    }
+    return false;
+  }
+
   /** A modal (celebration, reward, victory, welcome back…) is showing or waiting in the queue. */
   anyModal(): boolean {
     return this.modalQueue.length > 0 || this.open_.some((o) => !o.closing && o.panel.kind === 'modal');

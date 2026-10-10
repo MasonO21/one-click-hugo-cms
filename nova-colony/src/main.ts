@@ -9,7 +9,8 @@ import { createPlatformServices } from './platform';
 import { SaveManager } from './platform/save';
 import { AutoQuality } from './platform/autoQuality';
 import { guarded } from './core/guard';
-import { FramePacer, fpsCap } from './core/framePacer';
+import { FramePacer } from './core/framePacer';
+import { LoopPolicy } from './core/loopPolicy';
 import { onBackButton } from './platform/lifecycle';
 import { ReviewPrompt } from './platform/review';
 
@@ -42,7 +43,8 @@ async function boot() {
   autoQuality.attach();
 
   // expose for debugging / automated playtests (dev server, or production with ?debug)
-  if (import.meta.env.DEV || new URLSearchParams(location.search).has('debug')) {
+  const debug = import.meta.env.DEV || new URLSearchParams(location.search).has('debug');
+  if (debug) {
     (window as any).game = game;
     (window as any).renderer = renderer;
     (window as any).autoQuality = autoQuality;
@@ -56,11 +58,24 @@ async function boot() {
 
   let last = performance.now();
   const pacer = new FramePacer();
+  // 60 fps in play; 30 in Battery saver, behind menus and in a calm colony nobody has touched for a while
+  const policy = new LoopPolicy(game);
+  if (debug) (window as any).loopPolicy = policy;
+  const opts = { capture: true, passive: true } as const;
+  window.addEventListener('pointerdown', (e) => policy.pointerDown(e.timeStamp), opts);
+  window.addEventListener('pointerup', (e) => policy.pointerUp(e.timeStamp), opts);
+  window.addEventListener('pointercancel', (e) => policy.pointerUp(e.timeStamp), opts);
+  for (const ev of ['pointermove', 'keydown', 'keyup', 'wheel'] as const) window.addEventListener(ev, (e) => policy.input(e.timeStamp), opts);
+  window.addEventListener('blur', () => policy.release(performance.now()));
+  document.addEventListener('visibilitychange', () => policy.release(performance.now()));
   // the next frame is booked first and every step is guarded, so one exception can never stop the loop
   const frame = (t: number) => {
     requestAnimationFrame(frame);
-    // at most 60 fps on 90/120 Hz screens, 30 in Battery saver
-    if (!pacer.due(t, fpsCap(game.state.settings.batterySaver))) return;
+    // hidden (a WebView may keep its frames ticking in the background): nothing to simulate or draw; the time away is
+    // credited as offline progress when the app comes back (platform/hooks.ts installResumeCredit)
+    if (document.visibilityState === 'hidden') return;
+    // at most 60 fps on 90/120 Hz screens; 30 in the cases above (core/loopPolicy.ts)
+    if (!pacer.due(t, policy.fps(t))) return;
     const dt = Math.min(0.1, (t - last) / 1000);
     last = t;
     guarded('game', () => game.update(dt));

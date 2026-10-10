@@ -127,6 +127,8 @@ export class UI {
 
   private badgesCache: Badges = { missions: 0, research: 0, daily: false, spin: false, crate: false, season: 0, colonists: 0, expeditions: 0, journal: 0 };
   private accSlow = 0;
+  /** The top sheet hides the whole world (see coversWorld). */
+  private sheetHidesWorld = false;
   private accFps = 0;
   private lastClick = { x: 0, y: 0, t: -1e9 };
   private lastPanelSfx = 0;
@@ -588,6 +590,7 @@ export class UI {
     tut.notifyPanel(this.panels.topName());
     this.root.dataset.panelOpen = covering ? '1' : '0';
     this.syncToastInset();
+    this.syncWorldHidden();
     if (covering || this.panels.anyOpen()) this.input.reset();
   }
 
@@ -1129,6 +1132,7 @@ export class UI {
         this.guide.poll();
         this.threats.poll();
         this.syncToastInset();
+        this.syncWorldHidden();
       });
     }
     this.accFps += dt;
@@ -1172,9 +1176,18 @@ export class UI {
     this.fpsBox.textContent = `${st.fps} fps · ${st.drawCalls} calls · ${(st.triangles / 1000).toFixed(0)}k tris\n${g.state.buildings.list.length} buildings · ${g.state.colonists.list.length} colonists · ${g.state.combat.aliens.length} aliens`;
   }
 
-  /** A full-screen scene (the chest opening) hides the 3D world: main.ts skips drawing it meanwhile. */
+  /**
+   * Nothing of the 3D world shows: a full-screen scene (the chest opening) or a sheet at full height (the Research
+   * tree, the Crew list on a portrait phone). main.ts skips drawing the world meanwhile (the sim keeps running).
+   */
   coversWorld(): boolean {
-    return !!this.chestScene?.covering();
+    return this.sheetHidesWorld || !!this.chestScene?.covering();
+  }
+
+  /** Re-check whether the top sheet hides the world (on every panel change and a few times a second). */
+  private syncWorldHidden(): void {
+    const root = this.root;
+    this.sheetHidesWorld = !!root && this.panels.worldHidden(root.clientWidth || window.innerWidth, root.clientHeight || window.innerHeight);
   }
 
   /** Expose a reward popup (used by tests / dev tools). */

@@ -90,6 +90,10 @@ methods; do not rename/remove/change existing signatures.
   installs) `src/platform/autoQuality.ts` owns it: a once-per-device pick at boot (`deviceQuality.ts`, from
   `Renderer.init`'s `onContext` hook) and a frame-rate governor (`qualityGovernor.ts`) that only ever steps
   down. The Settings panel switches modes through `game.autoQuality` (`setManual` / `enableAuto`).
+- Frame pacing (`src/core/framePacer.ts`, `src/core/loopPolicy.ts`, wired in `main.ts`): the loop runs at 60 fps,
+  30 in Battery saver, behind a sheet / modal, and in a calm colony left untouched for 12 s (first touch: 60 again);
+  nothing runs while the page is hidden (the time away is credited as offline progress). The renderer draws at
+  most ~30 fps behind panels and not at all under the chest scene.
 
 ## Camera & movement convention (render ⇄ player ⇄ UI)
 
