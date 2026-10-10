@@ -183,6 +183,8 @@ window.RK_ART = {
     'i-recruit': 'art/ui/recruit.webp',
     'i-scroll': 'art/ui/scroll.webp',
     'i-star': 'art/ui/star.webp',
+    'i-veil': 'art/ui/veil.webp',
+    'i-riptide': 'art/ui/riptide.webp',
     'i-clock': 'art/ui/clock.webp',
     'i-calendar': 'art/ui/calendar.webp',
     'i-tideglass': 'art/ui/tideglass.webp',

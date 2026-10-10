@@ -555,8 +555,8 @@ const DATA = {
     arts: {
       order: ['torrent', 'veil', 'riptide'],
       torrent: { name: 'Torrent', icon: 'i-water', unlock: 1, text: 'A wall of water: damage, cracks a sand-shell, calms a frenzy.' },
-      veil: { name: 'Mist Veil', icon: 'i-raincloud', unlock: 6, heal: 1.6, rounds: 2, cut: 0.3, ward: 2, text: 'Cool mist over the squad: heals it, softens the next blows, draws out venom.' },
-      riptide: { name: 'Riptide', icon: 'i-storm', unlock: 11, hit: 0.4, rounds: 2, text: 'Drags the foe under for two rounds: less damage, but no blows and no healing while it struggles, and a frenzy calmed.' },
+      veil: { name: 'Mist Veil', icon: 'i-veil', unlock: 6, heal: 1.6, rounds: 2, cut: 0.3, ward: 2, text: 'Cool mist over the squad: heals it, softens the next blows, draws out venom.' },
+      riptide: { name: 'Riptide', icon: 'i-riptide', unlock: 11, hit: 0.4, rounds: 2, text: 'Drags the foe under for two rounds: less damage, but no blows and no healing while it struggles, and a frenzy calmed.' },
     },
   },
   patrolCapMinutes: 120,
@@ -1867,7 +1867,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.40', items: [
-      { icon: 'i-raincloud', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:world', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
+      { icon: 'i-veil', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:world', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
     ] },
     { v: '4.39', items: [
       { icon: 'i-star', name: 'Stage Stars', text: "Every story stage now holds three stars: the victory, ending the fight with half the squad's health, and winning within five rounds. Tap a cleared stage on the Expedition tab to fight it again for the stars it is missing; each chapter's stars fill three chests.", act: 'stars', open: (S) => S.stage > 2, needs: 'Clear stage 2' },
