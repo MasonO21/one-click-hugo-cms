@@ -2,7 +2,7 @@
 import './ui/style.css';
 import { audio, loadAudio } from './audio/index.js';
 import { loadProfile, saveProfile, newProfile } from './meta/save.js';
-import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon, beginRush } from './meta/economy.js';
+import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon, beginRush, rushCourt } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
 import { activePage } from './meta/grimoire.js';
@@ -17,7 +17,7 @@ import { Showcase } from './game/showcase.js';
 import { Run } from './game/run.js';
 import { RunUI } from './ui/runui.js';
 import { createMeta } from './ui/meta/index.js';
-import { CHAPTERS, CLOCK, ENDLESS_ID, ENDLESS_UNLOCK, chapterById } from './game/data.js';
+import { CHAPTERS, CLOCK, ENDLESS_ID, ENDLESS_UNLOCK, chapterById, BOSS_RUSH } from './game/data.js';
 import { toast } from './ui/dom.js';
 import { analytics } from './meta/analytics.js';
 import { needsGate, needsConsent, answerGate, setConsent } from './meta/privacy.js';
@@ -92,7 +92,7 @@ function applySettings() {
  *  opts.rush: Boss Rush (BOSS_RUSH): free, one of today's tries while the event is open; it starts at Chapter 1's scaling. */
 function startRun(chapterId, opts = {}) {
   if (opts.tutorial) return beginRun(CHAPTERS[0], { tutorial: true });
-  if (opts.rush) return beginRush(profile) ? beginRun(CHAPTERS[0], { rush: true }) : false;
+  if (opts.rush) { const court = rushCourt(profile); return beginRush(profile) ? beginRun(CHAPTERS[BOSS_RUSH.courts[court].chapters[0] - 1], { rush: true, court }) : false; } // this week's court
   let mutators = null;
   if (opts.trial) { const t = dailyTrial(profile); chapterId = t.chapter; mutators = [t.boon, t.bane]; }
   chapterId = +chapterId;
@@ -111,7 +111,7 @@ function beginRun(chapter, opts) {
   app.meta.hide();
   const loadout = computeLoadout(profile);
   const run = new Run(app.engine, { app, loadout, chapter, ...opts });
-  const mode = opts.tutorial ? 'tutorial' : opts.rush ? 'rush' : opts.mutators ? 'trial' : chapter.endless ? 'endless' : 'campaign';
+  const mode = opts.tutorial ? 'tutorial' : opts.rush ? (opts.court === 'fallen' ? 'rush_fallen' : 'rush') : opts.mutators ? 'trial' : chapter.endless ? 'endless' : 'campaign';
   const base = { mode, chapter: chapter.id, act: chapter.act || 0, difficulty: opts.difficulty || 'normal', hero: profile.selectedHero };
   analytics.track(opts.tutorial ? 'tutorial_start' : 'run_start', { ...base, page: opts.page || '', bloodMoon: !!opts.bloodMoon, level: profile.level });
   const unlocked0 = profile.chapter.unlocked;

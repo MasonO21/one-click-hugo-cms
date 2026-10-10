@@ -248,6 +248,13 @@ export const BOSS_RUSH = {
   level: 20, auto: 14, cap: 40, legion: 70, draft: 4, first: 3, warn: 3, gap: 6, souls: 20, heal: 0.4,
   hp: [1, 0.85, 0.7, 0.6, 0.55],
   milestones: [{ gold: 1000 }, { gems: 20 }, { gold: 1500 }, { gems: 30 }, { sigils: 1, gems: 40 }],
+  // Update 14: two courts. The Hollow Court (Act I's bosses, at their chapters' scaling) every week; once a player has
+  // cleared Chapter 10, every other week (odd weeks since 1970) brings the Fallen Court instead: the act finales, at
+  // Chapters 10, 15, 20, 25 and 30. Same tries, start, milestones and rewards. profile.flags.rushCourt overrides (QA).
+  courts: {
+    hollow: { name: 'The Hollow Court', bosses: ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'], chapters: [1, 2, 3, 4, 5], unlockAt: 2 },
+    fallen: { name: 'The Fallen Court', bosses: ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'], chapters: [10, 15, 20, 25, 30], unlockAt: 11 },
+  },
 };
 // ---------------------------------------------------------------- Chapter bosses (boss.js)
 // Each campaign chapter ends with its own boss; the Endless Abyss brings them back in turn (BOSS_ORDER, by depth). They

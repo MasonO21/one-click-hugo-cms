@@ -21,7 +21,7 @@ export function showRunIntro(hud, run, reduceFlash) {
     + (run.pageDef ? `<em class="ri-pill" style="--dc:${run.pageDef.color}">${run.pageDef.name}</em>` : ''); // the inscribed Grimoire page
   const el = h(`<div class="run-intro${reduceFlash ? ' rf' : ''}" aria-hidden="true" data-ch="${ch.id}" style="--rc:${hex(ch.rune)}">
     <i class="ri-art" style="background-image:url(${chapterArt(ch)})"></i>
-    <div class="ri-text"><span class="ri-kick">${kick}${pills}</span><b class="ri-name">${run.rush ? BOSS_RUSH.name : run.guide ? 'The Waking' : ch.name}</b><i class="ri-line"></i><span class="ri-tag">${tag}</span></div>
+    <div class="ri-text"><span class="ri-kick">${kick}${pills}</span><b class="ri-name">${run.rush ? run.court.name : run.guide ? 'The Waking' : ch.name}</b><i class="ri-line"></i><span class="ri-tag">${tag}</span></div>
   </div>`);
   hud.appendChild(el);
   hud.classList.add('intro-on'); // the legion counter (still 0) steps aside under the card

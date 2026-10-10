@@ -6,7 +6,7 @@
 // leaves the device unless the player shares or saves it.
 import { h, $, modal, fmt, fmtTime, toast } from './dom.js';
 import { icon } from './icons.js';
-import { HEROES, BOSSES, BOSS_ORDER, ENDLESS_BOSSES, CHAPTERS, SKILLS, EVOLUTIONS, DIFFICULTY } from '../game/data.js';
+import { HEROES, BOSSES, BOSS_RUSH, ENDLESS_BOSSES, CHAPTERS, SKILLS, EVOLUTIONS, DIFFICULTY } from '../game/data.js';
 import { CHAPTER_ART, HERO_ART, SKIN_ART, FOE_ART, SKILL_ART, LOGO_ART } from './art.js';
 
 const W = 1080, H = 1350;
@@ -37,8 +37,8 @@ function text(ctx, str, x, y, { font, color = '#fff', glow = null, blur = 18, al
 export function cardCopy(result, run) {
   const ch = CHAPTERS[(result.chapter || 1) - 1] || CHAPTERS[0], D = DIFFICULTY[result.difficulty]; // (a campaign result; rush and Endless return first)
   const diff = D && result.difficulty !== 'normal' ? ` · ${D.name}` : '';
-  if (result.rush) return { head: result.victory ? 'COURT CLEARED' : 'FELL IN THE COURT', sub: `Boss Rush · ${result.bossKills} of ${BOSS_ORDER.length} bosses`, art: 'endless',
-    bosses: BOSS_ORDER.slice(0, result.bossKills), color: 0xff2e55 };
+  if (result.rush) { const C = BOSS_RUSH.courts[result.court] || BOSS_RUSH.courts.hollow; return { head: result.victory ? 'COURT CLEARED' : 'FELL IN THE COURT', sub: `${C.name} · ${result.bossKills} of ${C.bosses.length} bosses`, art: 'endless',
+    bosses: C.bosses.slice(0, result.bossKills), color: 0xff2e55 }; }
   if (result.endless) return { head: `ABYSS DEPTH ${result.bossKills + 1}`, sub: `Endless Abyss · ${result.bossKills} ${result.bossKills === 1 ? 'boss' : 'bosses'} slain`, art: 'endless',
     bosses: Array.from({ length: Math.min(5, result.bossKills) }, (_, i) => ENDLESS_BOSSES[(result.bossKills - Math.min(5, result.bossKills) + i) % ENDLESS_BOSSES.length]), color: 0x8f6bff }; // the last five slain
   const boss = run && run.bossDead ? (run.boss.id || ch.bossId) : null;

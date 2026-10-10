@@ -57,7 +57,7 @@ export class RunUI {
         </div>
         <div class="hud-stats">
           <div class="hud-stat k">${icon('skull')}<span>0</span></div>
-          <div class="hud-timer"><b>00:00</b><small>${run.rush ? BOSS_RUSH.name : run.chapter.name}</small>${run.diff.id !== 'normal' ? `<em class="hud-diff" style="--dc:${run.diff.css}">${run.diff.name}</em>` : ''}</div>
+          <div class="hud-timer"><b>00:00</b><small>${run.rush ? run.court.name : run.chapter.name}</small>${run.diff.id !== 'normal' ? `<em class="hud-diff" style="--dc:${run.diff.css}">${run.diff.name}</em>` : ''}</div>
           <div class="hud-stat r g">${icon('gold')}<span>0</span></div>
         </div>
         <div class="legion"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${'<path d="M12 3c-3.5 0-6 2.7-6 6v11l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5V9c0-3.3-2.5-6-6-6z"/><path d="M9.6 9.8h.01M14.4 9.8h.01" stroke-width="3"/>'}</svg>
@@ -106,7 +106,7 @@ export class RunUI {
     this.set('gold', gold, (v) => { q.gold.textContent = fmt(v); });
     const tsec = Math.floor(run.time);
     this.set('time', tsec, () => {
-      if (run.rush) { q.timer.textContent = fmtTime(run.time); q.timerSub.textContent = `Boss ${Math.min(BOSS_ORDER.length, run.bossKills + 1)} of ${BOSS_ORDER.length}`; } // Boss Rush: the clock is the score
+      if (run.rush) { q.timer.textContent = fmtTime(run.time); q.timerSub.textContent = `Boss ${Math.min(run.court.bosses.length, run.bossKills + 1)} of ${run.court.bosses.length}`; } // Boss Rush: the clock is the score
       else if (run.bossSpawned) { q.timer.textContent = fmtTime(run.time); q.timerSub.textContent = run.endless ? `Abyss depth ${run.bossKills + 1} · Boss` : 'Boss fight'; }
       else {
         const left = Math.max(0, run.nextBossAt - run.time);
@@ -369,7 +369,7 @@ export class RunUI {
   // ---------------------------------------------------------------- results
   showResults(result, outcome) {
     const app = this.app, p = app.profile;
-    const win = result.victory, tut = !!result.tutorial, rush = !!result.rush, nB = BOSS_ORDER.length;
+    const win = result.victory, tut = !!result.tutorial, rush = !!result.rush, nB = this.run.court.bosses.length;
     let doubled = false, adOpen = false;
     const items = outcome.items.slice();
     const body = h(`<div style="display:flex;flex-direction:column;gap:10px">

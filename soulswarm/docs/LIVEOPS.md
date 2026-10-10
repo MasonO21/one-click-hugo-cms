@@ -89,6 +89,7 @@
 - **Format:** the five chapter bosses in a row (Gravemaw → Vesperine) at Ch1→Ch5 scaling with the season's modifier. The player starts as a campaign player stands at a boss (Lv20, a veteran build, a legion of 70) and picks 4 powers at a War Council, then gets one Relic Chest pick between bosses. 3 free attempts per day (then one more per ad, as many as wanted), no energy cost. *(Build: GDD §8.3; the first design's Lv10 and 30 minions let a Chapter 5 player beat one boss of five.)*
 - **Leaderboard:** fastest total clear time, in groups of 100 players matched by power.
 - **Rewards:** milestone track (bosses beaten) gives sigils, gems and featured-hero shards. Rank rewards give an exclusive **legion banner** cosmetic (top 10%) and gems. Cosmetic only, never power-exclusive.
+- **Courts (build, Update 14):** the Hollow Court (Act I's bosses) and, for players past Chapter 10, the Fallen Court (the act finales at Chapters 10–30's scaling) alternate week by week; live config can pin either for a season's event (`profile.flags.rushCourt` stands in for it in the build).
 
 ### 3.3 Endless Abyss weekly leagues
 

@@ -448,10 +448,18 @@ function rushNow(p) {
   if (R.day !== d) Object.assign(R, { day: d, tries: 0, ads: 0 });
   return R;
 }
+/** This week's court for the player: the Fallen Court in odd weeks once Chapter 10 is cleared, else the Hollow Court. */
+export function rushCourt(p, t = now()) {
+  const o = p.flags && p.flags.rushCourt, C = BOSS_RUSH.courts;
+  if (C[o]) return o;
+  const week = Math.floor(Date.parse(rushTimes(t).key) / (7 * DAY));
+  return p.chapter.unlocked >= C.fallen.unlockAt && week % 2 === 1 ? 'fallen' : 'hollow';
+}
 export function rushState(p) {
   const R = rushNow(p), unlocked = p.chapter.unlocked >= BOSS_RUSH.unlockAt, open = rushOpen(p), T = rushTimes();
-  const left = Math.max(0, BOSS_RUSH.tries + R.ads - R.tries);
-  return { unlocked, open, ends: T.ends, starts: T.starts, triesLeft: left, available: unlocked && open && left > 0,
+  const left = Math.max(0, BOSS_RUSH.tries + R.ads - R.tries), court = rushCourt(p);
+  return { court, name: BOSS_RUSH.courts[court].name, bosses: BOSS_RUSH.courts[court].bosses,
+    unlocked, open, ends: T.ends, starts: T.starts, triesLeft: left, available: unlocked && open && left > 0,
     retry: unlocked && open && left === 0, claimed: R.claimed, best: R.best, bestKills: R.bestKills, allBest: R.allBest, clears: R.clears };
 }
 /** Uses one of today's tries. */

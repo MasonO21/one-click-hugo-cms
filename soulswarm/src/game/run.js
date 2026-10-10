@@ -55,7 +55,7 @@ const _v = new THREE.Vector3(), _sp = { x: 0, y: 0 };
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _s = new THREE.Vector3(), _p = new THREE.Vector3();
 
 export class Run {
-  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false, rush = false, page = null }) {
+  constructor(engine, { app, loadout, chapter, mutators = null, bloodMoon = false, difficulty = 'normal', tutorial = false, rush = false, court = 'hollow', page = null }) {
     this.isRun = true;
     this.engine = engine;
     this.app = app;
@@ -71,6 +71,7 @@ export class Run {
     // Nightmare / Torment: always defined, Normal is the identity. Endless and the Daily Trial play Normal.
     this.diff = { ...(!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal };
     this.rush = !!rush; // Boss Rush: the five chapter bosses back to back in the Abyss (BOSS_RUSH)
+    this.court = BOSS_RUSH.courts[court] || BOSS_RUSH.courts.hollow; this.courtId = BOSS_RUSH.courts[court] ? court : 'hollow'; // the Hollow or the Fallen Court
     let look = this.rush ? ENDLESS : this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;
     if (this.diff.tint) look = difficultyLook(look, this.diff.tint); // over the Blood Moon sky too
     this.scene.background = new THREE.Color(look.fog);
@@ -386,7 +387,7 @@ export class Run {
     this.warned = true;
     const B = BOSSES[this.bossId], tier = !this.endless && !this.rush ? this.chapter.tier || 1 : 1;
     const back = (!this.rush && this.bossKills >= ENDLESS_BOSSES.length) || tier > 1;
-    const sub = this.rush ? `Boss ${this.bossKills + 1} of ${BOSS_ORDER.length}` : this.bossKills ? `Stronger than before (×${this.bossKills + 1})`
+    const sub = this.rush ? `Boss ${this.bossKills + 1} of ${this.court.bosses.length}` : this.bossKills ? `Stronger than before (×${this.bossKills + 1})`
       : tier > 1 ? `${ACTS[this.chapter.act - 1].epithet} ${B.name}: stronger than before` : 'Gather your legion';
     this.ui.bossColor(B.color);
     this.ui.banner(`${B.title.toUpperCase()} ${back ? 'RETURNS' : 'APPROACHES'}`, sub, 'boss');
@@ -702,7 +703,7 @@ export class Run {
     this.counters.byType[id]++; // Bestiary: campaign victories and every Endless kill
     this.slainVoice = `${K.voice}_slain`;
     if (this.endless) return this.onEndlessBossKilled(x, z, K);
-    if (this.rush && this.bossKills + 1 < BOSS_ORDER.length) return this.onRushBossKilled(x, z, K);
+    if (this.rush && this.bossKills + 1 < this.court.bosses.length) return this.onRushBossKilled(x, z, K);
     if (this.rush) this.bossKills++; // the fifth: the Court is cleared
     this.bossDead = true;
     this.bossEnemy = null;
@@ -745,7 +746,7 @@ export class Run {
     this.bossKills++;
     this.bossSpawned = false; this.warned = false; this.bossEnemy = null;
     this.nextBossAt = this.time + R.gap;
-    this.chapter = CHAPTERS[this.bossKills]; this.recomputeStats();
+    this.chapter = CHAPTERS[this.court.chapters[this.bossKills] - 1]; this.recomputeStats(); // the court's next chapter
     this.fx.slowMo(0.25, 0.9);
     this.fx.flash(0.7); this.fx.shake(0.8); this.fx.aberration(0.8);
     const hex = K.color;
@@ -760,7 +761,7 @@ export class Run {
     for (let i = 0; i < R.souls; i++) this.legion.raise(x + (Math.random() - 0.5) * 4, z + (Math.random() - 0.5) * 4);
     P.heal(P.maxHp * R.heal);
     this.ui.bossBar(false);
-    this.ui.banner(`${K.name.toUpperCase()} FALLS`, `${this.bossKills} of ${BOSS_ORDER.length} · ${BOSSES[this.bossId].name} rises next`, 'gold');
+    this.ui.banner(`${K.name.toUpperCase()} FALLS`, `${this.bossKills} of ${this.court.bosses.length} · ${BOSSES[this.bossId].name} rises next`, 'gold');
     this.audio.voice(this.slainVoice);
     this.audio.playMusic('battle');
   }
@@ -806,6 +807,7 @@ export class Run {
       byType: { ...this.counters.byType }, // Bestiary kills per foe
       tutorial: !!this.guide, // the beginner tutorial: its own reward, no chapter records (economy.applyRunResult)
       rush: this.rush, // Boss Rush: milestones by bosses beaten, the fastest clear
+      court: this.rush ? this.courtId : undefined,
     };
     if (this.onEnd) this.onEnd(result);
   }

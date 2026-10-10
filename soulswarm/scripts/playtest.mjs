@@ -4088,6 +4088,44 @@ errs = await session(async (page) => {
 });
 check('update 14 transfer: no runtime errors', !errs.length, errs[0] || '');
 
+// 53. Update 14: the Fallen Court. Every other week (once Chapter 10 is cleared) the Boss Rush brings the act finales
+//     instead of Act I's bosses, each at its chapter's scaling; same tries, milestones and rewards.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), app = window.__soulswarm, p = app.profile, out = {};
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), q = (sel) => document.querySelector(sel);
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off'; p.flags.bossRush = 'on';
+    // the calendar: odd weeks bring the Fallen Court, but only to a player past Chapter 10
+    const tue = (w) => Date.UTC(2026, 9, 6) + w * 7 * 864e5; // Tuesday 2026-10-06 and the weeks after
+    p.chapter.unlocked = 11; delete p.flags.rushCourt;
+    out.weeks = [0, 1, 2, 3].map((w) => eco.rushCourt(p, tue(w)));
+    p.chapter.unlocked = 6; out.early = [0, 1, 2, 3].map((w) => eco.rushCourt(p, tue(w)));
+    // a Fallen Court run: Morwenna first at Chapter 10's scaling, then Gorrath at Chapter 15's
+    p.chapter.unlocked = 30; p.flags.rushCourt = 'fallen'; p.rush.tries = 0;
+    out.state = { name: eco.rushState(p).name, bosses: eco.rushState(p).bosses.join() };
+    app.startRun(1, { rush: true }); const r = app.run; r.player.hurt = () => {};
+    out.run = { court: r.courtId, ch: r.chapter.id, boss: r.bossId, hud: q('.hud-timer small')?.textContent, intro: q('.ri-name')?.textContent };
+    r.draftLeft = 0; r.draftPicks = 0; r.nextBossAt = r.time + 0.1; for (let i = 0; i < 30 && !r.bossSpawned; i++) r.update(1 / 30);
+    out.run.first = r.boss.id; out.run.lvl = r.lvl;
+    const e = r.bossEnemy; e.hp = 1; r.enemies.damage(e, 50); for (let i = 0; i < 10; i++) r.update(1 / 30);
+    out.run.next = { kills: r.bossKills, ch: r.chapter.id, boss: r.bossId, wm: +r.stats.weaponMul.toFixed(2) };
+    app.exitRun(); document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    // the panel names the court and shows its five bosses
+    const { openRush } = await import('/src/ui/meta/rush.js'); openRush({ app }); await wait(100);
+    out.panel = { name: q('.mm-rush .br-head b')?.textContent, bosses: [...document.querySelectorAll('.mm-rush .br-boss b')].map((b) => b.textContent).join() };
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    delete p.flags.rushCourt; p.flags.bossRush = 'off';
+    return out;
+  });
+  check('fallen court: once Chapter 10 is cleared, the courts alternate week by week (the Hollow Court always before)',
+    new Set(s.weeks).size === 2 && s.weeks[0] !== s.weeks[1] && s.weeks[0] === s.weeks[2] && s.weeks[1] === s.weeks[3] && s.early.join() === 'hollow,hollow,hollow,hollow', JSON.stringify({ w: s.weeks, e: s.early }));
+  check('fallen court: the act finales back to back, each at its chapter (Morwenna at Chapter 10, then Gorrath at 15), named on the panel, the HUD and the intro',
+    s.state.name === 'The Fallen Court' && s.state.bosses === 'morwenna,gorrath,mire,kaelthar,nihl' && s.run.court === 'fallen' && s.run.ch === 10 && s.run.first === 'morwenna' && s.run.lvl === 10
+    && s.run.next.kills === 1 && s.run.next.ch === 15 && s.run.next.boss === 'gorrath' && s.run.next.wm > 1 && s.run.hud === 'The Fallen Court' && s.run.intro === 'The Fallen Court'
+    && s.panel.name === 'The Fallen Court' && s.panel.bosses === 'Morwenna,Gorrath,Mother Mire,Kaelthar,Nihl', JSON.stringify(s));
+});
+check('update 14 fallen court: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
