@@ -98,6 +98,10 @@ export interface Sample {
   mastery: Record<string, number>;
   masteryOpen: boolean;
   masteryAffordable: boolean;
+  /** Lifetime season XP (liveops) and Nova balance earned so far. */
+  seasonXp?: number;
+  /** Lifetime mission counters the achievement lines read (gather:wood, loot:*, upgrade:*, kill:* ...). */
+  counters?: Record<string, number>;
 }
 
 export interface RaidRec {
@@ -138,6 +142,8 @@ export interface RunResult {
   raids: RaidRec[];
   sessions: SessionRec[];
   tierAt: { tier: number; t: number; h: number }[];
+  /** The colony's facilities when each tier was reached: def -> levels (tests/data.pacing.test.ts plans from these). */
+  buildout?: Record<number, Record<string, number[]>>;
   /** Seconds (online) each resource sat at >= 99% of its cap, per tier. */
   capped: Record<number, Record<string, number>>;
   /** Seconds per tier the bot spent in each activity. */
@@ -240,6 +246,8 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       card(false);
     });
     bus.on('reward:granted', (e) => {
+      if (e.reward.colonist) ev('colonist_from', e.source);
+      if (e.reward.nova) ev('nova_from', `${e.source} ${e.reward.nova}`);
       // fixed-content crates from the backpack (Nova caches grant card by card and always get their scene)
       if (e.source === 'crate' && e.item && g.data.item(e.item)?.category === 'crate') tapRow().crateOpens++;
     });
@@ -277,6 +285,13 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     bus.on('colony:tierUp', (e) => {
       ev('tier', String(e.tier));
       res.tierAt.push({ tier: e.tier, t: T(), h: hours() });
+      const out: Record<string, number[]> = {};
+      for (const b of g.state.buildings.list) {
+        const d = g.data.building(b.def);
+        if (!d || d.piece || d.core || d.cosmetic) continue;
+        (out[b.def] ??= []).push(b.level);
+      }
+      (res.buildout ??= {})[e.tier] = out;
     });
     bus.on('world:regionDiscovered', (e) => ev('discover', e.id));
     bus.on('world:poiLooted', (e) => ev('loot', e.poi));
@@ -284,6 +299,7 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     bus.on('expedition:launched', (e) => ev('expedition_out', `${e.dest} ${Math.round(e.seconds / 60)}m`));
     bus.on('expedition:collected', (e) => {
       ev('expedition', `${e.dest}`);
+      if (e.reward.colonist) ev('colonist_from', 'expedition');
       let v = 0;
       for (const [k, n] of Object.entries(e.reward.resources ?? {})) v += (n ?? 0) * (val[k] ?? 1);
       inc('reward:expedition', v);
@@ -296,8 +312,14 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     });
     bus.on('world:eventStarted', (e) => ev('world_event', e.def));
     bus.on('nova:changed', (e) => {
-      if (e.delta > 0) novaEarned += e.delta;
+      if (e.delta > 0) {
+        novaEarned += e.delta;
+        ev('nova', String(e.delta));
+      }
     });
+    // time-based meta: season levels and medals (the report charts when they land over the weeks)
+    bus.on('season:levelUp', (e) => ev('season', String(e.level)));
+    bus.on('achievement:unlocked', (e) => ev('medal', `${e.medal} ${e.id}`));
     bus.on('combat:started', (e) => {
       const st = g.state;
       raid = {
@@ -418,6 +440,8 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       mastery: { ...st.research.mastery },
       masteryOpen: g.sys.research.masteryOpen(),
       masteryAffordable: g.sys.research.masteryInfo().some((m) => m.ready),
+      seasonXp: st.liveops.season.xp,
+      counters: Object.fromEntries(['gather:wood', 'loot:*', 'upgrade:*', 'kill:*', 'defend:*', 'wish:*', 'expedition:collect', 'build:*', 'craft:*'].map((k) => [k, Math.round(st.missions.counters[k] ?? 0)])),
     });
   };
 
@@ -477,6 +501,8 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       // play the session in slices so the bot knows how much session is left
       while (T() - sStart < len && !done()) {
         const left = len - (T() - sStart);
+        // a few ulps short after weeks of play (playTime ~1e5 s): T() + left rounds back to T(), so the session is over
+        if (left < 1e-6) break;
         bot.sessionLeft = left;
         bot.nextGap = gap;
         onlineStep(Math.min(30, left));

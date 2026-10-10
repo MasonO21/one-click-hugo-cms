@@ -131,8 +131,9 @@ describe('wishes.data — achievable at their tier, within a few minutes', () =>
 
 describe('wishes.data — rules and rewards stay cozy and small', () => {
   it('cadence, cap, expiry, mood and hearts match the design', () => {
-    expect(R.interval[0]).toBeGreaterThanOrEqual(8 * 60);
-    expect(R.interval[1]).toBeLessThanOrEqual(12 * 60);
+    // a small goal every few minutes between the bigger ones (the four-week pacing leans on them), never a nag
+    expect(R.interval[0]).toBeGreaterThanOrEqual(5 * 60);
+    expect(R.interval[1]).toBeLessThanOrEqual(10 * 60);
     expect(R.interval[0]).toBeLessThan(R.interval[1]);
     expect(R.firstDelay[0]).toBeLessThan(R.firstDelay[1]);
     expect(R.firstDelay[1]).toBeLessThanOrEqual(R.interval[0]);

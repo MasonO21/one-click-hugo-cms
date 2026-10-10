@@ -41,14 +41,27 @@ describe('persistence & events', () => {
     expect(loaded.derived.housing.beds).toBeGreaterThan(0);
   });
 
-  it('refreshes an elapsed candidate board on load', () => {
+  it('survivors who answered the radio while the app was closed are waiting after a load (only in free seats)', () => {
     const h = makeGame();
-    const oldRefreshAt = h.game.state.colonists.refreshAt;
-    const json = serializeState(h.game.state);
-    h.clock.now += h.game.data.balance.recruitRefreshMinutes * 60000 * 2;
-    const loaded = new Game({ state: deserializeState(json), clock: () => h.clock.now });
+    const st = h.game.state.colonists;
+    const full = st.candidates.map((k) => k.colonist.name);
+    // a full board stays exactly as it was
+    let json = serializeState(h.game.state);
+    h.clock.now += 24 * 3600 * 1000;
+    let loaded = new Game({ state: deserializeState(json), clock: () => h.clock.now });
     loaded.start();
-    expect(loaded.state.colonists.refreshAt).toBeGreaterThan(oldRefreshAt); // a new pool was rolled
+    expect(loaded.state.colonists.candidates.map((k) => k.colonist.name)).toEqual(full);
+    // two seats empty: one interval later one survivor is back, much later both seats are taken
+    st.candidates.splice(0, 2);
+    st.refreshAt = h.clock.now + 60_000;
+    json = serializeState(h.game.state);
+    h.clock.now += 61_000;
+    loaded = new Game({ state: deserializeState(json), clock: () => h.clock.now });
+    loaded.start();
+    expect(loaded.state.colonists.candidates).toHaveLength(2);
+    h.clock.now += 48 * 3600 * 1000;
+    loaded = new Game({ state: deserializeState(json), clock: () => h.clock.now });
+    loaded.start();
     expect(loaded.state.colonists.candidates).toHaveLength(loaded.data.balance.recruitCandidates);
   });
 

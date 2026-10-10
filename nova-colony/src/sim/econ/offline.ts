@@ -16,6 +16,25 @@
  */
 import type { ResourceBag } from '../../data/schema';
 
+/**
+ * Production seconds Welcome Back credits for `away` real seconds: the first `fullSeconds` at full speed (an app
+ * switch or a short break costs nothing), the rest at `efficiency` (the colony keeps busy at a relaxed pace), and
+ * nothing past `capSeconds` of absence.
+ */
+export function creditedSeconds(away: number, capSeconds: number, efficiency: number, fullSeconds = 0): number {
+  const t = Math.min(Math.max(0, away), Math.max(0, capSeconds));
+  const full = Math.min(t, Math.max(0, fullSeconds));
+  return full + (t - full) * Math.max(0, efficiency);
+}
+
+/** The absence (real seconds) that earns `credited` production seconds: creditedSeconds() inverted below the cap. */
+export function absenceFor(credited: number, efficiency: number, fullSeconds = 0): number {
+  const c = Math.max(0, credited);
+  const full = Math.max(0, fullSeconds);
+  if (c <= full || !(efficiency > 0)) return Math.min(c, full) || c;
+  return full + (c - full) / efficiency;
+}
+
 export interface OfflineFlow {
   /** Inputs per minute at the flow's efficiency (empty for simple producers). */
   ins: [string, number][];
@@ -102,12 +121,17 @@ export function simulateOffline(
       v[r] -= Math.min(surplus, n * dt);
     }
 
-    // 3. converters, limited by available inputs
+    // 3. converters, limited by available inputs and paused while every output store is full (like online)
     for (const f of converters) {
       let frac = 1;
       for (const [r, n] of f.ins) {
         const need = n * dt;
         if (need > 0) frac = Math.min(frac, Math.max(0, v[r]) / need);
+      }
+      if (frac > 0 && f.outs.length) {
+        let room = 0;
+        for (const [r, n] of f.outs) if (n > 0) room = Math.max(room, (limit[r] - v[r]) / (n * dt));
+        frac = Math.min(frac, Math.max(0, room));
       }
       if (frac <= 0) continue;
       if (frac > 1) frac = 1;

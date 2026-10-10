@@ -64,6 +64,8 @@ export interface GoalInfo {
 }
 
 const DEFENSE_COUNT = [1, 3, 5, 7, 9, 11, 13];
+/** Copies of a building two or more tiers old the bot still adds (it levels them up after that). */
+const OLD_COPIES = 10;
 /** Share of online time the player is happy to spend walking out (seconds of excursion per second played). */
 const EXPLORE_SHARE = 0.15;
 /** Most excursion time saved up (seconds), and what it takes to set out. */
@@ -585,6 +587,17 @@ export class PacingBot {
     return true;
   }
 
+  /** Empty required worker slots in finished buildings of a def. */
+  private emptySlotsOf(def: string): number {
+    let n = 0;
+    for (const b of this.game.state.buildings.list) {
+      if (b.def !== def || b.status === 'building') continue;
+      const w = this.game.data.building(b.def)?.workers;
+      if (w?.required) n += Math.max(0, w.slots - b.workers.length);
+    }
+    return n;
+  }
+
   private freeWorkers(): number {
     const st = this.game.state;
     return st.colonists.list.filter((c) => c.workplace == null && !c.away).length;
@@ -849,7 +862,11 @@ export class PacingBot {
     const E = g.sys.expeditions;
     if (!E.unlocked() || E.freeSlots() <= 0) return false;
     if (g.state.combat.phase === 'attack') return false;
-    const horizon = this.sessionLeft + this.nextGap; // back by the next check-in
+    let horizon = this.sessionLeft + this.nextGap; // back by the next check-in
+    // with a squad already on a long trip and another one free, an engaged player sends a quick one while still
+    // playing (back before the session ends: a haul to open on the spot)
+    const quick = E.out().length > 0 && !E.out().some((e) => (e.endsAt - g.now()) / 1000 < this.sessionLeft) && this.sessionLeft > 16 * 60;
+    if (quick) horizon = this.sessionLeft - 30;
     let bestId: string | null = null;
     let bestScore = -Infinity;
     const home = E.candidates().filter((c) => !E.isAway(c.id));
@@ -1003,7 +1020,8 @@ export class PacingBot {
 
   /**
    * A reasonable player recruits to staff the colony: when a workplace has an empty slot nobody idle can fill, or a
-   * mission asks for more colonists. (Nothing in the game itself limits growth beyond beds and food.)
+   * mission asks for more colonists. Since the board refills on its own clock (sim/colony/recruitBoard.ts), an engaged
+   * player simply welcomes whoever answered the radio: the board, beds and food set the pace.
    */
   wantColonist(): boolean {
     const g = this.game;
@@ -1012,6 +1030,7 @@ export class PacingBot {
     for (const sm of g.sys.missions.activeByChain('side')) {
       if (sm.type === 'colonists' && !g.sys.missions.progress(sm.id).done && g.sys.missions.progress(sm.id).target - g.state.colonists.list.length <= 4) return true;
     }
+    if (g.data.balance.recruitArrivalMinutes?.length && g.state.colonists.candidates.length > 0) return true;
     if (this.opts.pace === 'fast') return this.openSlots() > this.freeWorkers();
     // idle workplaces (a required slot nobody fills) always; optional slots now and then
     if (this.openRequiredSlots() > this.freeWorkers()) return true;
@@ -1108,8 +1127,9 @@ export class PacingBot {
     const nx = g.sys.progression.next();
     let gate = 0;
     if (nx?.research && !nx.researchDone) for (const r of this.researchChain(nx.research)) gate += g.data.researchDef(r)!.cost;
-    // aim for the gate chain within ~40 min of research, and at least some research every tier
-    const wantRate = Math.max(2 + tier * 6, gate / 40);
+    // aim for the gate chain within ~4 h of research (a player planning over a couple of days of sessions), and at
+    // least some research every tier
+    const wantRate = Math.max(2 + tier * 6, gate / 240);
     if (perMin >= wantRate) return false;
     if (this.anyPending((d) => (d.research_rate ?? 0) > 0)) return false;
     const best = this.bestBy((d) => (d.research_rate ?? 0) > 0 && !d.core, (d) => d.research_rate ?? 0);
@@ -1208,8 +1228,14 @@ export class PacingBot {
     let best: BuildingDef | null = null;
     let bs = -Infinity;
     const free = this.freeWorkers();
+    const tier = g.state.colony.tier;
     for (const d of g.data.buildings) {
       if (!pred(d) || !this.unlocked(d.id)) continue;
+      // a person stops placing more of an outdated building once they have a good handful (they level those up and
+      // build the newer kind instead): no forty research desks at Nano
+      if (d.unlockTier < tier - 1 && this.count(d.id) >= OLD_COPIES) continue;
+      // nobody would place another mine while the last one still waits for workers
+      if (d.workers?.required && this.emptySlotsOf(d.id) >= d.workers.slots) continue;
       let gv = gain(d);
       if (gv <= 0) continue;
       if (d.workers?.required && free < d.workers.slots) gv *= 0.5;
@@ -1242,7 +1268,8 @@ export class PacingBot {
       }
     }
     const newScore = (gain(def) * (def.workers?.required && this.freeWorkers() < def.workers.slots ? 0.5 : 1)) / Math.max(1, newCost);
-    if (lvl && lvlScore >= newScore) {
+    const levelUp = (): boolean => {
+      if (!lvl) return false;
       const c = B.levelUpCost(lvl.id)!;
       if (!this.canSpare(c, frac)) return false;
       if (B.levelUp(lvl.id)) {
@@ -1251,8 +1278,10 @@ export class PacingBot {
         return true;
       }
       return false;
-    }
-    return this.buy(def.id, frac, why);
+    };
+    if (lvl && lvlScore >= newScore) return levelUp();
+    // no room left for a new one (or it is not affordable): a player levels up the ones they have instead
+    return this.buy(def.id, frac, why) || levelUp();
   }
 
   private buildProducer(res: string, frac: number): boolean {
@@ -1546,10 +1575,17 @@ export class PacingBot {
     for (const k of Object.keys(nx?.cost ?? {})) if (eco.amount(k) < (nx!.cost[k] ?? 0)) cands.push(k);
     for (const r of cands) {
       if (r === 'food' || r === 'water') continue;
-      if (eco.isFull(r)) continue;
+      // a "gather N" step counts at the node, so a full store does not stop the player (sim/missions.ts)
+      if (eco.isFull(r) && !this.gatherMission(r)) continue;
       if (this.handSource(r)) return r;
     }
     return null;
+  }
+
+  /** The current main mission asks to gather this resource and is not done yet. */
+  private gatherMission(res: string): boolean {
+    const m = this.game.sys.missions.current();
+    return !!m && m.type === 'gather' && m.target === res && !this.game.sys.missions.progress(m.id).done;
   }
 
   private handSource(res: string): boolean {
@@ -1729,7 +1765,7 @@ export class PacingBot {
       return;
     }
     if (t.kind === 'gather') {
-      if (g.sys.world.isDepleted(t.node) || g.sys.economy.isFull(t.res)) {
+      if (g.sys.world.isDepleted(t.node) || (g.sys.economy.isFull(t.res) && !this.gatherMission(t.res))) {
         this.task = null;
         return;
       }

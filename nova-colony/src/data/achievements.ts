@@ -3,8 +3,10 @@
  * lifetime counters and plain state, see sim/meta/achievementRules.ts); nothing here needs new bookkeeping.
  *
  * Shape:
- *  - Tiered LINES earn bronze / silver / gold (`ach_<line>_<medal>`): bronze in the first hours, silver mid-game,
- *    gold a long-term goal (a full game, Tier 0 -> Titanium, is ~45 h of play).
+ *  - Tiered LINES earn bronze / silver / gold (`ach_<line>_<medal>`): bronze in the first hours, silver in the first
+ *    two weeks, gold from week two to the weeks after Titanium (a full game, Tier 0 -> Titanium, is about four weeks of
+ *    five short sessions a day, ~45 h of play; the counting lines are sized from the pacing bot's lifetime counters
+ *    over those weeks, so the medals keep coming the whole way rather than all in week one).
  *  - ONE-OFFS earn a single 'special' medal (`ach_<name>`): bosses, colony tiers, a legendary colonist.
  *  - The ids are what Game Center / Google Play Games are mapped to (docs/MOBILE.md): never rename one.
  *
@@ -96,7 +98,7 @@ const LINES: AchievementDef[] = [
     desc: (n) => `Finish ${n} buildings and pieces`,
     steps: [
       [25, { xp: 30, resources: { wood: 80, stone: 40 } }],
-      [250, { xp: 150, nova: 3, items: { defense_crate: 1 } }],
+      [280, { xp: 150, nova: 3, items: { defense_crate: 1 } }],
       [1500, { xp: 400, nova: 8, items: { alloy_crate: 1, mystery_crate: 1 } }],
     ],
   }),
@@ -105,8 +107,8 @@ const LINES: AchievementDef[] = [
     desc: (n) => `Gather ${n} wood`,
     steps: [
       [500, { xp: 30, items: { timber_bundle: 1 } }],
-      [5000, { xp: 150, nova: 3, items: { timber_bundle: 2, supply_crate: 1 } }],
-      [50000, { xp: 400, nova: 8, items: { mystery_crate: 2 } }],
+      [75000, { xp: 150, nova: 3, items: { timber_bundle: 2, supply_crate: 1 } }],
+      [150000, { xp: 400, nova: 8, items: { mystery_crate: 2 } }],
     ],
   }),
   ...line({
@@ -114,8 +116,8 @@ const LINES: AchievementDef[] = [
     desc: (n) => `Upgrade buildings ${n} times`,
     steps: [
       [5, { xp: 30, resources: { wood: 60, fiber: 40 } }],
-      [50, { xp: 150, nova: 3, items: { ore_bundle: 1 } }],
-      [300, { xp: 400, nova: 8, items: { tech_crate: 1, steel_bundle: 1 } }],
+      [450, { xp: 150, nova: 3, items: { ore_bundle: 1 } }],
+      [1000, { xp: 400, nova: 8, items: { tech_crate: 1, steel_bundle: 1 } }],
     ],
   }),
 
@@ -124,9 +126,9 @@ const LINES: AchievementDef[] = [
     id: 'treasure_hunter', category: 'explorer', name: 'Treasure Hunter', icon: '🎒', art: 'poi:supply_cache', source: counter('loot'),
     desc: (n) => `Loot ${n} points of interest`,
     steps: [
-      [5, { xp: 35, items: { supply_crate: 1 } }],
-      [25, { xp: 150, nova: 3, items: { mystery_crate: 1 } }],
-      [60, { xp: 400, nova: 8, items: { alloy_crate: 1, mystery_crate: 1 } }],
+      [10, { xp: 35, items: { supply_crate: 1 } }],
+      [1000, { xp: 150, nova: 3, items: { mystery_crate: 1 } }],
+      [2500, { xp: 400, nova: 8, items: { alloy_crate: 1, mystery_crate: 1 } }],
     ],
   }),
   ...line({
@@ -145,8 +147,8 @@ const LINES: AchievementDef[] = [
     desc: (n, raw) => (raw === 1 ? 'Survive an alien raid' : `Survive ${n} alien raids`),
     steps: [
       [1, { xp: 40, resources: { wood: 60, stone: 40 } }],
-      [15, { xp: 170, nova: 3, items: { defense_crate: 2 } }],
-      [75, { xp: 450, nova: 10, items: { alloy_crate: 1, nano_crate: 1 } }],
+      [40, { xp: 170, nova: 3, items: { defense_crate: 2 } }],
+      [100, { xp: 450, nova: 10, items: { alloy_crate: 1, nano_crate: 1 } }],
     ],
   }),
   ...line({
@@ -154,8 +156,8 @@ const LINES: AchievementDef[] = [
     desc: (n) => `Defeat ${n} aliens`,
     steps: [
       [25, { xp: 35, resources: { wood: 60, fiber: 40 }, items: { bandage: 2 } }],
-      [250, { xp: 160, nova: 3, items: { medkit: 3, ore_bundle: 1 } }],
-      [2500, { xp: 450, nova: 10, items: { regen_gel: 2, nano_crate: 1 } }],
+      [2000, { xp: 160, nova: 3, items: { medkit: 3, ore_bundle: 1 } }],
+      [10000, { xp: 450, nova: 10, items: { regen_gel: 2, nano_crate: 1 } }],
     ],
   }),
 
@@ -165,7 +167,7 @@ const LINES: AchievementDef[] = [
     desc: (n, raw) => (raw >= 90 ? 'Complete every research project' : `Complete ${n} research projects`),
     steps: [
       [5, { xp: 40, rp: 15 }],
-      [35, { xp: 170, nova: 3, items: { research_chip: 2 } }],
+      [50, { xp: 170, nova: 3, items: { research_chip: 2 } }],
       [90, { xp: 500, nova: 12, items: { quantum_chip: 1, data_core: 2 } }],
     ],
   }),
@@ -176,8 +178,8 @@ const LINES: AchievementDef[] = [
     desc: (n) => `Have ${n} colonists living in your colony`,
     steps: [
       [3, { xp: 35, resources: { food: 60, water: 60 } }],
-      [15, { xp: 170, nova: 3, items: { rations_crate: 2 } }],
-      [40, { xp: 450, nova: 10, items: { colonist_crate: 1, nano_crate: 1 } }],
+      [25, { xp: 170, nova: 3, items: { rations_crate: 2 } }],
+      [50, { xp: 450, nova: 10, items: { colonist_crate: 1, nano_crate: 1 } }],
     ],
   }),
 
@@ -186,8 +188,8 @@ const LINES: AchievementDef[] = [
     desc: (n, raw) => (raw === 1 ? 'Grant a colonist’s wish' : `Grant ${n} colonists’ wishes`),
     steps: [
       [3, { xp: 40, resources: { food: 80, water: 60 } }],
-      [25, { xp: 220, nova: 4, items: { rations_crate: 2 } }],
-      [100, { xp: 520, nova: 10, items: { colonist_crate: 1, nano_crate: 1 } }],
+      [75, { xp: 220, nova: 4, items: { rations_crate: 2 } }],
+      [250, { xp: 520, nova: 10, items: { colonist_crate: 1, nano_crate: 1 } }],
     ],
   }),
 
@@ -197,7 +199,7 @@ const LINES: AchievementDef[] = [
     desc: (n) => `Craft ${n} items`,
     steps: [
       [5, { xp: 30, resources: { wood: 60, stone: 40 } }],
-      [50, { xp: 150, nova: 3, items: { machine_parts: 2 } }],
+      [40, { xp: 150, nova: 3, items: { machine_parts: 2 } }],
       [400, { xp: 400, nova: 8, items: { robotic_core: 1, tech_crate: 1 } }],
     ],
   }),
@@ -208,8 +210,8 @@ const LINES: AchievementDef[] = [
     desc: (n, raw) => (raw === 1 ? 'Bring home an expedition haul' : `Bring home ${n} expedition hauls`),
     steps: [
       [1, { xp: 50, items: { supply_crate: 1 } }],
-      [15, { xp: 180, nova: 3, items: { mystery_crate: 1 } }],
-      [75, { xp: 450, nova: 10, items: { alloy_crate: 1, mystery_crate: 1 } }],
+      [60, { xp: 180, nova: 3, items: { mystery_crate: 1 } }],
+      [350, { xp: 450, nova: 10, items: { alloy_crate: 1, mystery_crate: 1 } }],
     ],
   }),
   ...line({

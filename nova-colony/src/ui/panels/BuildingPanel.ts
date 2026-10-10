@@ -11,7 +11,6 @@ import { WORLD_CELLS } from '../../core/constants';
 import { bagCovers, bagIsEmpty } from '../../core/bag';
 import { fmt } from '../../core/format';
 import { buildingEffects } from '../logic/describe';
-import { refundEstimate } from '../logic/build';
 import { jobOf, stars } from '../logic/colonist';
 import { bar, btn, costChips, emptyState, portrait, recipeChips, section, tagChips } from '../widgets';
 import { fill, h, replay, setVar, type Child } from '../dom';
@@ -225,6 +224,10 @@ export class BuildingPanel extends Panel {
       }
       case 'low_power':
         return { kind: 'lowpower', text: 'Low power — running slower. Build more generators.' };
+      case 'full': {
+        const outs = Object.keys(d.produces ?? {}).map((id) => this.data.resource(id)?.name ?? id);
+        return { kind: 'full', text: `Paused — ${outs.join(', ') || 'its'} storage is full. Its ingredients wait in store.` };
+      }
     }
     return null;
   }
@@ -624,8 +627,8 @@ export class BuildingPanel extends Panel {
     wrap.appendChild(grid);
 
     if (this.removing) {
-      const base = d.piece ? bs.cost(d.id, b.tier) : bs.cost(d.id);
-      const refund = refundEstimate(base, b.level, d.levelCostMult, this.data.balance.removeRefund);
+      // exactly what was paid for it (the next copy may cost more than this one did)
+      const refund = bs.refund(b.id);
       wrap.appendChild(
         h(
           'div',

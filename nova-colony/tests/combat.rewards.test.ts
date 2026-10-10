@@ -22,8 +22,8 @@ describe('victory rewards & core breach', () => {
     expect(retreated).toEqual([{ wave: 1 }]);
     expect(toasts.some((x) => x.text === 'The aliens retreated — your colony held!')).toBe(true);
     expect(ended).toHaveLength(1);
-    // base tier-0 chest {wood 120, stone 80, fiber 40, rp 20, nova 5, xp 50} at 50% (no kills)
-    expect(ended[0].reward).toEqual({ resources: { wood: 60, stone: 40, fiber: 20 }, rp: 10, nova: 3, xp: 25 });
+    // base tier-0 chest {wood 120, stone 80, fiber 40, rp 20, nova 1, xp 50} at 50% (no kills; Nova rounds up)
+    expect(ended[0].reward).toEqual({ resources: { wood: 60, stone: 40, fiber: 20 }, rp: 10, nova: 1, xp: 25 });
     expect(c.pendingReward).toEqual(ended[0].reward);
     expect((opens.find((o) => o.panel === 'victory')?.arg as { reason: string }).reason).toBe('breach');
     expect(c.wave).toBe(1);

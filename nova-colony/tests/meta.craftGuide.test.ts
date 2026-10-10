@@ -16,8 +16,9 @@ function colonyAt(tier: number, skip: string[]): Game {
   const game = new Game({ seed: 5, services: createMockServices(), clock: () => (now += 16) });
   game.start();
   const rich = () => {
-    for (const r of game.data.resources) game.state.resources.amounts[r.id] = 1e6;
-    game.state.research.points = 1e7;
+    // plenty for any paced tier-up or research (data/pacing.ts: Titanium asks over a million alloy)
+    for (const r of game.data.resources) game.state.resources.amounts[r.id] = 1e8;
+    game.state.research.points = 1e9;
   };
   const researchAll = () => {
     let any = true;

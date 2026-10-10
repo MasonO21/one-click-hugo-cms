@@ -4,8 +4,11 @@
  * Planning rules (fill order):
  *   1. Manual colonists keep their (valid) workplace and occupy slots first.
  *   2. Required-worker buildings are staffed before optional ones.
- *   3. Within a group, specialty matches are placed first, then anyone fills the leftovers.
- *   4. Skill breaks ties; currently-assigned workers get a stability bonus so jobs never flip-flop.
+ *   3. Within a group, jobs that make what the next tier-up still lacks come first and jobs whose every output store
+ *      is full come last (with more jobs than hands, nobody chops wood for a full shed while the iron mine stands
+ *      empty); otherwise the build order.
+ *   4. Within that, specialty matches are placed first, then anyone fills the leftovers.
+ *   5. Skill breaks ties; currently-assigned workers get a stability bonus so jobs never flip-flop.
  * `BuildingInstance.workers` is kept in sync here (it is the construction agent's slice, but the arrays are ours).
  */
 import type { Game } from '../../core/Game';
@@ -36,6 +39,39 @@ export function syncWorkers(layout: Layout, colonists: Colonist[]): void {
     const have = p.b.workers;
     if (!have || have.length !== want.length || have.some((v, i) => v !== want[i])) p.b.workers = want;
   }
+}
+
+/** What the next tier-up still lacks, re-read once a minute of play (jobs do not shuffle every time a store ticks). */
+const lackingCache = new WeakMap<Game, { at: number; set: Set<string> }>();
+function lackingFor(game: Game): Set<string> {
+  const now = game.state.playTime;
+  const hit = lackingCache.get(game);
+  if (hit && now - hit.at < 60 && now >= hit.at) return hit.set;
+  const set = new Set<string>();
+  const next = game.sys.progression?.next?.();
+  if (next) for (const [r, n] of Object.entries(next.cost)) if (game.sys.economy.amount(r) < (n ?? 0)) set.add(r);
+  lackingCache.set(game, { at: now, set });
+  return set;
+}
+
+/**
+ * Jobs in need order: outputs the next tier-up still lacks first, then the rest, then those whose every output store
+ * is full (stable within each band: the build order). Only matters when there are more jobs than hands.
+ */
+function byNeed(game: Game, group: Place[]): Place[] {
+  if (group.length < 2) return group;
+  const eco = game.sys.economy;
+  const lacking = lackingFor(game);
+  const band = (p: Place): number => {
+    const out = p.def.produces;
+    if (!out) return 1;
+    const ks = Object.keys(out);
+    if (ks.some((r) => lacking.has(r) && !eco.isFull(r))) return 0;
+    return ks.length && ks.every((r) => eco.isFull(r)) ? 2 : 1;
+  };
+  const bands: Place[][] = [[], [], []];
+  for (const p of group) bands[band(p)].push(p);
+  return bands[0].length === group.length || bands[1].length === group.length ? group : [...bands[0], ...bands[1], ...bands[2]];
 }
 
 function emitAssigned(game: Game, c: Colonist): void {
@@ -102,8 +138,9 @@ export function autoAssign(game: Game, layout: Layout, colonists: Colonist[]): n
     occ.set(p.id, (occ.get(p.id) ?? 0) + take);
   };
   for (const group of [layout.required, layout.optional]) {
-    for (const p of group) fill(p, true);
-    for (const p of group) fill(p, false);
+    const ordered = byNeed(game, group);
+    for (const p of ordered) fill(p, true);
+    for (const p of ordered) fill(p, false);
   }
 
   // 3. apply the diff

@@ -3,6 +3,7 @@ import { BUILDINGS } from './buildings';
 import { RECIPES } from './recipes';
 import { VEHICLES } from './vehicles';
 import { BIOMES } from './world';
+import { PACING, pace, roundCost, scaleBag } from './pacing';
 
 /**
  * Technology tree: 90 nodes across all 11 categories. "Spend RP, unlock instantly."
@@ -180,8 +181,11 @@ function unlocksFor(id: string): ResearchDef['unlocks'] | undefined {
 
 const POS = layout(NODES);
 
+/** RP and resource costs are paced by the tech's tier (data/pacing.ts). */
 export const RESEARCH: ResearchDef[] = NODES.map((n) => {
-  const def: ResearchDef = { ...n, pos: POS.get(n.id)! };
+  const m = pace(PACING.research, n.tier);
+  const def: ResearchDef = { ...n, cost: m === 1 ? n.cost : roundCost(n.cost * m), pos: POS.get(n.id)! };
+  if (n.resources) def.resources = scaleBag(n.resources, m);
   const unlocks = unlocksFor(n.id);
   if (unlocks) def.unlocks = unlocks;
   return def;

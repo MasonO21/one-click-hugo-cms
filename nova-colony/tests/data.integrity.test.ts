@@ -829,8 +829,8 @@ describe('data.integrity — monetization & live-ops', () => {
     const free = chestsAt('free');
     expect(free.length).toBeGreaterThanOrEqual(2);
     expect(free.every((c) => c.id === 'chest_supply')).toBe(true);
-    // bonus levels: a repeatable Explorer’s Case every 400 XP after the last level
-    expect(data.season.bonus).toEqual({ xp: 400, reward: { items: { chest_explorer: 1 } } });
+    // bonus levels: a repeatable Explorer’s Case every level's worth of XP after the last level
+    expect(data.season.bonus).toEqual({ xp: data.season.xpPerLevel, reward: { items: { chest_explorer: 1 } } });
   });
 
   it('daily login is 7 days (resources, mats, Nova, colonist, defense crate, Nova, legendary) and the spin wheel is sane', () => {
@@ -861,8 +861,11 @@ describe('data.integrity — balance sanity', () => {
     expect(b.removeRefund).toBe(1);
     expect(b.warningSeconds).toBe(120);
     expect(b.offlineHours).toBeGreaterThanOrEqual(8);
-    expect(b.offlineEfficiency).toBeGreaterThan(0.5);
+    // offline keeps the colony busy at a relaxed pace after the first minutes at full speed (data/balance.ts): generous,
+    // but five short sessions a day must not leave Welcome Back earning more than playing (the pacing bot checks <= 40%)
+    expect(b.offlineEfficiency).toBeGreaterThanOrEqual(0.05);
     expect(b.offlineEfficiency).toBeLessThanOrEqual(1);
+    expect(b.offlineFullMinutes ?? 0).toBeGreaterThanOrEqual(5);
     expect(b.waveScaling).toBeLessThanOrEqual(0.15);
     expect(data.tiers.map((t) => t.index)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(data.tiers.map((t) => t.id)).toEqual(['wood', 'reinforced', 'stone', 'steel', 'alloy', 'nano', 'titanium']);

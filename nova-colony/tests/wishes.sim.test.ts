@@ -48,15 +48,16 @@ describe('wishes — when they appear', () => {
     expect(rig.game.sys.wishes.unlocked()).toBe(true);
   });
 
-  it('come every 8–12 minutes of online play', () => {
+  it('come every few minutes of online play (WISH_RULES.interval)', () => {
     const crew = Array.from({ length: 16 }, () => 'gatherer' as const);
     const rig = makeColony({ seed: 99, tier: 2, crew, tower: false, data: roomyData() });
     rig.game.state.tutorial.done = true;
     for (const c of colonists(rig)) c.activity = 'idle';
     const log = offeredLog(rig);
     tickWishes(rig, 2 * 60 * 60);
-    expect(log.length).toBeGreaterThanOrEqual(10);
-    expect(log.length).toBeLessThanOrEqual(15);
+    const span = 2 * 60 * 60;
+    expect(log.length).toBeGreaterThanOrEqual(Math.floor(span / R.interval[1]));
+    expect(log.length).toBeLessThanOrEqual(Math.ceil(span / R.interval[0]) + 1);
     for (let i = 1; i < log.length; i++) {
       const gap = log[i].at - log[i - 1].at;
       expect(gap).toBeGreaterThanOrEqual(R.interval[0]);

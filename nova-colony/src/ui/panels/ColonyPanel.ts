@@ -6,14 +6,15 @@ import { Panel, type PanelTitle } from './Panel';
 import type { TierUpRequirements } from '../../sim/progression';
 import { fmt, fmtDuration } from '../../core/format';
 import { bagCovers } from '../../core/bag';
-import { btn, costChips, section, unlockChip } from '../widgets';
+import { btn, section, unlockChip } from '../widgets';
 import { tierUnlockGroups } from '../logic/describe';
 import { fill, h, setVar } from '../dom';
-import { alienArt, artOrEmoji, buildingArt, hudArt, iconEl, resourceArt, tierArt } from '../art';
+import { alienArt, artOrEmoji, buildingArt, hudArt, iconEl, resIcon, resourceArt, tierArt } from '../art';
 
 export class ColonyPanel extends Panel {
   readonly name = 'colony';
   private laddered = false;
+  private acc = 0;
 
   title(): PanelTitle {
     return { icon: '🛰️', art: buildingArt('command_center'), text: this.st.colony.name || 'Your Colony' };
@@ -24,6 +25,45 @@ export class ColonyPanel extends Panel {
     const req = this.requirements();
     const aff = req ? (bagCovers(g.state.resources.amounts, req.cost) ? 1 : 0) : 2;
     return `${g.state.colony.tier}|${g.state.research.completed.length}|${aff}|${g.state.buildings.list.length}|${g.state.colonists.list.length}`;
+  }
+
+  /**
+   * The tier-up cost as "have / need" chips: a tier is a goal of a few days now (data/pacing.ts), so the card shows how
+   * far along each store is, updated live (live()).
+   */
+  private progressChips(cost: Record<string, number | undefined>): HTMLElement {
+    const wrap = h('div', { class: 'chips cost tier-progress' });
+    for (const [id, need] of Object.entries(cost)) {
+      if (!need || !(need > 0)) continue;
+      const d = this.data.resource(id);
+      const have = h('b', { class: 'num' });
+      const chip = h('span', { class: 'chip', title: d?.name ?? id, data: { res: id } }, resIcon(id, d?.icon ?? '•'), have, ` / ${fmt(need)}`);
+      wrap.appendChild(chip);
+      this.paintProgress(chip, have, id, need);
+    }
+    if (!wrap.childElementCount) wrap.appendChild(h('span', { class: 'chip good', text: 'Free' }));
+    return wrap;
+  }
+
+  private paintProgress(chip: HTMLElement, have: HTMLElement, id: string, need: number): void {
+    const n = Math.min(need, Math.floor(this.st.resources.amounts[id] ?? 0));
+    const text = fmt(n);
+    if (have.textContent !== text) have.textContent = text;
+    chip.classList.toggle('bad', n < need);
+    chip.classList.toggle('good', n >= need);
+  }
+
+  override live(dt: number): void {
+    this.acc += dt;
+    if (this.acc < 0.5) return;
+    this.acc = 0;
+    const req = this.requirements();
+    if (!req) return;
+    for (const chip of this.body.querySelectorAll<HTMLElement>('.tier-progress [data-res]')) {
+      const id = chip.dataset.res!;
+      const have = chip.querySelector<HTMLElement>('b');
+      if (have && req.cost[id]) this.paintProgress(chip, have, id, req.cost[id]!);
+    }
   }
 
   /** Requirements from the system, or derived from data when the system has none. */
@@ -99,7 +139,7 @@ export class ColonyPanel extends Panel {
           ),
         );
       }
-      rows.appendChild(h('div', { class: 'row req' }, h('span', { class: 'chip ' + (req.affordable ? 'good' : 'bad'), text: req.affordable ? '✔ Resources' : '✖ Resources' }), costChips(this.data, req.cost, g.state.resources.amounts)));
+      rows.appendChild(h('div', { class: 'row req' }, h('span', { class: 'chip ' + (req.affordable ? 'good' : 'bad'), text: req.affordable ? '✔ Resources' : '✖ Resources' }), this.progressChips(req.cost)));
       card.appendChild(rows);
       const ok = req.researchDone && req.affordable;
       const reason = !req.researchDone ? 'Research it first' : !req.affordable ? 'Gather a few more resources' : false;

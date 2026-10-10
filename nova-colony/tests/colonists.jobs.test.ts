@@ -26,6 +26,22 @@ describe('job assignment', () => {
     expect(farm.workers).toEqual([]);
   });
 
+  it('with more jobs than hands: what the next tier-up lacks first, full stores last', () => {
+    const { game } = makeGame();
+    // the next tier (Reinforced) wants wood, stone and fiber; stone is short, wood is plentiful
+    const camp = addBuilding(game, 'logging_camp', 130, 130); // wood (+fiber), 2 gatherer slots, required
+    const quarry = addBuilding(game, 'quarry', 136, 130); // stone, 2 miner slots, required
+    game.sys.economy.recompute();
+    game.state.resources.amounts.wood = game.sys.economy.capacity('wood');
+    game.state.resources.amounts.fiber = game.sys.economy.capacity('fiber');
+    game.state.resources.amounts.stone = 0;
+    const a = addColonist(game, 'common', { specialty: 'cook', skill: 1 });
+    const b = addColonist(game, 'common', { specialty: 'cook', skill: 1 });
+    game.sys.colonists.autoAssign();
+    expect(new Set(quarry.workers)).toEqual(new Set([a.id, b.id]));
+    expect(camp.workers).toEqual([]);
+  });
+
   it('prefers specialty matches over raw skill', () => {
     const { game } = makeGame();
     const camp = addBuilding(game, 'logging_camp', 130, 130); // 2 slots

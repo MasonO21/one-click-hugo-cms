@@ -288,7 +288,7 @@ describe('analytics hooks', () => {
     (globalThis as Record<string, unknown>).window = new EventTarget();
     const r = rig();
     r.game.state.playTime = 125;
-    r.game.bus.emit('resource:gained', { id: 'wood', amount: 5, source: 'gather' }); // 5 of m01's wood target
+    r.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 5 } }); // 5 of m01's wood target
     const pct = Math.round((5 / r.game.data.mission('m01_wood')!.count) * 100);
     expect(pct).toBeGreaterThan(0);
     doc.visibilityState = 'hidden';

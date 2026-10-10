@@ -10,7 +10,7 @@
  *  - storage  — the first resource stops filling while away. "Full" means what Welcome Back will credit: offline
  *               gains fill storage up to capacity × `balance.offlineStorageMult`, so that is when production of it
  *               really stops. Timed by running the economy's own offline model (`simulateOffline`), so converters,
- *               upkeep paid from fresh production and the 80% offline efficiency all count. Only when that is at
+ *               upkeep paid from fresh production and the offline efficiency (full speed for the first minutes, then the relaxed pace) all count. Only when that is at
  *               least 30 minutes away and before the offline cap.
  *  - offline  — the offline cap (8 h × research/VIP bonuses): the colony stops producing until the player is back.
  *               Only when something is still being made at that point.
@@ -28,7 +28,7 @@
  * OWNER: meta agent (platform). Tests: tests/notify.plan.test.ts.
  */
 import type { Game } from '../core/Game';
-import { simulateOffline, type OfflineModel } from '../sim/econ/offline';
+import { creditedSeconds, simulateOffline, type OfflineModel } from '../sim/econ/offline';
 
 export type NotifyKind = 'storage' | 'offline' | 'daily' | 'miss' | 'expedition';
 
@@ -80,8 +80,10 @@ export interface NotifySnapshot {
   offline: {
     /** The economy's offline flow model (EconomySystem.offlineModel, after a recompute). */
     model: OfflineModel;
-    /** Share of real time credited while away (balance.offlineEfficiency). */
+    /** Share of real time credited while away (balance.offlineEfficiency)... */
     efficiency: number;
+    /** ...after the first this-many seconds at full speed (balance.offlineFullMinutes). */
+    fullSeconds?: number;
     /** Real seconds of absence that still produce (offlineHours × 3600 × the offlineHours modifier). */
     capSeconds: number;
     /** Welcome Back fills storage up to capacity × this (balance.offlineStorageMult). */
@@ -166,7 +168,7 @@ type SimResult = ReturnType<typeof simulateOffline>;
  * or with no net production never count.
  */
 export function forecastStorage(snap: NotifySnapshot, minMs = 0): StorageForecast {
-  const { model, efficiency, capSeconds, storageMult } = snap.offline;
+  const { model, efficiency, capSeconds, storageMult, fullSeconds = 0 } = snap.offline;
   if (!(efficiency > 0) || !(capSeconds > 0)) return { firstFullMs: null, resources: [], fullAtMs: {}, producingAtCap: false };
   const mult = storageMult > 0 ? storageMult : 1;
   const cap: Record<string, number> = {};
@@ -188,7 +190,7 @@ export function forecastStorage(snap: NotifySnapshot, minMs = 0): StorageForecas
   // a resource already at its limit is not news (the player just saw it)
   const candidates = [...watched].filter((r) => (room[r] ?? 0) >= 1);
 
-  const sim = (realSeconds: number): SimResult => simulateOffline(model, realSeconds * efficiency, snap.amounts, cap);
+  const sim = (realSeconds: number): SimResult => simulateOffline(model, creditedSeconds(realSeconds, capSeconds, efficiency, fullSeconds), snap.amounts, cap);
   const levelOf = (res: SimResult, r: string) => (snap.amounts[r] ?? 0) + (res.gains[r] ?? 0) - (res.spent[r] ?? 0);
   const isFull = (res: SimResult, r: string) => (res.gains[r] ?? 0) - (res.spent[r] ?? 0) >= room[r];
 
@@ -396,6 +398,7 @@ export function notifySnapshot(game: Game): NotifySnapshot {
     offline: {
       model: eco.offlineModel(),
       efficiency: bal.offlineEfficiency,
+      fullSeconds: (bal.offlineFullMinutes ?? 0) * 60,
       capSeconds: bal.offlineHours * 3600 * eco.modifier('offlineHours'),
       storageMult: bal.offlineStorageMult ?? 1,
     },

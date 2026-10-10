@@ -25,10 +25,22 @@ export function tierLag(game: Game, inv: InvasionDef): number {
   return Math.max(0, game.state.colony.tier - inv.tier);
 }
 
-/** Count multiplier for the next wave: waveScaling per wave survived at this tier (+ lag fallback). */
+declare module '../../data/schema' {
+  interface BalanceDef {
+    /**
+     * Only this many waves survived at a tier still grow the raids (waveScaling each): tiers last days now, and a raid
+     * must never snowball while the colony saves up for the next tier. Missing = no plateau.
+     */
+    waveScalingWaves?: number;
+  }
+}
+
+/** Count multiplier for the next wave: waveScaling per wave survived at this tier, up to a plateau (+ lag fallback). */
 export function waveCountScale(game: Game, inv: InvasionDef): number {
   const c = game.state.combat;
-  return (1 + game.data.balance.waveScaling * c.waveAtTier) * (1 + 0.35 * tierLag(game, inv));
+  const cap = game.data.balance.waveScalingWaves;
+  const waves = cap != null && cap >= 0 ? Math.min(c.waveAtTier, cap) : c.waveAtTier;
+  return (1 + game.data.balance.waveScaling * waves) * (1 + 0.35 * tierLag(game, inv));
 }
 
 /** Point on the spawn ring at `angle`, nudged onto walkable ground when possible. */

@@ -145,14 +145,16 @@ describe('construction: placement rules', () => {
     expect(b.cost('floor', 0)).toEqual({ wood: 2 });
     expect(b.cost('door', 0)).toEqual({ wood: 5 }); // 4 × 1.2 rounded up
     expect(b.cost('window', 0)).toEqual({ wood: 5, fiber: 2 });
-    expect(b.cost('wall', 1)).toEqual({ wood: 6, fiber: 3 });
-    expect(b.cost('wall', 2)).toEqual({ stone: 8, wood: 2 });
+    // later materials follow their tier's (paced) piece cost
+    expect(b.cost('wall', 1)).toEqual(game.data.tier(1).pieceCost);
+    expect(b.cost('wall', 2)).toEqual(game.data.tier(2).pieceCost);
+    expect(Object.keys(b.cost('wall', 2)).sort()).toEqual(['stone', 'wood']);
     expect(b.cost('campfire')).toEqual({ wood: 20, stone: 20 });
     // without an explicit tier, pieces follow the build preview's material (clamped to the colony tier)
     game.view.build.tier = 2;
     expect(b.cost('wall')).toEqual({ wood: 4 });
     game.state.colony.tier = 2;
-    expect(b.cost('wall')).toEqual({ stone: 8, wood: 2 });
+    expect(b.cost('wall')).toEqual(game.data.tier(2).pieceCost);
   });
 });
 
@@ -344,6 +346,7 @@ describe('construction: move & rotate', () => {
 describe('construction: remove & refunds', () => {
   it('refunds the full invested cost including level-ups and material upgrades', () => {
     const { game, b, events } = makeGame({ resources: { wood: 100, fiber: 20 } });
+    const t1 = game.data.tier(1).pieceCost;
     const crate = b.place('storage_crate', C + 3, C, 0, { instant: true })!;
     expect(b.levelUp(crate)).toBe(true); // 15 × 1.8 = 27
     expect(game.state.resources.amounts.wood).toBe(100 - 15 - 27);
@@ -360,7 +363,7 @@ describe('construction: remove & refunds', () => {
     game.state.colony.tier = 1;
     const wall = b.place('wall', C + 3, C, 0, { tier: 0, instant: true })!;
     expect(b.tierUp(wall, 1)).toBe(true);
-    expect(b.refund(wall)).toEqual({ wood: 10, fiber: 3 });
+    expect(b.refund(wall)).toEqual({ wood: 4 + (t1.wood ?? 0), fiber: t1.fiber });
     b.remove(wall);
     expect(game.state.resources.amounts).toMatchObject({ wood: 100, fiber: 20 });
   });

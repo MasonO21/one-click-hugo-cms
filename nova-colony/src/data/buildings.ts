@@ -1,5 +1,6 @@
 import type { BuildingDef } from './schema';
 import { COSMETIC_DECOR } from './decorCosmetic';
+import { PACING, pace, scaleBag } from './pacing';
 
 /**
  * Building catalogue for the full Wood -> Titanium journey (~150 defs).
@@ -28,7 +29,8 @@ const GEN = { maxLevel: 3, levelCostMult: 1.8, levelEffect: 0.5 };
 const GUN = { maxLevel: 5, levelCostMult: 1.8, levelEffect: 0.4 };
 const LAB = { maxLevel: 3, levelCostMult: 2, levelEffect: 0.5 };
 
-export const BUILDINGS: BuildingDef[] = [
+/** As authored; the exported BUILDINGS carry the paced costs and storage (data/pacing.ts). */
+const AUTHORED: BuildingDef[] = [
   // ================================================================== core
   {
     id: 'command_center', name: 'Command Center', icon: '🛰️', category: 'utility', core: true,
@@ -686,3 +688,16 @@ export const BUILDINGS: BuildingDef[] = [
   // ================================================================== cosmetic decor (unlocked by decoration cosmetics)
   ...COSMETIC_DECOR,
 ];
+
+/**
+ * Costs and storage by unlock tier (data/pacing.ts): pieces follow their material table; decor (and cosmetics) stay as
+ * authored — a lantern, a bench or a fountain is a small cozy wish at any tier, never a goal to save up for.
+ */
+function paced(b: BuildingDef): BuildingDef {
+  if (b.cosmetic || b.category === 'decor') return b;
+  const out: BuildingDef = { ...b, cost: scaleBag(b.cost, pace(b.piece ? PACING.piece : PACING.build, b.unlockTier)) };
+  if (b.storage && !b.core) out.storage = scaleBag(b.storage, pace(PACING.storage, b.unlockTier));
+  return out;
+}
+
+export const BUILDINGS: BuildingDef[] = AUTHORED.map(paced);

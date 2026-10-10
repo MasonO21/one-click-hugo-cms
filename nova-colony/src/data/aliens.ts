@@ -1,3 +1,4 @@
+import { PACING, pace, roundCost, scaleBag } from './pacing';
 import type { AlienDef, InvasionDef } from './schema';
 
 /**
@@ -73,14 +74,14 @@ export const ALIENS: AlienDef[] = [
  * One table per colony tier. Counts are multiplied by 1 + BalanceDef.waveScaling x wavesAtThisTier. Rewards are
  * the base victory chest (x2 with the bonus-spoils ad). Bosses join every Nth wave.
  */
-export const INVASIONS: InvasionDef[] = [
+const AUTHORED_INVASIONS: InvasionDef[] = [
   {
     tier: 0,
     groups: [
       { alien: 'crawler', count: 5, delay: 0 },
       { alien: 'crawler', count: 3, delay: 12 },
     ],
-    reward: { resources: { wood: 120, stone: 80, fiber: 40 }, rp: 20, nova: 5, xp: 50 },
+    reward: { resources: { wood: 120, stone: 80, fiber: 40 }, rp: 20, nova: 1, xp: 50 },
   },
   {
     tier: 1,
@@ -90,7 +91,7 @@ export const INVASIONS: InvasionDef[] = [
       { alien: 'spitter', count: 2, delay: 26 },
       { alien: 'brute', count: 1, delay: 40 },
     ],
-    reward: { resources: { wood: 240, stone: 160, fiber: 100, food: 60 }, rp: 45, nova: 6, xp: 70 },
+    reward: { resources: { wood: 240, stone: 160, fiber: 100, food: 60 }, rp: 45, nova: 1, xp: 70 },
   },
   {
     tier: 2,
@@ -101,7 +102,7 @@ export const INVASIONS: InvasionDef[] = [
       { alien: 'brute', count: 2, delay: 36 },
     ],
     boss: { alien: 'elder_brute', every: 5 },
-    reward: { resources: { stone: 320, iron: 120, coal: 70, wood: 200, food: 80 }, rp: 90, nova: 8, xp: 90 },
+    reward: { resources: { stone: 320, iron: 120, coal: 70, wood: 200, food: 80 }, rp: 90, nova: 2, xp: 90 },
   },
   {
     tier: 3,
@@ -113,7 +114,7 @@ export const INVASIONS: InvasionDef[] = [
       { alien: 'burrower', count: 5, delay: 45 },
     ],
     boss: { alien: 'elder_brute', every: 4 },
-    reward: { resources: { steel: 120, iron: 220, copper: 130, coal: 90, stone: 300, electronics: 20 }, rp: 180, nova: 10, xp: 110 },
+    reward: { resources: { steel: 120, iron: 220, copper: 130, coal: 90, stone: 300, electronics: 20 }, rp: 180, nova: 2, xp: 110 },
   },
   {
     tier: 4,
@@ -128,7 +129,7 @@ export const INVASIONS: InvasionDef[] = [
       { alien: 'queen', count: 1, delay: 60 },
     ],
     boss: { alien: 'hive_mother', every: 5 },
-    reward: { resources: { alloy: 55, steel: 200, electronics: 60, crystal: 40, copper: 140 }, rp: 380, nova: 12, xp: 140 },
+    reward: { resources: { alloy: 55, steel: 200, electronics: 60, crystal: 40, copper: 140 }, rp: 380, nova: 3, xp: 140 },
   },
   {
     tier: 5,
@@ -145,7 +146,7 @@ export const INVASIONS: InvasionDef[] = [
       { alien: 'titan', count: 1, delay: 90 },
     ],
     boss: { alien: 'hive_mother', every: 4 },
-    reward: { resources: { alloy: 120, nano: 25, energy_cell: 50, electronics: 90, crystal: 60 }, rp: 800, nova: 14, xp: 180 },
+    reward: { resources: { alloy: 120, nano: 25, energy_cell: 50, electronics: 90, crystal: 60 }, rp: 800, nova: 3, xp: 180 },
   },
   {
     tier: 6,
@@ -160,6 +161,13 @@ export const INVASIONS: InvasionDef[] = [
       { alien: 'titan', count: 2, delay: 70 },
     ],
     boss: { alien: 'titan_prime', every: 3 },
-    reward: { resources: { titanium: 70, nano: 45, energy_cell: 90, alloy: 150, electronics: 120 }, rp: 1800, nova: 18, xp: 240 },
+    reward: { resources: { titanium: 70, nano: 45, energy_cell: 90, alloy: 150, electronics: 120 }, rp: 1800, nova: 4, xp: 240 },
   },
 ];
+
+/** Victory chests grow with the colony like mission rewards do (data/pacing.ts `missionReward`). */
+export const INVASIONS: InvasionDef[] = AUTHORED_INVASIONS.map((inv) => {
+  const m = pace(PACING.missionReward, inv.tier);
+  if (m === 1) return inv;
+  return { ...inv, reward: { ...inv.reward, resources: scaleBag(inv.reward.resources, m), ...(inv.reward.rp ? { rp: roundCost(inv.reward.rp * m) } : {}) } };
+});

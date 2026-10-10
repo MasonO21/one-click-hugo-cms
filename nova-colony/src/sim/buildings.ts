@@ -18,6 +18,7 @@ import { BLOCK_ALIEN, BLOCK_FRIENDLY, BuildGrid, FLOOR, OBJECT, isWallLike, laye
 import { RoomDetector, type CellRect } from './build/rooms';
 import { wallEdgeShift } from './build/wallSnap';
 import { lineCells, rotateLayout, type Layout, type Rot } from './build/geometry';
+import { copyMult, scaleBag } from '../data/pacing';
 
 declare module '../core/state' {
   interface BuildingInstance {
@@ -59,6 +60,11 @@ const REPAIR_RANGE_CELLS = 6;
 const ENGINEER_BUILD_BONUS = 0.25;
 /** Facilities gain +50% max HP per colony tier. */
 const FACILITY_HP_PER_TIER = 0.5;
+/** Facilities whose next copy costs more (data/pacing.ts `copies`): not pieces, decor, cosmetics or the core. */
+export function escalates(d: BuildingDef): boolean {
+  return !d.piece && !d.core && !d.cosmetic && d.category !== 'decor';
+}
+
 /** Fallback level cost multiplier when a def doesn't specify one. */
 const DEFAULT_LEVEL_COST_MULT = 1.5;
 
@@ -304,11 +310,16 @@ export class BuildingSystem extends System {
    * Build cost for a def at a material tier (pieces) or level 1 (facilities).
    * Pieces: TierDef.pieceCost × costMult (rounded up) + def.cost. When `tier` is omitted, pieces use
    * the material currently selected in the build preview (view.build.tier, clamped to the colony tier).
+   * Facilities: the next copy's price (data/pacing.ts `copies`: past the first few, each copy costs a bit more;
+   * decor never escalates). `owned` overrides how many already stand (blueprints price their parts in turn).
    */
-  cost(defId: string, tier?: number): ResourceBag {
+  cost(defId: string, tier?: number, owned?: number): ResourceBag {
     const d = this.game.data.building(defId);
     if (!d) return {};
-    if (!d.piece) return { ...d.cost };
+    if (!d.piece) {
+      const m = escalates(d) ? copyMult(owned ?? this.countOf(defId)) : 1;
+      return m === 1 ? { ...d.cost } : scaleBag(d.cost, m);
+    }
     const t = this.game.data.tier(this.pieceTier(tier));
     return addInto(scaleCeil(t.pieceCost, d.costMult ?? 1), d.cost);
   }
@@ -758,7 +769,12 @@ export class BuildingSystem extends System {
     const b = this.blueprint(bp);
     const total: ResourceBag = {};
     if (!b) return total;
-    for (const p of b.parts) addInto(total, this.cost(p.def, this.partTier(p.def, p.tier)));
+    const owned = new Map<string, number>();
+    for (const p of b.parts) {
+      const n = owned.get(p.def) ?? this.countOf(p.def);
+      addInto(total, this.cost(p.def, this.partTier(p.def, p.tier), n));
+      owned.set(p.def, n + 1);
+    }
     return total;
   }
 

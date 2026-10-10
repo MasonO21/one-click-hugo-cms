@@ -23,7 +23,12 @@ import { DAILY_COUNT, goalTier, isLiveType, lesserBosses, lesserItems, liveValue
 /** Seconds between a main mission completing and it being claimed automatically. */
 export const AUTO_CLAIM_DELAY = 1.2;
 const LIVE_INTERVAL = 0.25;
-const GATHER_SOURCES: ReadonlySet<GainSource> = new Set<GainSource>(['gather', 'production', 'drop']);
+/**
+ * Storage gains that count as gathering. Hand gathering counts at the node (`gather:hit`), not when the backpack is
+ * unloaded: a "gather 40 crystal" step must never stall because the store is already full (rewards and loot can fill
+ * a small store before the step comes up).
+ */
+const GATHER_SOURCES: ReadonlySet<GainSource> = new Set<GainSource>(['production', 'drop']);
 
 export interface MissionProgress {
   value: number;
@@ -61,6 +66,9 @@ export class MissionSystem extends System {
     });
     bus.on('resource:gained', (e) => {
       if (GATHER_SOURCES.has(e.source)) this.bump('gather', [e.id], e.amount);
+    });
+    bus.on('gather:hit', (e) => {
+      for (const [id, n] of Object.entries(e.drop)) if ((n ?? 0) > 0) this.bump('gather', [id], n!);
     });
     bus.on('building:completed', (e) => {
       const def = this.game.data.building(e.def);

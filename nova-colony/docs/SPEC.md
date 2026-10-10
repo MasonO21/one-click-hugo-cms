@@ -17,6 +17,15 @@ Explore → Gather → Build → Recruit → Automate → Upgrade → Defend →
 Every few minutes an accomplishment: new building, colonist, weapon, expansion, generator upgrade,
 production increase, area discovered, alien defeated, tech researched, defense unlocked, tier reached.
 
+**Pacing (data/pacing.ts):** an engaged player (five 20-minute sessions a day) reaches Reinforced Wood in the first
+session, Stone at the end of day 1, Steel on day 3, Alloy on day 6–7, Nano on day 13–14 and **Titanium in about four
+weeks** (~45 h online). Production numbers stay big; the goals grow: per-tier multipliers on building costs (and so
+level-ups), storage, research, tier-ups and mission rewards; past the first few copies each new copy of a facility costs
+15% more (levelling up and newer machines become the better deal); decor and structure pieces are never paced. Converters
+and factories pause while every output store is full. A tier is a goal of a few days, so the Colony panel's tier-up card
+shows each resource as "have / need" (live). `node scripts/pacing-bot.mjs` plays it through and prints the
+schedule, gaps between accomplishments, income by source (offline <= ~40% from Stone on), colonists, raids and Nova.
+
 ## 3. Open world (mobile-friendly)
 Biomes, unlocked gradually: **Crash Valley** (start, grasslands, basic resources), **Pinewood Forest**
 (wood, animals, berries, abandoned structures), **Crystal Canyon** (alien crystals), **Red Desert**
@@ -57,6 +66,15 @@ generators, farmers crops, cooks meals, engineers repair, guards defend, scienti
 Happiness (simple) from beds, food, water, electricity, entertainment, comfortable rooms, decor,
 safety → productivity **bonuses**. Unhappy colonists do NOT leave.
 
+**Recruitment board** (Radio Tower): a few seats (3, +1 per recruiting research). Recruiting someone leaves the seat
+empty; a new survivor answers the radio on an absolute clock (time away counts) until the board is full again, every
+20 min at Wood, 3 h 20 at Reinforced, 15 h at Stone, 2 days at Steel, a week at Alloy, two weeks at Nano and 12 h at
+Titanium, where the last few join for the Super-Colony (`balance.recruitArrivalMinutes`,
+sim/colony/recruitBoard.ts). The board shows "next survivor in 12:41". Rescues, expeditions, crates, survey milestones,
+daily gifts and rewards add colonists on top, so a colony grows to ~10 at Stone, ~22 at Steel, ~32 at Alloy, ~40 at
+Nano and ~50 around Titanium. The "New recruits" ad / Nova offer swaps the survivors waiting for fresh faces (a choice
+of specialties); it never fills an empty seat, so the colony's growth stays on the arrival clock.
+
 **Colony Spirit & festivals** (what a happy colony is worth once happiness tops out, from the Reinforced tier): while
 average happiness is above 75, a Spirit meter fills during online play, faster with decor and entertainment per
 colonist, medical care and friendship hearts; every granted wish adds a chunk. Full: a 10-minute **festival** with +25%
@@ -77,7 +95,9 @@ storage, automated farms (enormous end-game output). Water: rain collector → p
 industrial purifier → atmospheric water generator.
 
 ## 12–14. Invasions, aliens, defenses
-Periodic attacks: exciting, not stressful; rarely lose progress. Warning first:
+Periodic attacks: exciting, not stressful; rarely lose progress. A raid comes every `invasionInterval` of online play:
+15 min early on, 20 min at Stone, 25 at Steel, 30 at Alloy, 35 at Nano, 40 at Titanium (about three a day for an
+engaged player once tiers last days); only the first four raids of a tier grow it. Warning first:
 "ALIEN ACTIVITY DETECTED — ATTACK IN 2:00". Early 5–10 small aliens; late swarms + giants; a properly
 upgraded base survives. Aliens: Crawler (small fast), Spitter (ranged vs defenses), Brute (attacks
 walls), Burrower (emerges underground), Flyer (needs anti-air), Swarm Queen (spawns smaller),
@@ -119,8 +139,8 @@ Cozy: nobody is ever hurt; a long walk without a vehicle only leaves the squad a
 
 ## 20c. Achievements & the Colony Journal
 62 cozy achievements in nine sections (Builder, Explorer, Defender, Scientist, Community, Crafter, Expeditions,
-Collector, Veteran): 17 tiered lines with bronze / silver / gold (Lumberjack 500 / 5,000 / 50,000 wood …: bronze in the
-first hour or two, silver mid-game, gold a long-term goal across the ~45 h to Titanium) and 11 one-offs (each boss, each
+Collector, Veteran): 17 tiered lines with bronze / silver / gold (Lumberjack 500 / 75,000 / 150,000 wood …: bronze in the
+first hour or two, silver in the first two weeks, gold from week two to the weeks after Titanium) and 11 one-offs (each boss, each
 colony tier, a legendary colonist). Progress is never double-counted: it reads the lifetime mission counters and plain
 state. Rewards are season XP plus modest resources / crates of the stage they are earned in; Nova (~310 in total) only
 with silver, gold and the one-offs. Earned medals wait for a tap on Claim (Claim all too). A save from before the
@@ -131,7 +151,7 @@ Unlock toasts open it when tapped. The guided first session stays quiet. Unlocks
 Games through a no-op platform hook (docs/MOBILE.md §6c).
 
 ## 20d. Colonist wishes & friendship (short, cozy goals between bigger ones)
-Once the opening tutorial is over, a colonist voices a small wish about every 8–12 minutes of online play (at most two
+Once the opening tutorial is over, a colonist voices a small wish about every 5–8 minutes of online play (at most two
 open, one per colonist; never during an alien attack, never from someone away, asleep or indoors): hand over a couple
 of minutes' worth of a resource with one tap, place one more lantern / flower bed / bench / fountain…, hand-craft a quick
 recipe, walk up and Chat, or open any cache out there. Each is doable in 1–10 minutes at its tier; a bubble over their
@@ -170,7 +190,10 @@ Intentionally EASY. Avoid permadeath, base loss, starvation loops, frequent colo
 raids, complicated recipes, grinding. Small, easily solved problems only.
 
 ## 24–25. Offline & rewarded ads
-Colony produces offline. "Welcome Back! Away for 4h 32m — Your Colony Produced: +4,250 Wood …" with
+Colony produces offline: the first 10 minutes away at full speed, then at a relaxed pace (10%) up to the 8-hour cap
+(research and VIP extend it); Welcome Back may fill storage up to 2× (rewards too). Five short sessions a day leave the
+app closed ~93% of the time, so this keeps Welcome Back generous but at about a third of a day's income.
+"Welcome Back! Away for 4h 32m — Your Colony Produced: +4,250 Wood …" with
 optional ad to **DOUBLE OFFLINE REWARDS** (primary ad placement). Voluntary ads for: 2× offline,
 2× production 10 min, instant craft, free resource crate, recruit refresh, bonus invasion rewards,
 extra research points, extra daily spin, temporary drone assistant. Players should WANT to watch.
@@ -184,7 +207,9 @@ Automation, Titanium Founder (late game); cosmetics: base themes, outfits, vehic
 decorations, colonist outfits. **Never lock Titanium or any gameplay system behind payment.**
 Optional VIP **Colony Pass $7.99/mo**: daily Nova, extra daily rewards, +10% production, more offline
 storage, exclusive decorations, monthly outfit — never necessary. Season pass with free + premium
-tracks; XP from normal play (building, gathering, exploring, defending, crafting, missions).
+tracks; XP from normal play (building, gathering, exploring, defending, crafting, missions). A season runs about a
+month; 50 levels at 5,000 XP each, so an engaged free player finishes the free track in its last days (the pacing
+bot: level 50 around day 27-29).
 7-day login rewards (D1 resources, D2 crafting mats, D3 Nova, D4 colonist crate, D5 defense crate,
 D6 premium currency, D7 large legendary reward). Daily spin wheel placed in the settlement (free
 daily; ad for another).

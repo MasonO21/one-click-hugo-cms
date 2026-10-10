@@ -7,7 +7,7 @@ import { Game } from '../src/core/Game';
 import { createInitialState } from '../src/core/state';
 import { migrateState } from '../src/platform/saveMigrate';
 import { msUntilLocalMidnight } from '../src/ui/logic/time';
-import type { OfflineModel } from '../src/sim/econ/offline';
+import { absenceFor, type OfflineModel } from '../src/sim/econ/offline';
 import {
   ALL_NOTIFY_IDS,
   MAX_SCHEDULED,
@@ -62,7 +62,7 @@ function snap(o: SnapOpts = {}): NotifySnapshot {
 }
 
 describe('notify plan: storage full', () => {
-  it('times "storage full" from the shipped balance: real producer, 80% offline efficiency, Welcome Back 3× storage', () => {
+  it('times "storage full" from the shipped balance: real producers, full speed then the relaxed offline pace, Welcome Back storage', () => {
     const clock = { now: MORNING };
     const game = new Game({ seed: 7, clock: () => clock.now }); // real content + real balance
     game.start();
@@ -70,15 +70,23 @@ describe('notify plan: storage full', () => {
     // a self-running producer from the real catalogue (no workers, inputs or power)
     const def = game.data.buildings.find((b) => b.produces && !b.consumes && !b.workers && !b.power && !b.factory && Object.keys(b.produces).length === 1)!;
     expect(def).toBeTruthy();
-    const [res, perMin] = Object.entries(def.produces!)[0] as [string, number];
-    addBuilding(game, def.id);
-    const s = notifySnapshot(game);
+    const [res, one] = Object.entries(def.produces!)[0] as [string, number];
     const bal = game.data.balance;
+    const full = (bal.offlineFullMinutes ?? 0) * 60;
+    // enough of them that storage fills a couple of hours into an absence (well inside the offline cap)
+    game.sys.economy.recompute();
+    const limit = game.derived.capacity[res] * (bal.offlineStorageMult ?? 1);
+    const copies = Math.max(1, Math.ceil(limit / (one * (full / 60 + 120 * bal.offlineEfficiency))));
+    for (let i = 0; i < copies; i++) addBuilding(game, def.id);
+    const perMin = one * copies;
+    const s = notifySnapshot(game);
     expect(s.offline.efficiency).toBe(bal.offlineEfficiency);
+    expect(s.offline.fullSeconds).toBe(full);
     expect(s.offline.storageMult).toBe(bal.offlineStorageMult ?? 1);
     expect(s.offline.capSeconds).toBe(bal.offlineHours * 3600);
-    const limit = game.derived.capacity[res] * (bal.offlineStorageMult ?? 1);
-    const expectedMin = limit / (perMin * bal.offlineEfficiency);
+    expect(game.derived.capacity[res] * (bal.offlineStorageMult ?? 1)).toBe(limit);
+    // production minutes needed, then the absence that credits them
+    const expectedMin = absenceFor((limit / perMin) * 60, bal.offlineEfficiency, full) / 60;
     const f = forecastStorage(s);
     expect(f.resources).toEqual([res]);
     expect(Math.abs(f.firstFullMs! / MIN - expectedMin)).toBeLessThan(0.5);

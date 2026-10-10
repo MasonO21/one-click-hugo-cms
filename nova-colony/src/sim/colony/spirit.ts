@@ -217,7 +217,10 @@ export class SpiritSystem extends System {
     this.game.bus.emit('spirit:festivalEnded', { n: this.st.festivals });
   }
 
-  /** The colony tier's supply crates and, from the Stone tier, a Supply Cache (rolled at the tier when opened). */
+  /**
+   * The colony tier's supply crates and, from the Stone tier, a Supply Cache on every few festivals (the 1st, 4th,
+   * 7th…; rolled at the tier when opened).
+   */
   festivalChest(): Reward {
     const g = this.game;
     const r = SPIRIT_RULES.festival;
@@ -225,7 +228,8 @@ export class SpiritSystem extends System {
     const items: Record<string, number> = {};
     const crate = tierCrate(tier);
     if (g.data.item(crate)) items[crate] = r.crates;
-    if (tier >= r.cacheFromTier && g.data.item('chest_supply')) items.chest_supply = 1;
+    const n = Math.max(1, this.st.festivals);
+    if (tier >= r.cacheFromTier && g.data.item('chest_supply') && (n - 1) % r.cacheEvery === 0) items.chest_supply = 1;
     const out: Reward = { xp: r.xp };
     if (Object.keys(items).length) out.items = items;
     return out;

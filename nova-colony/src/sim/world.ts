@@ -767,6 +767,8 @@ export class WorldSystem extends System {
     const now = this.game.now();
     const log = (st.world.lootLog ??= []).filter((t) => typeof t === 'number' && t > now - 3_600_000 && t <= now);
     const reward = rollPoiLoot({ data: this.game.data, tier: st.colony.tier, capacity: (id) => eco.capacity(id) }, def.id, this.game.rng, lootThinning(log.length));
+    // a restocked cache or nest hands out its goods again; its Nova only the first time (weeks of restocks add up)
+    if ((ps.times ?? 1) > 1) delete reward.nova;
     if (def.kind !== 'beacon') log.push(now);
     st.world.lootLog = log.slice(-40);
     let colonist: Id | null = null;

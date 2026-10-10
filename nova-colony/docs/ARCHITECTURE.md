@@ -32,6 +32,7 @@ Render and UI read `game.state` directly every frame (cheap, no copying).
 |---|---|---|
 | Core engine & contracts | `src/core/*`, `src/data/schema.ts`, `src/data/index.ts`, `src/sim/System.ts`, `src/platform/types.ts`, `src/platform/mock.ts`, `src/render/api.ts`, `src/main.ts` | lead |
 | Content & balance data | `src/data/*.ts` except schema/index/names | data agent |
+| Economy pacing (four-week schedule) | `src/data/pacing.ts` (multipliers applied where tiers, buildings, research, missions, raids, expeditions and events are built), `src/sim/colony/recruitBoard.ts`, offline curve in `src/sim/econ/offline.ts`; checked by `scripts/pacing-bot.mjs`, `tests/econ.*.test.ts`, `tests/data.pacing.test.ts` | economy |
 | Colonist names/bios | `src/data/names.ts` | names agent |
 | Construction | `src/sim/buildings.ts` (+ new `src/sim/build/*`) | construction/economy agent |
 | Economy, research, crafting, tiers, offline | `src/sim/economy.ts`, `research.ts`, `crafting.ts`, `progression.ts` (+ `src/sim/econ/*`) | construction/economy agent |

@@ -142,6 +142,7 @@ export function novaOffer(game: Game, id: string, opts: { expedition?: number } 
       break;
     case 'recruit_refresh':
       if (!g.sys.colonists.boardAvailable()) reason = 'Build a recruitment board first';
+      else if (!g.state.colonists.candidates.length) reason = 'Nobody is waiting at the board yet';
       break;
     case 'merchant': {
       const m = merchantDef(g);

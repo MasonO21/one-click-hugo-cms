@@ -91,7 +91,8 @@ describe('economy: modifiers', () => {
     const total = base + ids.reduce((a, id) => a + hours(id), 0);
     expect(base * eco.modifier('offlineHours')).toBeCloseTo(total);
     // and the Welcome Back credit stops there
-    expect(eco.computeOffline(100 * 3600).seconds).toBeCloseTo(total * 3600 * game.data.balance.offlineEfficiency);
+    const full = (game.data.balance.offlineFullMinutes ?? 0) * 60;
+    expect(eco.computeOffline(100 * 3600).seconds).toBeCloseTo(full + (total * 3600 - full) * game.data.balance.offlineEfficiency);
     // the Colony Pass still adds its hours on top
     game.state.liveops.vip.until = now + 86_400_000;
     eco.markDirty();

@@ -1,4 +1,6 @@
 import type { MissionDef, Reward } from './schema';
+import { BUILDINGS } from './buildings';
+import { PACING, pace, roundCost, scaleBag } from './pacing';
 
 /**
  * Main chain = the guided first 15 minutes, then a gentle story through every tier up to the Titanium
@@ -16,7 +18,8 @@ export const FIRST_MISSION = 'm01_wood';
 
 const R = (r: Reward): Reward => r;
 
-export const MISSIONS: MissionDef[] = [
+/** As authored; the exported MISSIONS pay rewards paced to the tier they are played in (data/pacing.ts). */
+const AUTHORED: MissionDef[] = [
   // ====================================================================== TIER 0 — the first 15 minutes
   {
     id: 'm01_wood', chain: 'main', name: 'Timber!', description: 'Gather 80 Wood from the bubble trees near your pod.',
@@ -500,6 +503,52 @@ export const MISSIONS: MissionDef[] = [
   { id: 'd_upgrade', chain: 'daily', name: 'Daily: Upgrade Day', description: 'Upgrade three buildings.', type: 'upgrade', target: '*', count: 3, reward: R({ nova: 4, xp: 50 }) },
   { id: 'd_spin', chain: 'daily', name: 'Daily: Wheel of Fortune', description: 'Spin the Lucky Wheel.', type: 'spin', target: '*', count: 1, reward: R({ nova: 2, xp: 30 }) },
 ];
+
+/**
+ * The tier a mission is played in: the main chain counts tier-ups along `next` (a tier mission pays out in the tier it
+ * reaches); a side mission uses its `minTier`, else the tier its target building unlocks at. Dailies pay Nova and XP.
+ */
+function missionTiers(list: MissionDef[]): Map<string, number> {
+  const out = new Map<string, number>();
+  const byId = new Map(list.map((m) => [m.id, m]));
+  let tier = 0;
+  for (let m = byId.get(FIRST_MISSION); m && !out.has(m.id); m = m.next?.[0] ? byId.get(m.next[0]) : undefined) {
+    if (m.type === 'tier') tier++;
+    out.set(m.id, tier);
+  }
+  const unlock = new Map(BUILDINGS.map((b) => [b.id, b.unlockTier]));
+  for (const m of list) if (!out.has(m.id) && m.chain === 'side') out.set(m.id, m.minTier ?? unlock.get(m.target) ?? 0);
+  return out;
+}
+
+/** Resources some storage building of this tier or earlier holds (the rest only fit the small base capacity). */
+function storable(tier: number): Set<string> {
+  const out = new Set<string>();
+  for (const b of BUILDINGS) if (b.storage && b.unlockTier <= tier) for (const k of Object.keys(b.storage)) out.add(k);
+  return out;
+}
+
+/**
+ * Resources and RP grow with the tier; a resource the colony cannot store yet keeps its authored amount (a big crystal
+ * reward at Stone would fill the tiny base store and stall the "gather crystal" mission right after it).
+ */
+function pacedReward(r: Reward, tier: number): Reward {
+  const m = pace(PACING.missionReward, tier);
+  if (m === 1) return r;
+  const out: Reward = { ...r };
+  if (r.resources) {
+    const ok = storable(tier);
+    const scaled = scaleBag(r.resources, m);
+    out.resources = {};
+    for (const [k, v] of Object.entries(r.resources)) out.resources[k] = ok.has(k) ? scaled[k] : v;
+  }
+  if (r.rp) out.rp = roundCost(r.rp * m);
+  return out;
+}
+
+const TIER_OF = missionTiers(AUTHORED);
+
+export const MISSIONS: MissionDef[] = AUTHORED.map((m) => (TIER_OF.has(m.id) ? { ...m, reward: pacedReward(m.reward, TIER_OF.get(m.id)!) } : m));
 
 export const DAILY_MISSION_POOL = [
   'd_gather_wood', 'd_gather_stone', 'd_gather_fiber', 'd_gather_any', 'd_kill', 'd_kill_big', 'd_build', 'd_build_big',

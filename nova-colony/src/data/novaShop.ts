@@ -46,7 +46,7 @@ export const NOVA_SHOP: NovaShopItemDef[] = [
   { id: 'nova_gather_1h', name: '2× Gathering · 1 h', icon: '🪓', art: 'res:wood', kind: 'boost', nova: 60, dailyCap: 3, boost: { kind: 'gather', mult: 2, minutes: 60 }, description: 'Hand gathering yields double for an hour.' },
   // ---- time savers
   { id: 'nova_expedition_rush', name: 'Recall an expedition', icon: '🧭', art: 'hud:expeditions', kind: 'expedition', nova: EXPEDITION_RUSH.base, dailyCap: 5, description: 'The squad due home next is back right now with its haul. The price follows the time left.' },
-  { id: 'nova_recruit_refresh', name: 'New recruits', icon: '📋', art: 'hud:population', kind: 'recruit_refresh', nova: 20, dailyCap: 10, description: 'A fresh set of survivors at the recruitment board.' },
+  { id: 'nova_recruit_refresh', name: 'New recruits', icon: '📋', art: 'hud:population', kind: 'recruit_refresh', nova: 20, dailyCap: 10, description: 'Fresh faces in place of the survivors waiting at the recruitment board.' },
   { id: 'nova_merchant', name: 'Call a merchant', icon: '🛒', art: 'poi:merchant_caravan', kind: 'merchant', nova: 80, dailyCap: 2, description: 'A wandering merchant parks their cart near your colony for a while.' },
   { id: 'nova_spin', name: 'Extra wheel spin', icon: '🎡', art: 'hud:spin', kind: 'spin', nova: 40, dailyCap: 5, description: 'One more turn of the Lucky Wheel today.' },
   { id: 'nova_season_level', name: 'Skip a season level', icon: '🏅', art: 'hud:season', kind: 'season_level', nova: 60, dailyCap: 5, description: 'Jump straight to the next level of the season pass.' },

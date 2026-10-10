@@ -1,4 +1,5 @@
 import type { ExpeditionDef, ExpeditionRules, FrontierRules } from './schema';
+import { PACING } from './pacing';
 
 /**
  * Expeditions — squads of one to three colonists (and optionally a vehicle) leave from the Radio Tower for a
@@ -27,8 +28,10 @@ const MIN = 60;
 const HOUR = 3600;
 
 /**
- * The pacing model's planned economy at the END of each tier, net per minute (tests/data.pacing.test.ts prints these
- * as `economy@tierN`). Index 6 (Titanium) has no tier-up plan: the colony keeps growing ~25% past the Nano build-out.
+ * The pacing model's planned economy at the END of each tier, net per minute (tests/data.pacing.test.ts printed these
+ * as `economy@tierN` when hauls were sized). Index 6 (Titanium) has no tier-up plan: the colony keeps growing ~25% past
+ * the Nano build-out. The four-week retune (data/pacing.ts) left hauls at these sizes: with goals 20-60x bigger, a trip
+ * is a welcome top-up (~16% of an engaged colony's income in the pacing bot), never a shortcut.
  */
 const PLANNED_ECONOMY: Record<string, number>[] = [
   { food: 6, wood: 6, fiber: 2, water: 3 },
@@ -142,10 +145,11 @@ export const EXPEDITION_RULES: ExpeditionRules = {
   unlockTier: 2,
   durations: [15 * MIN, 1 * HOUR, 4 * HOUR, 8 * HOUR],
   durationEfficiency: [1, 1.05, 1.1, 1.15],
+  // a tier lasts days: a second squad from Steel and a third from Nano keep something on the road while saving up
   slots: [
     { tier: 2, slots: 1 },
-    { tier: 4, slots: 2 },
-    { tier: 6, slots: 3 },
+    { tier: 3, slots: 2 },
+    { tier: 5, slots: 3 },
   ],
   squadMax: 3,
   squadSize: [0, 0.5, 0.8, 1],
@@ -170,7 +174,8 @@ export const EXPEDITION_RULES: ExpeditionRules = {
  * Three destinations per region with rising duration and tier. `poi` picks the painted icon; `match` is who knows
  * the terrain (miners in the desert, scientists in the ruins, guards at the nests…).
  */
-export const EXPEDITIONS: ExpeditionDef[] = [
+/** As authored; the exported EXPEDITIONS find survivors at the paced rate (data/pacing.ts `survivors`). */
+const AUTHORED: ExpeditionDef[] = [
   // ---------------------------------------------------------------- Crash Valley
   {
     id: 'cv_debris', region: 'crash_valley', name: 'Pod Debris Sweep', poi: 'supply_cache', icon: '🎁', duration: 15 * MIN, tier: 2, match: ['gatherer', 'engineer'],
@@ -324,3 +329,7 @@ export const EXPEDITIONS: ExpeditionDef[] = [
     finds: [{ chance: 0.4, reward: { items: { titan_crate: 1 } } }, { chance: 0.1, reward: { items: { quantum_chip: 1 } } }, { chance: 0.1, reward: { items: { swarm_drone: 1 } } }],
   },
 ];
+
+export const EXPEDITIONS: ExpeditionDef[] = AUTHORED.map((d) =>
+  d.finds?.some((f) => f.reward.colonist) ? { ...d, finds: d.finds.map((f) => (f.reward.colonist ? { ...f, chance: Math.round(f.chance * PACING.survivors * 1000) / 1000 } : f)) } : d,
+);

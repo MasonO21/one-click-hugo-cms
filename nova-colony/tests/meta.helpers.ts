@@ -77,7 +77,7 @@ export function fulfil(g: TestGame, def: MissionDef): void {
   const bus = game.bus;
   switch (def.type) {
     case 'gather':
-      bus.emit('resource:gained', { id: def.target === '*' ? 'wood' : def.target, amount: def.count, source: 'gather' });
+      bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { [def.target === '*' ? 'wood' : def.target]: def.count } });
       break;
     case 'build': {
       const id = def.target.startsWith('category:') || def.target === '*' ? 'shelter' : def.target;

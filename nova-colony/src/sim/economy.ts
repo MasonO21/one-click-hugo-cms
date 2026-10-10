@@ -17,7 +17,7 @@ import type { GainSource } from '../core/events';
 import type { BuildingInstance, Colonist, Id } from '../core/state';
 import { bagCovers, bagEntries, bagMissing } from '../core/bag';
 import { ModifierTable } from './econ/modifiers';
-import { simulateOffline, type OfflineFlow, type OfflineModel } from './econ/offline';
+import { creditedSeconds, simulateOffline, type OfflineFlow, type OfflineModel } from './econ/offline';
 import { centerX, centerZ, defEffects, factorySpeed, levelMult, recipeFlows, type Entries } from './econ/effects';
 
 declare module '../data/schema' {
@@ -27,6 +27,11 @@ declare module '../data/schema' {
      * capacity × this (default 1 = clamp to free capacity).
      */
     offlineStorageMult?: number;
+    /**
+     * The first minutes away run at full speed before `offlineEfficiency` applies (an app switch or a quick break
+     * costs nothing). Default 0.
+     */
+    offlineFullMinutes?: number;
     /**
      * Research points stop after this many credited offline minutes (the labs bank about two hours of output, like a
      * store fills up), so the backlog stays meaningful. Undefined = no cap.
@@ -49,7 +54,7 @@ export interface OfflineSummary {
 }
 
 /** Why a building is not running at full speed (building panel / render hints). */
-export type IdleReason = 'building' | 'off' | 'damaged' | 'no_power' | 'low_power' | 'no_workers' | 'no_inputs' | null;
+export type IdleReason = 'building' | 'off' | 'damaged' | 'no_power' | 'low_power' | 'no_workers' | 'no_inputs' | 'full' | null;
 
 /** Per-building economy snapshot for the UI building panel. */
 export interface BuildingEconomy {
@@ -87,6 +92,8 @@ interface FlowRec {
   /** Input availability vs. the full-load need in the last tick (0..1) and a smoothed copy for UI/power. */
   frac: number;
   fracSmooth: number;
+  /** Paused last tick because every output store was full (its inputs stay in store). */
+  full: boolean;
   seen: number;
 }
 
@@ -344,6 +351,7 @@ export class EconomySystem extends System {
     if (b.status !== 'active') idle = b.status;
     else if (p < 0 && ratio <= 0) idle = 'no_power';
     else if (def.workers?.required && (this.staffCache.get(id) ?? 0) <= 0) idle = 'no_workers';
+    else if (rec && rec.full) idle = 'full';
     else if ((rec && rec.ins.length && rec.frac < 0.999) || (frec && factoryActivity < 0.5)) idle = 'no_inputs';
     else if (p < 0 && ratio < 1) idle = 'low_power';
     return {
@@ -530,7 +538,7 @@ export class EconomySystem extends System {
     this.recompute();
     const away = Math.max(0, awaySeconds);
     const capSeconds = bal.offlineHours * 3600 * this.modifier('offlineHours');
-    const seconds = Math.min(away, capSeconds) * bal.offlineEfficiency;
+    const seconds = creditedSeconds(away, capSeconds, bal.offlineEfficiency, (bal.offlineFullMinutes ?? 0) * 60);
     const storageMult = bal.offlineStorageMult ?? 1;
     let capacity: Record<string, number> = this.game.derived.capacity;
     if (storageMult !== 1) {
@@ -629,6 +637,7 @@ export class EconomySystem extends System {
         load: 1,
         frac: 1,
         fracSmooth: 1,
+        full: false,
         seen: stamp,
       };
       map.set(b.id, rec);
@@ -666,7 +675,8 @@ export class EconomySystem extends System {
     }
 
     // 3. converters run only as far as their inputs allow (fuelled generators also only as far as
-    //    the grid needs: `load`)
+    //    the grid needs: `load`), and pause while every output store is full: the smelter does not burn iron
+    //    into steel nobody can keep (the iron stays in store for the next tier-up)
     for (const rec of this.converters) {
       let f = rec.eff > 0 ? 1 : 0;
       for (let i = 0; i < rec.ins.length && f > 0; i++) {
@@ -675,6 +685,20 @@ export class EconomySystem extends System {
         const r = rec.ins[i][0];
         const have = (amounts[r] ?? 0) + (this.acc.get(r) ?? 0);
         if (have < need) f = Math.min(f, have / need);
+      }
+      rec.full = false;
+      if (f > 0 && rec.outs.length) {
+        let room = 0;
+        for (let i = 0; i < rec.outs.length; i++) {
+          const out = (rec.outRate[i] / 60) * step;
+          if (out <= 0) continue;
+          const r = rec.outs[i][0];
+          room = Math.max(room, (this.capacity(r) - (amounts[r] ?? 0) - (this.acc.get(r) ?? 0)) / out);
+        }
+        if (room < f) {
+          f = Math.max(0, room);
+          rec.full = f <= 0;
+        }
       }
       const run = Math.min(f, rec.load);
       if (run > 0) {

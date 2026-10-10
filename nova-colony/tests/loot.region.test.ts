@@ -58,8 +58,9 @@ describe('paid random items by region', () => {
     expect(paid.bonus!.reward).toEqual(withoutRandomItems(data, season.bonus!.reward));
     const here = seasonHighlights(data, paid).bonus!;
     expect(here.chest).toBeNull();
-    expect(bonusLine(data, here, last)).toBe(`${paid.bonus!.reward.nova} Nova every 400 XP after level ${last}`);
-    expect(bonusLine(data, seasonHighlights(data, season).bonus!, last)).toBe(`an Explorer's Case every 400 XP after level ${last}`);
+    const per = season.bonus!.xp.toLocaleString('en-US');
+    expect(bonusLine(data, here, last)).toBe(`${paid.bonus!.reward.nova} Nova every ${per} XP after level ${last}`);
+    expect(bonusLine(data, seasonHighlights(data, season).bonus!, last)).toBe(`an Explorer's Case every ${per} XP after level ${last}`);
   });
 
   it('in Belgium the cache bundle is not offered, the paid track pays Nova instead of caches; elsewhere unchanged', () => {
@@ -80,7 +81,7 @@ describe('paid random items by region', () => {
       expect(game.sys.chests.buy('chest_supply', false) !== null).toBe(!be);
       expect(game.state.liveops.nova).toBe(be ? nova : nova - 60);
       game.state.liveops.season.premium = true;
-      lo.addXp(seasonTrackXp(data.season) + 400);
+      lo.addXp(seasonTrackXp(data.season) + data.season.bonus!.xp);
       const items = () => Object.entries(game.state.player.items).filter(([id, n]) => (n ?? 0) > 0 && data.item(id)?.use?.chest).length;
       const before = items();
       expect(lo.claimSeason(level, true)).toBe(true);

@@ -1,6 +1,7 @@
 /**
- * RecruitPanel — the recruitment board: candidate cards with cost + Recruit button, a countdown to
- * the free refresh, and a "watch an ad for new recruits" button.
+ * RecruitPanel — the recruitment board: candidate cards with cost + Recruit button, a countdown to the next
+ * survivor answering the radio (a free seat refills on its own clock, sim/colony/recruitBoard.ts), empty seats, and a
+ * "watch an ad for new recruits" button (fresh faces for the survivors waiting; it never fills an empty seat).
  */
 import { Panel, type PanelTitle } from './Panel';
 import { fmtHMS } from '../logic/time';
@@ -23,9 +24,9 @@ export class RecruitPanel extends Panel {
     const g = this.game;
     const cs = g.state.colonists;
     const hasBoard = this.hasBoard() ? 1 : 0;
-    const timerDone = cs.refreshAt <= g.now() ? 1 : 0;
+    const waiting = g.sys.colonists.nextArrivalIn() == null ? 1 : 0;
     const aff = cs.candidates.map((c) => (bagCovers(g.state.resources.amounts, c.cost) ? 1 : 0)).join('');
-    return `${cs.candidates.map((c) => c.colonist.id).join('.')}|${aff}|${g.sys.colonists.freeBeds()}|${hasBoard}|${timerDone}`;
+    return `${cs.candidates.map((c) => c.colonist.id).join('.')}|${aff}|${g.sys.colonists.freeBeds()}|${hasBoard}|${waiting}|${g.sys.colonists.boardSeats()}`;
   }
 
   /** Is a recruitment board built (when the content defines one)? */
@@ -39,13 +40,16 @@ export class RecruitPanel extends Panel {
     this.acc += dt;
     if (this.acc < 0.5) return;
     this.acc = 0;
-    const el = this.body.querySelector('[data-countdown]');
-    if (el) el.textContent = this.countdownText();
+    const text = this.countdownText();
+    for (const el of this.body.querySelectorAll('[data-countdown]')) el.textContent = text;
   }
 
+  /** "12:41" until the next survivor ("2d 4h" for a long wait); "Board full" while every seat is taken. */
   private countdownText(): string {
-    const ms = this.game.state.colonists.refreshAt - this.game.now();
-    return ms > 0 ? fmtHMS(ms / 1000) : 'Ready!';
+    const s = this.game.sys.colonists.nextArrivalIn();
+    if (s == null) return 'Board full';
+    if (s <= 0) return 'Any moment';
+    return s >= 86400 ? `${Math.floor(s / 86400)}d ${Math.floor((s % 86400) / 3600)}h` : fmtHMS(s);
   }
 
   render(): void {
@@ -61,13 +65,13 @@ export class RecruitPanel extends Panel {
         { class: 'summary-strip' },
         h('div', { class: 'sum' }, h('b', { text: String(g.state.colonists.list.length) }), h('small', { text: 'colonists' })),
         h('div', { class: 'sum' }, h('b', { class: beds > 0 ? '' : 'neg', text: String(beds) }), h('small', { text: 'free beds' })),
-        h('div', { class: 'sum' }, h('b', { 'data-countdown': '1', text: this.countdownText() }), h('small', { text: 'next free refresh' })),
+        h('div', { class: 'sum' }, h('b', { class: 'num', 'data-countdown': '1', text: this.countdownText() }), h('small', { text: 'next survivor in' })),
       ),
     );
     if (!board) wrap.appendChild(h('div', { class: 'card warn-card', text: '🏗️ Build a Recruitment Board to welcome new survivors to your colony.' }));
     else if (beds <= 0) wrap.appendChild(h('div', { class: 'card warn-card', text: '🛏️ Every bed is taken — build a Shelter so new colonists have somewhere to sleep.' }));
 
-    if (!cs.candidates.length) wrap.appendChild(emptyState('📡', 'No survivors on the radio', 'Check back soon — or watch a short video for fresh recruits!'));
+    if (!cs.candidates.length) wrap.appendChild(emptyState('📡', 'No survivors on the radio yet', 'The radio is on. The next survivor to answer the call will wait here for you.'));
     const grid = h('div', { class: 'grid cand-grid' });
     cs.candidates.forEach((cand, i) => {
       const c = cand.colonist;
@@ -97,23 +101,23 @@ export class RecruitPanel extends Panel {
       );
       grid.appendChild(card);
     });
+    // the free seats: the radio keeps calling, one survivor at a time
+    const empty = Math.max(0, g.sys.colonists.boardSeats() - cs.candidates.length);
+    if (cs.candidates.length) {
+      for (let i = 0; i < empty; i++) {
+        grid.appendChild(
+          h('div', { class: 'card cand cand-empty' }, h('div', { class: 'cand-wait' }, h('i', { text: '📻' }), h('small', { text: i === 0 ? 'Next survivor in' : 'Seat free' }), i === 0 ? h('b', { class: 'num', 'data-countdown': '1', text: this.countdownText() }) : null)),
+        );
+      }
+    }
     wrap.appendChild(grid);
 
-    const foot = h('div', { class: 'row wrap' });
-    const ready = cs.refreshAt <= g.now();
-    foot.appendChild(
-      btn({
-        label: '↻ Free refresh',
-        cls: 'info grow',
-        disabled: ready ? false : 'The board refreshes on its own — or watch a video!',
-        onClick: () => {
-          g.sys.colonists.refreshCandidates(false);
-          this.rerender();
-        },
-      }),
-    );
-    foot.appendChild(adButton(this.ctx, 'recruit_refresh', 'New recruits', () => this.rerender(), { cls: 'grow' }));
-    wrap.appendChild(foot);
+    // fresh faces for whoever is waiting (an empty board has nobody to swap)
+    if (cs.candidates.length) {
+      const foot = h('div', { class: 'row wrap' });
+      foot.appendChild(adButton(this.ctx, 'recruit_refresh', 'New recruits', () => this.rerender(), { cls: 'grow' }));
+      wrap.appendChild(foot);
+    }
     fill(this.body, wrap);
   }
 }

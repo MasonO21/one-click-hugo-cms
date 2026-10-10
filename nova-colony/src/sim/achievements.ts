@@ -81,6 +81,7 @@ export class AchievementSystem extends System {
     bus.on('resource:gained', (e) => {
       if (e.source === 'gather' || e.source === 'production' || e.source === 'drop') mark();
     });
+    bus.on('gather:hit', mark); // hand gathering counts at the node (sim/missions.ts)
     bus.on('building:completed', mark);
     bus.on('building:upgraded', mark);
     bus.on('colony:tierUp', mark);

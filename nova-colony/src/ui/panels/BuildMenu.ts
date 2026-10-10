@@ -100,6 +100,7 @@ export class BuildMenuPanel extends Panel {
       for (const d of this.defsOf(this.tab, pinned)) {
         mask += bagCovers(game.state.resources.amounts, this.costOf(d)) ? '1' : '0';
         if (d.maxCount) mask += bs.countOf(d.id) >= d.maxCount ? 'm' : '-';
+        else if (!d.piece) mask += bs.countOf(d.id); // the next copy's price (data/pacing.ts copies)
       }
     } else mask = String(game.state.buildings.blueprints.length);
     return `${this.tab}|${game.state.colony.tier}|${game.state.research.completed.length}|${game.state.liveops.cosmetics.owned.length}|${mask}|${this.ctx.build.pieceTier}|${pinned ?? ''}`;

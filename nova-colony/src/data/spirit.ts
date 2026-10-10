@@ -40,9 +40,13 @@ export const SPIRIT_RULES = {
     seconds: 600,
     /** Production multiplier while it lasts (online only, like the ad boosts). */
     production: 1.25,
-    /** Tier supply crates in the festival chest (sim/chests.ts tierCrate), plus a Supply Cache from this tier. */
+    /**
+     * Tier supply crates in the festival chest (sim/chests.ts tierCrate), plus a Supply Cache from this tier on every
+     * `cacheEvery`-th festival (a colony holds dozens over the weeks: its colonists and Nova cards stay a treat).
+     */
     crates: 2,
     cacheFromTier: 2,
+    cacheEvery: 5,
     /** Season XP. */
     xp: 40,
   },

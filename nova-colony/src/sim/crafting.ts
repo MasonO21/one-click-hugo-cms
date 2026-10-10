@@ -380,6 +380,9 @@ export class CraftingSystem extends System {
 
   private payCycle(b: BuildingInstance, recipe: RecipeDef): boolean {
     const g = this.game;
+    // every resource it makes is at capacity: wait instead of turning stock into output nobody can keep
+    const outs = Object.keys(recipe.outputs.resources ?? {});
+    if (outs.length && !recipe.outputs.items && !recipe.outputs.vehicle && outs.every((id) => g.sys.economy.isFull(id))) return false;
     for (const [id, n] of Object.entries(recipe.itemInputs ?? {})) if ((g.state.player.items[id] ?? 0) < n) return false;
     if (!g.sys.economy.deduct(recipe.inputs)) return false;
     for (const [id, n] of Object.entries(recipe.itemInputs ?? {})) g.sys.player.removeItem(id, n);

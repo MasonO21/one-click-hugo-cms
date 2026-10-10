@@ -12,7 +12,7 @@ export const AD_PLACEMENTS: AdPlacementDef[] = [
   { id: 'production_boost', name: '2× Production', description: 'Double all production for 10 minutes.', dailyLimit: 6, cooldown: 60 },
   { id: 'instant_craft', name: 'Instant Craft', description: 'Finish a crafting job instantly.', dailyLimit: 10, cooldown: 30 },
   { id: 'free_crate', name: 'Free Resource Crate', description: 'Open a free crate of resources.', dailyLimit: 4, cooldown: 600 },
-  { id: 'recruit_refresh', name: 'New Recruits', description: 'Refresh the recruitment board now.', dailyLimit: 5, cooldown: 60 },
+  { id: 'recruit_refresh', name: 'New Recruits', description: 'Fresh faces: swap the survivors waiting at the recruitment board.', dailyLimit: 5, cooldown: 60 },
   { id: 'invasion_bonus', name: 'Bonus Spoils', description: 'Double the alien invasion reward chest.', dailyLimit: 0, cooldown: 0 },
   { id: 'research_bonus', name: 'Research Grant', description: 'Get bonus research points.', dailyLimit: 5, cooldown: 120 },
   { id: 'extra_spin', name: 'Extra Spin', description: 'Spin the Lucky Wheel again.', dailyLimit: 3, cooldown: 0 },
@@ -38,7 +38,7 @@ export const PRODUCTS: ProductDef[] = [
   // ---------------------------------------------------------------- subscription & season
   { id: 'colony_pass_monthly', section: 'vip', type: 'subscription', name: 'Colony Pass', description: 'Daily Nova, +10% production, longer offline storage, double daily rewards and monthly cosmetics.', fallbackPrice: '$7.99/mo', limit: 0, tag: 'popular', grants: { vipDays: 30 } },
   { id: 'season_pass_premium', section: 'season', type: 'non_consumable', name: 'Premium Season Track', description: 'Unlock premium rewards on the current season pass — including outfits, skins and epic colonists.', fallbackPrice: '$9.99', limit: 1, grants: { seasonPremium: true } },
-  { id: 'season_xp_boost', section: 'season', type: 'consumable', name: 'Season Boost', description: 'Skip ahead ten levels on the season track (4,000 season XP).', fallbackPrice: '$4.99', limit: 0, grants: { xp: 4000 } },
+  { id: 'season_xp_boost', section: 'season', type: 'consumable', name: 'Season Boost', description: 'Skip ahead ten levels on the season track (50,000 season XP).', fallbackPrice: '$4.99', limit: 0, grants: { xp: 50000 } },
 
   // ---------------------------------------------------------------- cosmetic bundles (also buyable with Nova)
   { id: 'cosmetic_sakura_theme', section: 'cosmetics', type: 'non_consumable', name: 'Sakura Colony Theme', description: 'Pink blossoms and soft lantern light across your whole colony.', fallbackPrice: '$2.99', limit: 1, grants: { cosmetic: 'theme_blossom' } },
@@ -218,14 +218,22 @@ function seasonLevels(): SeasonDef['levels'] {
   return levels;
 }
 
+/**
+ * Season XP per level. A season runs about a month (SEASON.days): an engaged free player (five 20-minute sessions a day)
+ * earns ~9,000 season XP a day from play, missions, medals and exploration, so the 50 levels of the free track fill
+ * up in the last days of the season (the pacing bot: level 50 around day 27), not in the first week.
+ */
+const SEASON_XP_PER_LEVEL = 5000;
+
 export const SEASON: SeasonDef = {
   id: 'season_1',
   name: 'Season 1: First Light',
-  xpPerLevel: 400,
+  days: 30,
+  xpPerLevel: SEASON_XP_PER_LEVEL,
   levels: seasonLevels(),
-  // after level 50 the premium track keeps paying: an Explorer’s Case for every further 400 XP (repeatable)
-  bonus: { xp: 400, reward: { items: { chest_explorer: 1 } } },
-  // Note: 'gather' is XP per gather hit (fractions accumulate); tuned so an engaged player finishes ~20 days.
+  // after level 50 the premium track keeps paying: an Explorer’s Case for every further level's worth of XP (repeatable)
+  bonus: { xp: SEASON_XP_PER_LEVEL, reward: { items: { chest_explorer: 1 } } },
+  // Note: 'gather' is XP per gather hit (fractions accumulate).
   xp: { gather: 0.25, build: 6, craft: 5, kill: 1, defend: 50, mission: 30, discover: 60, research: 20 },
 };
 

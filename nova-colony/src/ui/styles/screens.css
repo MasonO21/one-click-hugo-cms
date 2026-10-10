@@ -312,6 +312,28 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* a free seat on the board: the radio is still calling */
+.card.cand.cand-empty {
+  border-style: dashed;
+  background: transparent;
+  box-shadow: none;
+  justify-content: center;
+  min-height: 5.5em;
+}
+.cand-wait {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  opacity: 0.8;
+}
+.cand-wait i {
+  font-style: normal;
+  font-size: 1.5em;
+}
+.cand-wait b {
+  font-size: 1.15em;
+}
 
 /* ---------- research ---------- */
 .rp-bank {

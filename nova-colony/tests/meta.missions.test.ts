@@ -32,11 +32,13 @@ describe('missions: setup', () => {
   it('tracks lifetime counters ("type:target" and "type:*") for every event type', () => {
     const { game } = makeGame();
     const bus = game.bus;
+    // hand gathering counts at the node (a full store never stalls a gather step); unloading the backpack does not count twice
+    bus.emit('gather:hit', { node: 1, model: 'tree_round', x: 0, z: 0, drop: { wood: 4 } });
     bus.emit('resource:gained', { id: 'wood', amount: 4, source: 'gather' });
     bus.emit('resource:gained', { id: 'wood', amount: 6, source: 'production' });
     bus.emit('resource:gained', { id: 'wood', amount: 3, source: 'drop' });
     bus.emit('resource:gained', { id: 'wood', amount: 99, source: 'reward' }); // rewards/offline/etc. do not count as gathering
-    bus.emit('resource:gained', { id: 'stone', amount: 2, source: 'gather' });
+    bus.emit('gather:hit', { node: 2, model: 'rock', x: 0, z: 0, drop: { stone: 2 } });
     bus.emit('building:completed', { id: 5, def: 'shelter' });
     bus.emit('building:upgraded', { id: 5, def: 'shelter', level: 2, tier: 0 });
     bus.emit('colonist:recruited', { id: 1, rarity: 'rare' });

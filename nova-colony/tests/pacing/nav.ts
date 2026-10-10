@@ -64,6 +64,13 @@ export class Nav {
   private readonly f = new Float64Array(N * N);
   private readonly from = new Int32Array(N * N);
   private readonly stamp = new Int32Array(N * N);
+  /** Walkability looked up during one search (state does not change mid-search): 1 walkable, 2 blocked. */
+  private readonly walk = new Uint8Array(N * N);
+  private readonly walkStamp = new Int32Array(N * N);
+  /** 4-connected components of walkable cells (0 = blocked), rebuilt lazily when what can change walkability did. */
+  private readonly comp = new Int32Array(N * N);
+  private compKey = '';
+  private readonly fill: number[] = [];
   private run = 1;
   private readonly heap = new Heap(this.f);
 
@@ -101,11 +108,78 @@ export class Nav {
     return this.nodeBlock[cz * N + cx] === 0;
   }
 
+  /** Rebuild the component map when buildings, regions, the node mask or the vehicle changed (same tick: reuse). */
+  private components(hover: boolean): Int32Array {
+    const g = this.game;
+    const key = `${g.state.playTime}|${this.nodeBlockAt}|${hover}|${g.derived.buildingsVersion}|${g.state.world.regionsUnlocked.length}|${g.state.buildings.list.length}`;
+    if (key === this.compKey) return this.comp;
+    this.compKey = key;
+    const comp = this.comp;
+    comp.fill(-1);
+    let id = 0;
+    const stack = this.fill;
+    for (let i = 0; i < N * N; i++) {
+      if (comp[i] !== -1) continue;
+      if (!this.walkable(i % N, (i / N) | 0, hover)) {
+        comp[i] = 0;
+        continue;
+      }
+      id++;
+      comp[i] = id;
+      stack.length = 0;
+      stack.push(i);
+      while (stack.length) {
+        const c = stack.pop()!;
+        const cx = c % N;
+        const cz = (c / N) | 0;
+        for (let k = 0; k < 4; k++) {
+          const nx = cx + (k === 0 ? 1 : k === 1 ? -1 : 0);
+          const nz = cz + (k === 2 ? 1 : k === 3 ? -1 : 0);
+          if (nx < 0 || nz < 0 || nx >= N || nz >= N) continue;
+          const ni = nz * N + nx;
+          if (comp[ni] !== -1) continue;
+          if (!this.walkable(nx, nz, hover)) {
+            comp[ni] = 0;
+            continue;
+          }
+          comp[ni] = id;
+          stack.push(ni);
+        }
+      }
+    }
+    return comp;
+  }
+
+  /**
+   * Can any goal cell inside `box` be reached from the start cell at all? (Diagonal steps need both side cells free,
+   * so reachability is plain 4-connectivity of walkable cells: the start's free side neighbours name the components.)
+   */
+  private anyReachable(sx: number, sz: number, goal: (cx: number, cz: number) => boolean, box: [number, number, number, number], hover: boolean): boolean {
+    const comp = this.components(hover);
+    const starts = new Set<number>();
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = sx + dx;
+      const nz = sz + dz;
+      if (nx < 0 || nz < 0 || nx >= N || nz >= N) continue;
+      const c = comp[nz * N + nx];
+      if (c > 0) starts.add(c);
+    }
+    if (!starts.size) return false;
+    for (let cz = Math.max(0, box[1]); cz <= Math.min(N - 1, box[3]); cz++) {
+      for (let cx = Math.max(0, box[0]); cx <= Math.min(N - 1, box[2]); cx++) {
+        if (starts.has(comp[cz * N + cx]) && goal(cx, cz)) return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Shortest path from a world point to the nearest cell satisfying `goal` (A* toward `aim` when given, else
-   * Dijkstra). Returns world-space waypoints (cell centres, thinned) or null.
+   * Dijkstra). Returns world-space waypoints (cell centres, thinned) or null. `goalBox` (cells, inclusive) bounds the
+   * goal: a search that has not found it after a short while first checks the goal is reachable at all, so an
+   * unreachable target costs one flood fill instead of a search over the whole reachable map (same answers).
    */
-  path(fromX: number, fromZ: number, goal: (cx: number, cz: number) => boolean, aim?: Pt, maxExpand = 70000): Pt[] | null {
+  path(fromX: number, fromZ: number, goal: (cx: number, cz: number) => boolean, aim?: Pt, maxExpand = 70000, goalBox?: [number, number, number, number]): Pt[] | null {
     this.refreshNodes();
     const hover = this.hover();
     const run = ++this.run;
@@ -128,6 +202,19 @@ export class Nav {
     this.heap.push(start);
     let expanded = 0;
     let found = -1;
+    // memoised walkable(): a cell is asked about up to 24 times per search (same answers, a lot faster)
+    const walk = this.walk;
+    const walkStamp = this.walkStamp;
+    const ok = (x: number, z: number): boolean => {
+      if (x < 0 || z < 0 || x >= N || z >= N) return false;
+      const i = z * N + x;
+      if (walkStamp[i] === run) return walk[i] === 1;
+      walkStamp[i] = run;
+      const w = this.walkable(x, z, hover);
+      walk[i] = w ? 1 : 2;
+      return w;
+    };
+    let checked = !goalBox;
     while (this.heap.size) {
       const cur = this.heap.pop();
       const cx = cur % N;
@@ -137,14 +224,18 @@ export class Nav {
         break;
       }
       if (++expanded > maxExpand) break;
+      if (!checked && expanded > 2000) {
+        checked = true;
+        if (!this.anyReachable(sx, sz, goal, goalBox!, hover)) break;
+      }
       const gc = this.g[cur];
       for (let dz = -1; dz <= 1; dz++) {
         for (let dx = -1; dx <= 1; dx++) {
           if (!dx && !dz) continue;
           const nx = cx + dx;
           const nz = cz + dz;
-          if (!this.walkable(nx, nz, hover)) continue;
-          if (dx && dz && (!this.walkable(cx + dx, cz, hover) || !this.walkable(cx, cz + dz, hover))) continue;
+          if (!ok(nx, nz)) continue;
+          if (dx && dz && (!ok(cx + dx, cz) || !ok(cx, cz + dz))) continue;
           const ni = nz * N + nx;
           const ng = gc + (dx && dz ? 1.414 : 1);
           if (this.stamp[ni] === run && this.g[ni] <= ng) continue;
@@ -196,7 +287,9 @@ export class Nav {
   /** Path to stand within `range` world units of a point (e.g. a resource node or a POI). */
   pathNear(fromX: number, fromZ: number, x: number, z: number, range: number): Pt[] | null {
     const r = range - CELL * 0.75;
-    return this.path(fromX, fromZ, (cx, cz) => Math.hypot(cellCenter(cx) - x, cellCenter(cz) - z) <= Math.max(0.9, r), { x, z });
+    const rr = Math.max(0.9, r);
+    const box: [number, number, number, number] = [cellOf(x - rr) - 1, cellOf(z - rr) - 1, cellOf(x + rr) + 1, cellOf(z + rr) + 1];
+    return this.path(fromX, fromZ, (cx, cz) => Math.hypot(cellCenter(cx) - x, cellCenter(cz) - z) <= rr, { x, z }, 70000, box);
   }
 }
 

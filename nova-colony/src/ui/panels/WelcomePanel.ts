@@ -62,7 +62,7 @@ export class WelcomePanel extends Panel {
     left.appendChild(h('div', { class: 'wb-sun' }, h('div', { class: 'wb-rays' }), iconEl(hudArt('sunrise'), '🌅', 'wb-ic', 'div')));
     left.appendChild(h('h2', { class: 'wb-title', text: 'Welcome Back!' }));
     left.appendChild(h('div', { class: 'wb-away', text: `Away for ${fmtDuration(away)}` }));
-    right.appendChild(h('div', { class: 'mute small center', text: offlineWorkedText(away, s.seconds, this.game.data.balance.offlineEfficiency, fmtDuration) }));
+    right.appendChild(h('div', { class: 'mute small center', text: offlineWorkedText(away, s.seconds, this.game.data.balance.offlineEfficiency, fmtDuration, (this.game.data.balance.offlineFullMinutes ?? 0) * 60) }));
 
     const list = h('div', { class: 'gains' });
     const order = new Map(this.data.resources.map((r) => [r.id, r.sort]));

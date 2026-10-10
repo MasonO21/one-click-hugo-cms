@@ -45,7 +45,7 @@ function produce(game: Game, src: Counter, n: number): void {
   const t = src.target;
   switch (src.type) {
     case 'gather':
-      bus.emit('resource:gained', { id: t === '*' ? 'wood' : t, amount: n, source: 'gather' });
+      bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { [t === '*' ? 'wood' : t]: n } });
       break;
     case 'build': {
       const def = t === '*' ? 'floor' : t.startsWith('category:') ? game.data.buildings.find((b) => b.category === t.slice(9))!.id : t;
@@ -142,7 +142,7 @@ describe('achievements — progress & unlock', () => {
   it('reads progress from the mission counters (a gather event moves the Lumberjack bar)', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 120, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 120 } });
     expect(a.progress('ach_lumberjack_bronze')).toEqual({ value: 120, target: 500, done: false });
     expect(a.value('ach_lumberjack_gold')).toBe(120);
     // production and drops count like gathering, offline earnings and refunds do not
@@ -156,10 +156,10 @@ describe('achievements — progress & unlock', () => {
     const { g, rec } = withRecorder();
     const ev = listen(g.game);
     const a = g.game.sys.achievements;
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 499, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 499 } });
     tick(g);
     expect(a.isUnlocked('ach_lumberjack_bronze')).toBe(false);
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 1, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 1 } });
     tick(g, 1.1); // an event marks it dirty: noticed within a second
     expect(a.isUnlocked('ach_lumberjack_bronze')).toBe(true);
     expect(a.unlockedAt('ach_lumberjack_bronze')).toBe(g.clock.now);
@@ -176,7 +176,8 @@ describe('achievements — progress & unlock', () => {
   it('several unlocks in one pass make one toast', () => {
     const { g } = withRecorder();
     const ev = listen(g.game);
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 6000, source: 'gather' }); // bronze + silver
+    const silver = g.game.data.achievement('ach_lumberjack_silver')!.target;
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: silver + 1000 } }); // bronze + silver
     tick(g, 1.1);
     expect(ev.unlocked).toEqual(['ach_lumberjack_bronze', 'ach_lumberjack_silver']);
     expect(ev.journalToasts()).toEqual([{ text: '2 achievements earned!', open: 'journal', icon: '🏅' }]);
@@ -240,7 +241,7 @@ describe('achievements — the guided first session', () => {
     const g = makeGame();
     const ev = listen(g.game);
     expect(g.game.sys.liveops.offersUnlocked()).toBe(false);
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 600, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 600 } });
     setMetric(g.game, 'colonists', 3);
     tick(g, 1.1);
     expect(ev.unlocked.sort()).toEqual(['ach_lumberjack_bronze', 'ach_welcome_home_bronze']); // analytics and platform still hear
@@ -277,8 +278,9 @@ describe('achievements — claiming', () => {
     const st = g.game.state;
     const before = { wood: st.resources.amounts.wood ?? 0, xp: st.liveops.season.xp, bundles: st.player.items.timber_bundle ?? 0 };
     expect(a.claim('ach_lumberjack_bronze')).toBe(false); // not earned yet
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 500, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 500 } });
     tick(g);
+    before.xp = st.liveops.season.xp; // the hit itself earns a sliver of season XP
     const claims: string[] = [];
     g.game.bus.on('achievement:claimed', (e) => claims.push(e.id));
     expect(a.claimable().map((d) => d.id)).toEqual(['ach_lumberjack_bronze']);
@@ -297,7 +299,7 @@ describe('achievements — claiming', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
     const st = g.game.state;
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 5000, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: g.game.data.achievement('ach_lumberjack_silver')!.target } });
     tick(g, 1.1);
     const waiting = a.claimable().filter((d) => d.line === 'lumberjack');
     expect(waiting.map((d) => d.medal)).toEqual(['bronze', 'silver']);
@@ -316,7 +318,7 @@ describe('achievements — claiming', () => {
   it('claim all takes everything waiting, once', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
-    setMetric(g.game, 'colonists', 15);
+    setMetric(g.game, 'colonists', g.game.data.achievement('ach_welcome_home_silver')!.target); // bronze + silver
     setMetric(g.game, 'colonyTier', 3);
     tick(g);
     const waiting = a.claimable().length;
@@ -331,7 +333,7 @@ describe('achievements — claiming', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
     const st = g.game.state;
-    setMetric(g.game, 'colonists', 15);
+    setMetric(g.game, 'colonists', g.game.data.achievement('ach_welcome_home_silver')!.target); // bronze + silver
     setMetric(g.game, 'colonyTier', 3);
     tick(g);
     const waiting = a.claimable();
@@ -365,7 +367,7 @@ describe('achievements — claiming', () => {
   it('summary counts medals earned, not just claimed', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
-    setMetric(g.game, 'colonists', 15);
+    setMetric(g.game, 'colonists', g.game.data.achievement('ach_welcome_home_silver')!.target); // bronze + silver
     tick(g);
     a.claim('ach_welcome_home_bronze');
     expect(a.summary()).toMatchObject({ unlocked: 2, claimed: 1, claimable: 1, medals: { bronze: 1, silver: 1, gold: 0, special: 0 } });
@@ -376,7 +378,10 @@ describe('achievements — claiming', () => {
 function richState(): GameState {
   const { game } = makeGame({ start: false });
   const st = game.state;
-  st.missions.counters = { 'gather:wood': 6200, 'gather:*': 9000, 'build:*': 300, 'kill:*': 40, 'kill:crawler': 40, 'defend:*': 2, 'loot:*': 6 };
+  // past silver for wood (bronze for loot), short of gold: thresholds from data (the four-week pacing sizes them)
+  const target = (id: string) => game.data.achievement(id)!.target;
+  const wood = target('ach_lumberjack_silver') + 1200;
+  st.missions.counters = { 'gather:wood': wood, 'gather:*': wood + 2800, 'build:*': 300, 'kill:*': 40, 'kill:crawler': 40, 'defend:*': 2, 'loot:*': target('ach_treasure_hunter_bronze') + 1 };
   st.colony.tier = 3;
   st.playTime = 2 * 3600;
   st.research.completed = game.data.research.slice(0, 8).map((r) => r.id);
@@ -465,7 +470,7 @@ describe('achievements — saves', () => {
   it('round-trips unlocked and claimed ids with their timestamps', () => {
     const { g } = withRecorder();
     const a = g.game.sys.achievements;
-    setMetric(g.game, 'colonists', 15);
+    setMetric(g.game, 'colonists', g.game.data.achievement('ach_welcome_home_silver')!.target); // bronze + silver
     tick(g);
     a.claim('ach_welcome_home_bronze');
     const json = serializeState(g.game.state);
@@ -521,7 +526,7 @@ describe('achievements — hooks', () => {
     services.analytics = { setConsent: () => {}, track: (name, props) => events.push({ name, props }), flush: async () => {} };
     const g = makeGame({ services });
     installAnalyticsHooks(g.game);
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 500, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 500 } });
     tick(g, 1.1);
     const hit = events.filter((e) => e.name === 'achievement_unlocked');
     expect(hit).toHaveLength(1);

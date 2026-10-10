@@ -25,20 +25,23 @@ describe('season bonus chests (past level 50, premium)', () => {
     expect(end).toBe(50 * s.xpPerLevel);
     expect(seasonBonusEarned(s, 0)).toBe(0);
     expect(seasonBonusEarned(s, end)).toBe(0);
-    expect(seasonBonusEarned(s, end + 399)).toBe(0);
-    expect(seasonBonusEarned(s, end + 400)).toBe(1);
-    expect(seasonBonusEarned(s, end + 4000)).toBe(10);
-    expect(seasonBonusEarned({ ...s, bonus: undefined }, end + 4000)).toBe(0);
+    const per = s.bonus!.xp;
+    expect(per).toBe(s.xpPerLevel); // a level's worth of XP per bonus chest
+    expect(seasonBonusEarned(s, end + per - 1)).toBe(0);
+    expect(seasonBonusEarned(s, end + per)).toBe(1);
+    expect(seasonBonusEarned(s, end + per * 10)).toBe(10);
+    expect(seasonBonusEarned({ ...s, bonus: undefined }, end + per * 10)).toBe(0);
   });
 
   it('only the premium track gets them; claiming grants Explorer’s Cases, once each, and badges count them', async () => {
     const g = makeGame();
     const { game } = g;
     const lo = game.sys.liveops;
-    lo.addXp(seasonTrackXp(game.data.season) + 1000);
+    const per = game.data.season.bonus!.xp;
+    lo.addXp(seasonTrackXp(game.data.season) + per * 2.5);
     expect(seasonBonusReady(game)).toBe(0);
     expect(claimSeasonBonus(game)).toBe(0);
-    expect(seasonBonusView(game)).toMatchObject({ enabled: true, unlocked: true, premium: false, earned: 2, ready: 0, xpInto: 200, xpPer: 400 });
+    expect(seasonBonusView(game)).toMatchObject({ enabled: true, unlocked: true, premium: false, earned: 2, ready: 0, xpInto: per / 2, xpPer: per });
 
     expect(await lo.buy('season_pass_premium')).toBe(true);
     expect(seasonBonusReady(game)).toBe(2);
@@ -53,7 +56,7 @@ describe('season bonus chests (past level 50, premium)', () => {
     // more play, another chest (and a toast pointing at the season pass)
     const toasts: string[] = [];
     game.bus.on('ui:toast', (e) => toasts.push(e.text));
-    lo.addXp(250);
+    lo.addXp(per / 2 + 50);
     expect(seasonBonusReady(game)).toBe(1);
     expect(toasts.some((t) => /^🎁 Bonus Explorer's Case earned/.test(t))).toBe(true);
   });
@@ -62,7 +65,7 @@ describe('season bonus chests (past level 50, premium)', () => {
     const g = makeGame();
     const { game } = g;
     await game.sys.liveops.buy('season_pass_premium');
-    game.sys.liveops.addXp(seasonTrackXp(game.data.season) + 1200);
+    game.sys.liveops.addXp(seasonTrackXp(game.data.season) + game.data.season.bonus!.xp * 3);
     expect(claimSeasonBonus(game)).toBe(3);
     const raw = JSON.parse(serializeState(game.state));
     const again = makeGame({ state: migrateState(JSON.parse(JSON.stringify(raw))), at: g.clock.now });
@@ -86,7 +89,7 @@ describe('season premium highlights (computed, never typed in)', () => {
     const nova = data.season.levels.reduce((s, l) => s + (l.premium.nova ?? 0), 0);
     expect(h.nova).toBe(nova);
     expect(h.exclusive).toBe(3); // bubble helmet, lunar hare, brass frame: only from the season
-    expect(h.bonus).toEqual({ xp: 400, chest: 'chest_explorer', nova: 0 });
+    expect(h.bonus).toEqual({ xp: data.season.bonus!.xp, chest: 'chest_explorer', nova: 0 });
     expect(highlightChips(h)).toEqual([`10 cosmetics`, `8 caches`, `${friendlyAmount(nova)} Nova`, `${h.colonists} colonists`]);
   });
 

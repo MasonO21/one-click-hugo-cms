@@ -1,7 +1,7 @@
 /**
  * Colonist wishes & friendship — content and balance (types in schema.ts, behaviour in sim/wishes.ts).
  *
- * Every 8–12 minutes of online play (after the opening tutorial) one colonist voices a small, cozy wish. Granting it
+ * Every 5–8 minutes of online play (after the opening tutorial) one colonist voices a small, cozy wish. Granting it
  * makes them happy for a while, adds a friendship heart and brings a little thank-you gift. Nothing bad happens when a
  * wish lapses: it is simply forgotten after 45 minutes of play.
  *
@@ -21,7 +21,7 @@ const MIN = 60;
 
 export const WISH_RULES: WishRules = {
   firstDelay: [2.5 * MIN, 4 * MIN],
-  interval: [8 * MIN, 12 * MIN],
+  interval: [5 * MIN, 8 * MIN],
   retry: MIN,
   maxOpen: 2,
   expire: 45 * MIN,

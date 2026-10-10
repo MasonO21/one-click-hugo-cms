@@ -24,6 +24,7 @@ import { assignManual, autoAssign as runAutoAssign } from './colony/jobs';
 import { computeMood, emptyMood, happinessFactors, happinessTarget, productivityOf, type Mood } from './colony/happiness';
 import { secondsToNextSkill } from './colony/skills';
 import { ColonistAI } from './colony/ai';
+import { arrivalSeconds, arrivalsDue, boardSeats } from './colony/recruitBoard';
 import type { HappinessFactor } from './colony/types';
 
 export type { HappinessFactor } from './colony/types';
@@ -68,8 +69,10 @@ export class ColonistSystem extends System {
       if (!Number.isFinite(c.happiness)) c.happiness = 60;
     }
     this.refresh();
-    // Fresh game: create the initial candidate pool (recruiting still needs a recruitment building).
-    this.refreshCandidates(fresh || this.game.state.colonists.candidates.length === 0);
+    // Fresh game: a full board (recruiting still needs a recruitment building). A loaded save lets in whoever
+    // arrived while the app was closed (absolute clock, see colony/recruitBoard.ts).
+    const cs = this.game.state.colonists;
+    if (fresh || !(cs.refreshAt > 0)) this.fillBoard();
     this.perSecond();
   }
 
@@ -291,8 +294,8 @@ export class ColonistSystem extends System {
   }
 
   /**
-   * Recruit the candidate at `index` (needs a recruitment building, a free bed and the cost). The vacated
-   * board slot is immediately refilled with a fresh candidate so growth is never gated on a timer.
+   * Recruit the candidate at `index` (needs a recruitment building, a free bed and the cost). The seat stays empty
+   * until the next survivor answers the radio (colony/recruitBoard.ts); a full board starts that clock now.
    */
   recruit(index: number): boolean {
     const g = this.game;
@@ -310,33 +313,79 @@ export class ColonistSystem extends System {
       return false;
     }
     if (!g.sys.economy.spend(cand.cost, 'recruit')) return false;
+    const wasFull = st.candidates.length >= this.poolSize();
     st.candidates.splice(index, 1);
+    const interval = arrivalSeconds(g) * 1000;
+    if (interval <= 0) st.candidates.splice(index, 0, this.makeCandidate());
+    else if (wasFull || !(st.refreshAt > g.now())) st.refreshAt = g.now() + interval;
     this.add(cand.colonist, board.x + (g.rng.next() - 0.5) * 2, board.z + board.hd + 1.2);
-    st.candidates.splice(index, 0, this.makeCandidate());
     return true;
   }
 
   /**
-   * Refresh the candidate pool. Free when the timer elapsed; `force` (ads / Nova crystals) rerolls it now.
-   * Pool size = balance.recruitCandidates x modifier('recruitSlots').
+   * New faces at the recruitment board. `force` (the New recruits ad / Nova crystals): everyone waiting makes way for
+   * fresh survivors; an empty seat still waits for the radio, so the colony's growth stays on the arrival clock. Without
+   * force it only lets in whoever is due (the board otherwise refills on its own clock, colony/recruitBoard.ts).
    */
   refreshCandidates(force: boolean): void {
-    const g = this.game;
-    const st = g.state.colonists;
-    const now = g.now();
-    if (!force && st.candidates.length > 0 && now < st.refreshAt) return;
-    const hadPool = st.candidates.length > 0;
+    const st = this.game.state.colonists;
+    if (!force) {
+      this.boardUpkeep();
+      return;
+    }
+    // fresh faces for the seats that are filled; empty seats wait for the radio as before (the colony's growth stays
+    // on the arrival clock, an ad or Nova only changes who is waiting)
+    const n = st.candidates.length;
     st.candidates.length = 0;
-    const n = this.poolSize();
     for (let i = 0; i < n; i++) st.candidates.push(this.makeCandidate());
-    st.slots = n;
-    st.refreshAt = now + g.data.balance.recruitRefreshMinutes * 60000;
-    if (!force && hadPool && this.layout.recruit) g.toast('New survivors are waiting at the recruitment board', 'info');
   }
 
-  /** Seconds until the free refresh (0 when due). */
+  /** Seconds until the next survivor arrives (0 when due or when the board is full: nobody is on the way). */
   secondsToRefresh(): number {
-    return Math.max(0, (this.game.state.colonists.refreshAt - this.game.now()) / 1000);
+    const next = this.nextArrivalIn();
+    return next == null ? 0 : next;
+  }
+
+  /** Seconds until the next survivor answers the radio, or null while every seat on the board is taken. */
+  nextArrivalIn(): number | null {
+    const st = this.game.state.colonists;
+    if (st.candidates.length >= this.poolSize()) return null;
+    if (arrivalSeconds(this.game) <= 0) return 0;
+    return Math.max(0, (st.refreshAt - this.game.now()) / 1000);
+  }
+
+  /** Seats on the board (filled or not). */
+  boardSeats(): number {
+    return this.poolSize();
+  }
+
+  /** A full board of fresh survivors (a new colony); the arrival clock starts now. */
+  private fillBoard(): void {
+    const g = this.game;
+    const st = g.state.colonists;
+    const n = this.poolSize();
+    while (st.candidates.length < n) st.candidates.push(this.makeCandidate());
+    st.slots = n;
+    st.refreshAt = g.now() + arrivalSeconds(g) * 1000;
+  }
+
+  /** Let in the survivors who arrived since the last check (absolute clock, capped by the free seats). */
+  private boardUpkeep(): void {
+    const g = this.game;
+    const st = g.state.colonists;
+    const want = this.poolSize();
+    const free = want - st.candidates.length;
+    if (free <= 0) return; // full: the clock waits until someone is recruited
+    const ms = arrivalSeconds(g) * 1000;
+    const now = g.now();
+    if (!(st.refreshAt > 0)) st.refreshAt = now + ms;
+    const due = arrivalsDue(st.refreshAt, now, ms, free);
+    if (due.n <= 0) return;
+    for (let i = 0; i < due.n; i++) st.candidates.push(this.makeCandidate());
+    st.refreshAt = due.nextAt;
+    if (this.layout.recruit) {
+      g.toast(due.n === 1 ? 'A survivor answered the radio — they are waiting at the recruitment board' : `${due.n} survivors are waiting at the recruitment board`, 'info', '📻');
+    }
   }
 
   // ---------------------------------------------------------------- jobs
@@ -428,7 +477,7 @@ export class ColonistSystem extends System {
   }
 
   private poolSize(): number {
-    return Math.max(1, Math.round(this.game.data.balance.recruitCandidates * this.game.sys.economy.modifier('recruitSlots')));
+    return boardSeats(this.game);
   }
 
   private makeCandidate(): RecruitCandidate {
@@ -483,9 +532,9 @@ export class ColonistSystem extends System {
     g.derived.happiness.average = avg;
     g.derived.happiness.productivity = 1 + Math.max(0, avg - 50) / 100;
 
-    // board upkeep: timed refresh, and top up when 'recruitSlots' grew (e.g. research)
+    // board upkeep: arrivals on the board's clock, and a new seat (research) comes with someone sitting in it
     const st = g.state.colonists;
-    if (g.now() >= st.refreshAt) this.refreshCandidates(false);
+    this.boardUpkeep();
     const want = this.poolSize();
     const have = st.slots ?? st.candidates.length;
     if (want > have) {

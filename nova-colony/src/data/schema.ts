@@ -1013,6 +1013,8 @@ export interface SpinSegment {
 export interface SeasonDef {
   id: string;
   name: string;
+  /** Nominal length in days: what `xpPerLevel` is tuned for (an engaged free player completes the free track near the end). */
+  days?: number;
   /** XP needed per level (flat). */
   xpPerLevel: number;
   levels: { free: Reward; premium: Reward }[];

@@ -100,14 +100,14 @@ describe('journal — lines, order, sections', () => {
 
   it('follows progress, claimable medals and completion', () => {
     const g = makeGame();
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 750, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: 750 } });
     tick(g);
     let lumber = lineViews(g.game).find((v) => v.line === 'lumberjack')!;
     expect(lumber.state).toBe('claim');
     expect(lumber.claimable.map((d) => d.medal)).toEqual(['bronze']);
     expect(lumber.next!.medal).toBe('silver');
     expect(lumber.value).toBe(750);
-    expect(lumber.frac).toBeCloseTo(0.15, 5);
+    expect(lumber.frac).toBeCloseTo(750 / g.game.data.achievement('ach_lumberjack_silver')!.target, 5);
     expect(lumber.earned).toBe(1);
 
     g.game.sys.achievements.claimLine('lumberjack');
@@ -115,7 +115,7 @@ describe('journal — lines, order, sections', () => {
     expect(lumber.state).toBe('progress');
     expect(lumber.claimable).toEqual([]);
 
-    g.game.bus.emit('resource:gained', { id: 'wood', amount: 60000, source: 'gather' });
+    g.game.bus.emit('gather:hit', { node: 0, model: 'tree_round', x: 0, z: 0, drop: { ['wood']: g.game.data.achievement('ach_lumberjack_gold')!.target } });
     tick(g);
     g.game.sys.achievements.claimAll();
     lumber = lineViews(g.game).find((v) => v.line === 'lumberjack')!;

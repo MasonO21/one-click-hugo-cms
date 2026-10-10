@@ -241,9 +241,11 @@ describe('expeditions: timers and hauls', () => {
     rig.wait(61 * MIN);
     const haul = g.sys.expeditions.get(e.id)!.haul!;
     const cap = g.sys.economy.capacity('steel');
-    g.state.resources.amounts.steel = cap * 3 - 10; // nearly at the allowance already
+    const mult = g.data.balance.offlineStorageMult ?? 1;
+    expect(mult).toBeGreaterThan(1);
+    g.state.resources.amounts.steel = cap * mult - 10; // nearly at the allowance already
     const res = g.sys.expeditions.collect(e.id)!;
-    expect(g.state.resources.amounts.steel).toBe(cap * 3);
+    expect(g.state.resources.amounts.steel).toBe(cap * mult);
     expect(res.leftBehind.steel).toBe(haul.resources!.steel! - 10);
   });
 
