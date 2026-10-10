@@ -432,12 +432,12 @@ export const BLESSINGS = {
 // foe, and ends with its own boss; its other chapters bring earlier bosses back stronger (`tier`), under the act's epithet.
 const PARADE = [45, 75, 110, 150, 185, 225, 255, 290]; // the doubled elite times of the parade chapters (5, 9, 20, 23, 29)
 export const ACTS = [
-  { n: 1, name: 'The Waking Dark',   from: 1,  to: 5,  epithet: '',            css: '#4ef2ff' },
-  { n: 2, name: 'The Drowned Coast', from: 6,  to: 10, epithet: 'Drowned',     css: '#2fe6c8' },
-  { n: 3, name: 'The Thornwood',     from: 11, to: 15, epithet: 'Thornbound',  css: '#c8e040' },
-  { n: 4, name: 'The Plague Fens',   from: 16, to: 20, epithet: 'Blighted',    css: '#9cff3a' },
-  { n: 5, name: 'The Storm Spire',   from: 21, to: 25, epithet: 'Stormforged', css: '#7fd4ff' },
-  { n: 6, name: 'The Hollow Moon',   from: 26, to: 30, epithet: 'Moonless',    css: '#d0b8ff' },
+  { n: 1, name: 'The Waking Dark',   from: 1,  to: 5,  epithet: '',            css: '#4ef2ff', hazard: 'Each chapter its own twist', foe: '' },
+  { n: 2, name: 'The Drowned Coast', from: 6,  to: 10, epithet: 'Drowned',     css: '#2fe6c8', hazard: 'Tide pools', foe: 'siren' },
+  { n: 3, name: 'The Thornwood',     from: 11, to: 15, epithet: 'Thornbound',  css: '#c8e040', hazard: 'Brambles', foe: 'thornback' },
+  { n: 4, name: 'The Plague Fens',   from: 16, to: 20, epithet: 'Blighted',    css: '#9cff3a', hazard: 'Miasma', foe: 'rat' },
+  { n: 5, name: 'The Storm Spire',   from: 21, to: 25, epithet: 'Stormforged', css: '#7fd4ff', hazard: 'Lightning', foe: 'caller' },
+  { n: 6, name: 'The Hollow Moon',   from: 26, to: 30, epithet: 'Moonless',    css: '#d0b8ff', hazard: 'Gravity wells', foe: 'stalker' },
 ];
 export const CAMPAIGN_LENGTH = 30;
 export const ENDLESS_ID = 100; // the Endless Abyss's id (records, art, difficulty); it was 6 while the campaign had five chapters

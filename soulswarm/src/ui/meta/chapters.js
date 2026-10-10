@@ -3,7 +3,7 @@
 // it on the home card. Opened from the map button on the chapter card (home.js).
 import { h, $, modal } from '../dom.js';
 import { icon } from '../icons.js';
-import { ACTS, CHAPTERS, BOSSES, DIFFICULTY, DIFFICULTY_ORDER, ENDLESS, ENDLESS_ID, ENDLESS_UNLOCK } from '../../game/data.js';
+import { ACTS, CHAPTERS, BOSSES, BESTIARY, DIFFICULTY, DIFFICULTY_ORDER, ENDLESS, ENDLESS_ID, ENDLESS_UNLOCK } from '../../game/data.js';
 import { clearedOn } from '../../meta/difficulty.js';
 import { commit } from '../../meta/economy.js';
 import { tap } from './util.js';
@@ -48,6 +48,7 @@ export function openChapterMap(ctx) {
     const reached = A.from <= p.chapter.unlocked;
     return `<section class="cm-act${reached ? '' : ' lk'}" style="--ac:${A.css}">
       <header><span class="t-label">Act ${actRoman(A.n)}</span><b class="t-display">${A.name}</b><small class="tnum">${cleared}/5</small></header>
+      <p class="cm-realm">${reached || A.n === 1 ? `${A.hazard}${A.foe ? ` · ${BESTIARY.foes[A.foe].name}` : ''}` : `${icon('lock')} Reach Chapter ${A.from}`}</p>
       <div class="cm-grid">${chs.map(tile).join('')}</div>
     </section>`;
   }).join('');
