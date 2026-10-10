@@ -1201,6 +1201,51 @@
     decreeDeco.model = g;
   }
   T3.decreeDeco = decreeDeco; // for tests
+  // the Buried City (dig.js): once the well-diggers break through, a dig site on the sand outside the gate (a pit
+  // under a timber hoist with a rope and bucket, spoil heaps, a ladder, an awning over the finds); tap it to dig
+  const digSite = { model: null, proxy: null, at: null };
+  function syncDigSite() {
+    if (digSite.model || !KH.dig || !KH.dig.unlocked() || !S.dig || !S.dig.open) return;
+    const at = new V3(9.0, 0, K.gate.z + 3.6);
+    digSite.at = at; plotPos.buriedcity = at.clone();
+    const g = new THREE.Group(), wood = A.mat(A.P.woodD), woodL = A.mat(A.P.wood), rope = A.mat(A.P.rope), sand = A.mat('#9a6a3a', { flat: true }), sandD = A.mat('#7a4f2e', { flat: true });
+    const pit = A.mat('#2a1608', { r: 1 }), cloth = A.mat(A.P.cloth2, { ds: true, flat: true }), clothR = A.mat(A.P.cloth1, { ds: true, flat: true });
+    // the pit: a dark shaft with a timber rim
+    g.add(A.box(1.5, 0.04, 1.1, pit, 0, 0.01, 0));
+    for (const [w, d, x, z] of [[1.7, 0.12, 0, -0.6], [1.7, 0.12, 0, 0.6], [0.12, 1.1, -0.8, 0], [0.12, 1.1, 0.8, 0]]) g.add(A.box(w, 0.12, d, woodL, x, 0, z));
+    // spoil heaps of dug sand
+    for (const [x, z, r] of [[-1.5, -0.5, 0.55], [-1.3, 0.55, 0.42], [1.55, 0.7, 0.48], [0.4, -1.25, 0.38]]) { const h = A.sph(r, Math.random() < 0.5 ? sand : sandD, x, 0, z, 9); h.scale.y = 0.55; g.add(h); }
+    // the hoist: an A-frame each end, a beam, rope and bucket over the shaft
+    for (const x of [-0.75, 0.75]) { g.add(A.rod(new V3(x, 0, -0.5), new V3(x, 1.7, 0), 0.045, wood)); g.add(A.rod(new V3(x, 0, 0.5), new V3(x, 1.7, 0), 0.045, wood)); }
+    g.add(A.rod(new V3(-0.85, 1.7, 0), new V3(0.85, 1.7, 0), 0.05, wood));
+    g.add(A.sph(0.1, woodL, 0, 1.7, 0, 8));
+    g.add(A.rod(new V3(0.05, 1.66, 0), new V3(0.05, 0.75, 0), 0.012, rope));
+    g.add(A.cyl(0.13, 0.1, 0.2, A.mat(A.P.copper, { m: 0.5, r: 0.4 }), 0.05, 0.65, 0, 10));
+    // a ladder out of the shaft
+    const lad = A.grp(A.box(0.04, 1.3, 0.04, woodL, -0.16, 0, 0), A.box(0.04, 1.3, 0.04, woodL, 0.16, 0, 0), ...[0.2, 0.45, 0.7, 0.95, 1.2].map((y) => A.box(0.34, 0.03, 0.03, woodL, 0, y, 0)));
+    lad.rotation.x = -0.35; lad.position.set(-0.45, -0.1, 0.3); g.add(lad);
+    // an awning over the finds: jars and a little idol on a rug
+    const aw = new V3(0.2, 0, 1.6);
+    for (const [x, z] of [[-0.55, -0.35], [0.55, -0.35], [-0.55, 0.35], [0.55, 0.35]]) g.add(A.cyl(0.03, 0.03, 1.05, wood, aw.x + x, 0, aw.z + z, 6));
+    const top = A.box(1.3, 0.03, 0.9, clothR, aw.x, 1.03, aw.z); top.rotation.x = 0.12; g.add(top);
+    g.add(A.box(1.0, 0.02, 0.6, cloth, aw.x, 0.02, aw.z));
+    g.add(A.cyl(0.08, 0.12, 0.3, A.mat('#c0582e'), aw.x - 0.25, 0.02, aw.z, 8));
+    g.add(A.cyl(0.06, 0.09, 0.22, A.mat('#2e8b7a'), aw.x + 0.05, 0.02, aw.z + 0.1, 8));
+    g.add(A.grp(A.box(0.1, 0.22, 0.08, A.mat('#2e8bb0'), 0, 0.02, 0), A.sph(0.06, A.mat('#2e8bb0'), 0, 0.3, 0, 8)).translateX(aw.x + 0.3).translateZ(aw.z));
+    // a pick and shovel leaning on the rim
+    g.add(A.rod(new V3(1.0, 0, -0.4), new V3(0.85, 0.85, -0.55), 0.025, woodL));
+    g.add(A.box(0.14, 0.2, 0.02, A.mat(A.P.dark, { m: 0.5 }), 1.0, 0.1, -0.4));
+    A.bake(g);
+    g.position.copy(at); g.rotation.y = -0.25; g.scale.setScalar(1.7);
+    scene.add(g);
+    const proxy = new THREE.Mesh(new THREE.CylinderGeometry(3.0, 3.0, 3.2, 10), new THREE.MeshBasicMaterial());
+    proxy.position.set(at.x, 1.6, at.z); proxy.visible = false; proxy.userData.pid = 'buriedcity';
+    scene.add(proxy); hit.push(proxy);
+    digSite.model = g; digSite.proxy = proxy;
+  }
+  KH.on('relic', () => burst('buriedcity', '#ffe08a', 24));
+  KH.on('digLayer', () => burst('buriedcity', '#8ff0ff', 60));
+  T3.digSite = digSite; // for tests
   function syncDecor() {
     if (!KH.decorItems) return;
     const open = S.lv.wyrm >= DATA.decor.unlock;
@@ -1890,7 +1935,7 @@
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     slow -= dt;
-    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncRanks(); syncDecrees(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
+    if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncRanks(); syncDecrees(); syncDigSite(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
     camStep(now, dt);
     // short swoop in when the keep first appears (wall-clock, so slow devices don't drag it out)
     const fk = smooth(0, 1, (now - view.flyStart) / 1800);
