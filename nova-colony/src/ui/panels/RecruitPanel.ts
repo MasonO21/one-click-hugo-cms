@@ -46,7 +46,7 @@ export class RecruitPanel extends Panel {
     for (const el of this.body.querySelectorAll('[data-countdown]')) el.textContent = text;
   }
 
-  /** "12:41" until the next survivor ("1d 4h", "7 days" for a long wait); "Board full" while every seat is taken. */
+  /** "12:41" until the next survivor ("1d 4h", "7 days" for a long wait); "Full" while every seat is taken. */
   private countdownText(): string {
     return recruitCountdownText(this.game.sys.colonists.nextArrivalIn(), fmtHMS);
   }
@@ -64,7 +64,8 @@ export class RecruitPanel extends Panel {
         { class: 'summary-strip' },
         h('div', { class: 'sum' }, h('b', { text: String(g.state.colonists.list.length) }), h('small', { text: 'colonists' })),
         h('div', { class: 'sum' }, h('b', { class: beds > 0 ? '' : 'neg', text: String(beds) }), h('small', { text: 'free beds' })),
-        h('div', { class: 'sum' }, h('b', { class: 'num', 'data-countdown': '1', text: this.countdownText() }), h('small', { text: 'next survivor in' })),
+        // a full board has nobody on the way: "Full · board", not "Board full · next survivor in"
+        h('div', { class: 'sum' }, h('b', { class: 'num', 'data-countdown': '1', text: this.countdownText() }), h('small', { text: g.sys.colonists.nextArrivalIn() == null ? 'board' : 'next survivor in' })),
       ),
     );
     if (!board) wrap.appendChild(h('div', { class: 'card warn-card', text: '🏗️ Build a Recruitment Board to welcome new survivors to your colony.' }));

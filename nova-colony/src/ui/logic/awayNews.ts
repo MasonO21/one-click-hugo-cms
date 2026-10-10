@@ -39,10 +39,10 @@ export function awayNewsText(n: AwayNews): string | null {
 
 /**
  * The board's countdown: "12:41" or "3:05:10" under a day, "1d 4h" under two days, then whole days ("7 days": a
- * week-long wait counted to the second is clock-watching, not anticipation). "Board full" with every seat taken.
+ * week-long wait counted to the second is clock-watching, not anticipation). "Full" with every seat taken.
  */
 export function recruitCountdownText(seconds: number | null, hms: (s: number) => string): string {
-  if (seconds == null) return 'Board full';
+  if (seconds == null) return 'Full';
   if (seconds <= 0) return 'Any moment';
   if (seconds < 86400) return hms(seconds);
   if (seconds < 2 * 86400) return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;

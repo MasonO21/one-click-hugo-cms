@@ -56,7 +56,7 @@ describe('recruitment board: a long wait points to the other roads in', () => {
   });
 
   it('counts down to the second within a day, then in days (a week is not clock-watching)', () => {
-    expect(recruitCountdownText(null, fmtHMS)).toBe('Board full');
+    expect(recruitCountdownText(null, fmtHMS)).toBe('Full');
     expect(recruitCountdownText(0, fmtHMS)).toBe('Any moment');
     expect(recruitCountdownText(761, fmtHMS)).toBe('12:41');
     expect(recruitCountdownText(3 * 3600 + 5, fmtHMS)).toBe('3:00:05');
