@@ -8,7 +8,6 @@ Everything here was made from the game itself, so it shows what players get.
 | `android/01-wyrm.jpg` … `07-story.jpg` | Google Play phone screenshots (1080×1920), the same seven |
 | `google-play-feature-1024x500.png` | Google Play's required feature graphic |
 | `keyart-wide-2752x1536.jpg` | The key art in landscape (the portrait painting outpainted), for banners, Discord, a press kit |
-| `trailer-1080x1920.mp4` | A 30-second vertical gameplay trailer (no sound) for ads, TikTok/Reels/Shorts and the Play promo video |
 
 The order and captions follow `STORE_LISTING.md`:
 
@@ -24,13 +23,13 @@ The order and captions follow `STORE_LISTING.md`:
 
 A headless Chromium plays a built copy of the game at the stores' sizes (430×932 and 360×640 points at 3× pixel
 density), sets up a built-up keep, takes each shot and lays the caption band over it in the game's own type. The
-trailer pauses the page's clock and steps it one frame at a time, so the video is a smooth 30 fps whatever the
-machine, then `ffmpeg` encodes it. The feature graphic is the key art outpainted to landscape (Higgsfield) with the
+feature graphic is the key art outpainted to landscape (Higgsfield) with the
 wordmark set in El Messiri.
 
 To retake them by hand instead: run the game in a desktop browser with the device toolbar at the sizes above (or the
 iOS Simulator), screenshot, and add the caption in any editor. Apple's App Preview video (886×1920 for the 6.7"
-iPhone) is best recorded in the Simulator (File › Record Screen), following the script in `STORE_LISTING.md`.
+iPhone) and ad videos are best recorded from a real phone or the Simulator (File › Record Screen), following the
+script in `STORE_LISTING.md`: software rendering on a server is too slow for smooth 3D video.
 
 Before a large ad spend, A/B test the first two screenshots and the icon (App Store product page optimization,
 Google Play store listing experiments): they move installs more than anything else on the page.
