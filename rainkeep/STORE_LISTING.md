@@ -106,7 +106,10 @@ Expect **12+**. See NATIVE.md, section 7, for the questionnaire answers (paid ra
 
 ## Screenshots (6.7" and 6.5" iPhone, portrait)
 
-Take these in the iOS Simulator or on a device, then add a short caption band at the top of each. The 3D keep looks best at golden hour (dusk in the day cycle) or at night with the lanterns lit. Seven screenshots, in this order:
+Ready-made sets are in `store/` (`store/README.md`): 1290×2796 for the 6.7" iPhone and 1080×1920 for Google Play,
+captions included, made with the script described there. To retake them by hand, use the iOS Simulator or a device
+and add a short caption band at the top of each. The 3D keep looks best at golden hour (dusk in the day cycle) or at
+night with the lanterns lit. Seven screenshots, in this order:
 
 | # | Screen | Caption |
 |---|---|---|
@@ -114,7 +117,7 @@ Take these in the iOS Simulator or on a device, then add a short caption band at
 | 2 | A sandstorm rolling over the keep, HUD showing "Sandstorm 1:12", the wyrm sheet on Downpour | **See the storm coming. Be ready.** |
 | 3 | Heroes roster with Legendary portraits and stars | **25 heroes. Every one has a job at home.** |
 | 4 | The Dunes in 3D with caravans out to an oasis, a camp and a ruin beacon | **Cross the Dunes** |
-| 5 | Caravan tab with the Colossus raid open and the chat | **Ride with your Caravan against the Colossus** |
+| 5 | A real Caravan: its members, the chat and the Glass Serpent of the day | **Play with real people** |
 | 6 | The evolution sheet showing the Skyriver with its halo of living water | **Nine forms. One storm to choose.** |
 | 7 | A story scene before a boss: Elder Maram facing the Pale Herald over the Act I dunes | **Every boss has a story** |
 
@@ -124,7 +127,7 @@ Take these in the iOS Simulator or on a device, then add a short caption band at
 2. (3-7s) The egg cracks in a dry well; the Hatchling coils in the spring and mist rolls over the keep.
 3. (7-12s) HUD forecast: "Sandstorm in 0:30". Player taps the wyrm and sets **Downpour**. The storm hits; the keep stays cool.
 4. (12-17s) Quick cuts: a building rising through its tiers, a Legendary hero reveal, a caravan crossing the Dunes.
-5. (17-23s) The Colossus raid with the Caravan; damage numbers fly.
+5. (17-23s) A real Caravan brings down the Glass Serpent; the chat cheers.
 6. (23-28s) The camera orbits the Primordial wyrm under its rain cloud. Title card: **Rainkeep**. "Free to play."
 
 Record with the iOS Simulator (File › Record Screen) at 30 fps and trim to the frames above.

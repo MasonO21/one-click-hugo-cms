@@ -141,14 +141,22 @@ Target: match the genre's spending ladder while putting more of the spend into b
 5. **Returning-veteran onboarding.** Skip-tutorial for experienced 4X players and a "Warden's Welcome" catch-up event for anyone who joins a server late.
 6. **Creator program** with mid-size strategy and Whiteout Survival YouTubers and streamers at soft launch. Give them early access, custom wyrm skins and Caravan-founder codes.
 
-## 6. From 4.3 to a live multiplayer game
+## 6. From single player to a live multiplayer game
 
-Version 4.16 is a complete single-player game: every system above works offline, with simulated Caravan members and rival keeps. Turning it into a live-service multiplayer game means swapping the simulations for real players:
+Up to 4.43 Rainkeep was a complete single-player game with simulated Caravan members and rival keeps. 4.44 added the
+first real multiplayer layer beside the simulations (NETWORK.md): real Caravans with chat, help and a shared daily
+boss, an Arena between real keeps, a board of every warden and a world chat, running on the claude.ai link's shared
+database for a closed test and on the reference server (`server/`) for the native app. What remains for a
+live-service game:
 
-- **Real Caravans:** shared help requests, donations and Colossus raids backed by a server, plus chat with moderation.
+- **Server-side battles:** resolve Arena attacks and boss hits on the server with the same pure battle functions
+  (`core.js` `newBattle`/`battleStep`), so a modified client can't report results it didn't earn.
 - **Shared Dunes:** one map per server, where caravans can meet rival keeps.
 - **Oasis Wars between servers:** real bracketed leaderboards each season, with server transfers at the start of a season.
-- **Live ops:** monthly hero banners, new chapters past the Sunheart, seasonal skins and event packs, all tuned through remote config.
+- **Moderation at scale:** the Report/Block tools and the owner's removal queue serve a closed test; a public launch
+  needs a text filter and a moderation service.
+- **Live ops:** monthly hero banners, new chapters past the Sunheart, seasonal skins and event packs, all tuned through
+  remote config (`cfg/live`, `GET /v1/config`).
 
 ## 7. What it takes to ship and scale
 
@@ -331,9 +339,14 @@ Other measured outcomes:
 
 ## 9. Next steps
 
-1. Playtest with 20+ genre players; watch the first 10 minutes, the first sandstorm and the first caravan across the Dunes.
-2. Ship to TestFlight using NATIVE.md, with real purchases in the App Store sandbox. Check frame rate on a 3-4 year old iPhone and Android mid-ranger.
-3. The painted set in 4.2 covers every hero, foe family, building, event and store pack. Before a large ad spend, commission a human artist to repaint the six Legendary heroes and the Rainwyrm key art over the generated versions (they show in every ad), and to animate the hero portraits for the Beacon.
-4. Add analytics hooks (tutorial funnel, first purchase view, storm outcomes, when players call the rain, which incident choices they pick, day-1/7/30 retention).
-5. Soft-launch in one or two test markets and check the retention gates in section 7 before spending on user acquisition.
-6. If retention holds, start the live multiplayer backend in section 6.
+LAUNCH.md has the plan in full. In short:
+
+1. Closed test (now): share the link at Contributor access with 20 to 50 genre players for two weeks; read the
+   Playtest sheet for retention, the first-session funnel, frame rates and feedback. Android testers can sideload the
+   debug build (`scripts/android-debug-build.sh`, NATIVE.md).
+2. Fix what the test finds, then deploy the server (`server/README.md`) and ship TestFlight and Google Play internal
+   builds with real purchases in the stores' sandboxes (NATIVE.md).
+3. Before a large ad spend, commission a human artist to repaint the six Legendary heroes and the Rainwyrm key art
+   over the generated versions (they show in every ad).
+4. Soft-launch in one or two test markets and check the retention gates in section 7 before spending on user
+   acquisition; resolve Arena battles on the server before competitive play matters (section 6).

@@ -5,7 +5,7 @@ A complete desert water-survival strategy game for phones, in 3D. The rain stopp
 - **Play:** open `index.html` in any browser, or install it to your phone's home screen (see below).
 - **Design and business plan:** [DESIGN.md](DESIGN.md)
 - **Putting it on the App Store and Google Play:** [NATIVE.md](NATIVE.md)
-- **Store listing copy:** [STORE_LISTING.md](STORE_LISTING.md) · **Privacy policy:** [PRIVACY.md](PRIVACY.md)
+- **Store listing copy:** [STORE_LISTING.md](STORE_LISTING.md) · **Privacy policy:** [PRIVACY.md](PRIVACY.md) · **Launch plan:** [LAUNCH.md](LAUNCH.md) · **Network contract:** [NETWORK.md](NETWORK.md)
 
 ## What's in the game
 
@@ -168,6 +168,8 @@ Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D gr
 | `fonts/` | El Messiri and Barlow Semi Condensed (SIL Open Font License) |
 | `icons/`, `icon.svg`, `manifest.webmanifest` | App icons, splash screen and home-screen install |
 | `package.json`, `capacitor.config.json`, `scripts/build-www.mjs` | Native app shell (Capacitor) and build script |
+| `scripts/android-debug-build.sh`, `scripts/android-res.py` | A sideloadable Android test build (debug-signed APK) on any Linux or Mac machine, with the launcher icon and splash generated from `icons/` (NATIVE.md) |
+| `store/` | Store screenshots with captions for the App Store (6.7" iPhone) and Google Play, made from the game itself (`store/README.md`) |
 
 ## Tuning and testing
 
