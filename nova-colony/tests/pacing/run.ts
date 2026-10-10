@@ -31,6 +31,12 @@ export interface RunOptions {
   verbose: boolean;
   /** Called with the live game and bot when the run ends (debugging). */
   inspect?: (game: Game, bot: PacingBot) => void;
+  /** Called after the step in which a new tier was reached (QA saves: scripts/pacing-bot.mjs --saves). */
+  onTier?: (tier: number, game: Game, bot: PacingBot) => void;
+  /** Called after every report sample (once per online minute; soak checks). */
+  onSample?: (game: Game, bot: PacingBot) => void;
+  /** Sessions mode: called when the app closes, with the save written and the offline gap (s) that follows. */
+  onClose?: (game: Game, save: string, gapSeconds: number) => void;
 }
 
 export const DEFAULTS: RunOptions = {
@@ -163,6 +169,8 @@ export interface RunResult {
   taps: Record<number, TapRow>;
   botStats: PacingBot['stats'];
   botLog: string[];
+  /** Wall-clock cost per online hour: total (bot + sim) and the share spent inside game.update, in ms. */
+  stepCost: { hour: number; wallMs: number; simMs: number; steps: number }[];
   final: { t: number; h: number; tier: number; colonists: number; buildings: number; research: number; explored: number; nova: number; novaEarned: number };
   wallMs: number;
 }
@@ -208,6 +216,7 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     taps: {},
     botStats: bot.stats,
     botLog: bot.log,
+    stepCost: [],
     final: { t: 0, h: 0, tier: 0, colonists: 0, buildings: 0, research: 0, explored: 0, nova: 0, novaEarned: 0 },
     wallMs: 0,
   };
@@ -445,15 +454,30 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     });
   };
 
+  const costRow = () => {
+    const hour = Math.floor(T() / 3600);
+    let row = res.stepCost[res.stepCost.length - 1];
+    if (!row || row.hour !== hour) res.stepCost.push((row = { hour, wallMs: 0, simMs: 0, steps: 0 }));
+    return row;
+  };
   const onlineStep = (seconds: number) => {
     const end = T() + seconds;
     while (T() < end) {
       const st = game.state;
       const fight = st.combat.phase === 'attack' || st.combat.phase === 'victory' || (st.combat.phase === 'warning' && st.combat.nextAt - st.playTime < 3);
       const dt = fight ? Math.min(0.1, opts.dt) : opts.dt;
+      const tierBefore = st.colony.tier;
+      const w0 = performance.now();
       bot.frame(dt);
       now += dt * 1000;
+      const w1 = performance.now();
       game.update(dt);
+      const w2 = performance.now();
+      const cost = costRow();
+      cost.wallMs += w2 - w0;
+      cost.simMs += w2 - w1;
+      cost.steps++;
+      if (opts.onTier && game.state.colony.tier > tierBefore) opts.onTier(game.state.colony.tier, game, bot);
       // per-tier accounting
       const tier = st.colony.tier;
       const act = (res.activity[tier] ??= {});
@@ -471,6 +495,7 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       if (T() - lastSample >= 60) {
         lastSample = T();
         sample();
+        opts.onSample?.(game, bot);
       }
       if (game.state.colony.tier >= 6 && titanAt < 0) titanAt = T();
     }
@@ -516,6 +541,7 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       // close the app: save, wait, reload, Welcome Back
       const potentialPerMin = Object.entries(game.derived.netPerMin).reduce((s, [k, v]) => s + Math.max(0, v) * (game.data.expeditionRules.value[k] ?? 1), 0) + game.derived.research.perMin * 3;
       const save = serializeState(game.state);
+      opts.onClose?.(game, save, gap);
       game.dispose();
       sIndex++;
       now = schedule[sIndex];
