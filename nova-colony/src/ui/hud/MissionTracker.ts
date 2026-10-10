@@ -10,6 +10,8 @@ import { claimableMissions } from '../logic/badges';
 import { btn, rewardChips } from '../widgets';
 import { fill, h, replay, setClass, setHidden, setText } from '../dom';
 import { hudArt, iconEl, rewardArt } from '../art';
+import { pinSurvey, surveyOffer, surveyToast } from '../logic/survey';
+import type { SurveyTarget } from '../../sim/survey';
 
 export class MissionTracker {
   readonly el: HTMLElement;
@@ -25,6 +27,9 @@ export class MissionTracker {
   private wasDone = false;
   private offerKey = '';
   private extraClaims: string[] = [];
+  /** The gentle "Survey" pill's target (refreshed about once a second; logic/survey.ts). */
+  private survey: SurveyTarget | null = null;
+  private surveyAt = -1e9;
 
   constructor(private readonly ctx: UiCtx) {
     this.kind = h('div', { class: 'mt' });
@@ -91,7 +96,12 @@ export class MissionTracker {
 
   private pollOffers(): void {
     const b = this.ctx.badges();
-    const key = `${+b.daily}${+b.spin}${+b.crate}|${this.extraClaims.length}`;
+    const now = performance.now();
+    if (now - this.surveyAt > 1000) {
+      this.surveyAt = now;
+      this.survey = surveyOffer(this.ctx.game);
+    }
+    const key = `${+b.daily}${+b.spin}${+b.crate}|${this.extraClaims.length}|${this.survey ? 1 : 0}`;
     if (key === this.offerKey) return;
     this.offerKey = key;
     fill(this.offers);
@@ -112,6 +122,18 @@ export class MissionTracker {
     if (b.daily) this.offers.append(mk(rewardArt('daily_gift'), '🎁', 'Daily', () => this.ctx.open('daily')));
     if (b.spin) this.offers.append(mk(hudArt('spin'), '🎡', 'Spin', () => this.ctx.open('spin')));
     if (b.crate) this.offers.append(mk(rewardArt('supply_crate'), '📦', 'Crate', () => this.ctx.open('shop', { tab: 'crystals' })));
+    // between things to do: a gentle nudge toward a restocked cache, an unopened ruin or uncharted ground nearby
+    if (this.survey) {
+      const pill = mk(hudArt('map'), '🧭', 'Survey', () => {
+        const t = this.survey ?? surveyOffer(this.ctx.game);
+        if (!t) return;
+        pinSurvey(t, performance.now() / 1000);
+        this.ctx.toast(surveyToast(t), 'info', '🧭');
+        this.ctx.sfx('ui_tab');
+      });
+      pill.classList.add('survey');
+      this.offers.append(pill);
+    }
     // CSS turns 3+ pills into one row of round icons on phones (two rows of pills pushed the stack over the colony)
     this.offers.dataset.n = String(this.offers.childElementCount);
   }

@@ -404,6 +404,7 @@ export class Hud {
         setClass(el, 'dot', dot);
       }
     };
+    set('btn-map', b.map ?? 0);
     set('btn-missions', b.missions);
     set('btn-research', b.research, true);
     set('btn-menu', (b.daily ? 1 : 0) + (b.spin ? 1 : 0) + b.season + b.expeditions + (b.journal ? 1 : 0));

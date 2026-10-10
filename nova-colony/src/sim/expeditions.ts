@@ -141,7 +141,8 @@ export class ExpeditionSystem extends System {
     const tier = this.game.state.colony.tier;
     let n = 0;
     for (const s of this.rules.slots) if (tier >= s.tier) n = Math.max(n, s.slots);
-    return n;
+    // a mastered Frozen Ridge survey adds a squad (sim/survey.ts), once the Radio Tower sends any
+    return n > 0 ? n + (this.game.sys.survey?.extraExpeditionSlots() ?? 0) : n;
   }
 
   /** The tier where one more squad slot opens (null at the maximum). */

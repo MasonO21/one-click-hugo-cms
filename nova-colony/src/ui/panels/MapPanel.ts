@@ -3,14 +3,21 @@
  * fog of war (world.revealed), locked regions hatched with their unlock reason, the colony, the
  * player arrow, discovered POIs / beacons / live events. Pan, pinch/wheel zoom; tap a beacon to
  * fast travel (player.fastTravel).
+ * Region surveys (sim/survey.ts): every region row carries its survey meter and next milestone; a tapped region
+ * shows what is left, what the next milestone brings, Claim when it is reached and "Show me" for the nearest thing
+ * left to explore. Explored POIs are dimmed on the map (a tick when one-off, waiting to restock otherwise) and a
+ * restocked cache wears a green pip.
  */
 import { Panel, type PanelTitle } from './Panel';
 import { CELL, HALF_WORLD, WORLD_CELLS, cellCenter } from '../../core/constants';
 import { clamp } from '../../core/math';
 import { MAP_MAX_ZOOM, MAP_MIN_ZOOM, clampViewport, mapScale, mapToWorld, nearestMarker, placeLabel, regionCentroids, worldToMap, type LabelRect, type MapMarker, type MapViewport } from '../logic/map';
-import { btn, section } from '../widgets';
+import { bar, btn, section } from '../widgets';
 import { fill, h } from '../dom';
 import { artOrEmoji, biomeArt, eventArt, hudArt, iconEl, poiArt } from '../art';
+import { SURVEY } from '../../data/survey';
+import type { SurveyProgress } from '../../sim/survey';
+import { milestoneLabel, milestonePreview, pinSurvey, surveyLeftLine, surveyToast } from '../logic/survey';
 
 function hex(c: string): [number, number, number] {
   const v = parseInt(c.replace('#', ''), 16);
@@ -99,7 +106,7 @@ export class MapPanel extends Panel {
 
   override signature(): string {
     const w = this.game.state.world;
-    return `${w.regionsUnlocked.length}|${w.regionsDiscovered.length}|${w.beacons.length}|${w.events.length}|${this.selected?.id}|${this.selectedRegion}|${this.game.state.colony.tier}`;
+    return `${w.regionsUnlocked.length}|${w.regionsDiscovered.length}|${w.beacons.length}|${w.events.length}|${this.selected?.id}|${this.selectedRegion}|${this.game.state.colony.tier}|${this.game.sys.survey.version}`;
   }
 
   render(): void {
@@ -153,7 +160,9 @@ export class MapPanel extends Panel {
       if (!ps?.discovered) continue;
       const def = this.data.poi(p.def);
       const isBeacon = wst.beacons.includes(p.id);
-      out.push({ id: p.id, kind: isBeacon ? 'beacon' : 'poi', x: p.x, z: p.z, icon: def?.icon ?? '❓', art: poiArt(p.def), label: def?.name ?? p.def, travel: isBeacon });
+      const world = g.sys.world;
+      const loot: MapMarker['loot'] = isBeacon || def?.kind === 'beacon' ? undefined : world.poiRestocked(p.id) ? 'restocked' : ps.looted ? ((def?.respawn ?? 0) > 0 ? 'waiting' : 'done') : undefined;
+      out.push({ id: p.id, kind: isBeacon ? 'beacon' : 'poi', x: p.x, z: p.z, icon: def?.icon ?? '❓', art: poiArt(p.def), label: def?.name ?? p.def, travel: isBeacon, loot });
     }
     for (const t of g.sys.world.fastTravelTargets()) {
       if (t.id === 'base' || out.some((m) => m.id === t.id)) continue;
@@ -187,11 +196,16 @@ export class MapPanel extends Panel {
         fill(this.info, this.regionCard(this.selectedRegion));
         return;
       }
-      fill(this.info, h('div', { class: 'mute small', text: 'Tap a region or marker for details. Beacons let you fast travel!' }));
+      const waiting = this.game.sys.survey.claimable();
+      fill(
+        this.info,
+        h('div', { class: 'mute small', text: 'Tap a region or marker for details. Beacons let you fast travel!' }),
+        waiting > 0 && this.game.sys.liveops.offersUnlocked() ? h('div', { class: 'sv-hint', text: `🧭 ${waiting === 1 ? 'A survey reward is' : `${waiting} survey rewards are`} waiting: tap a region marked Ready` }) : null,
+      );
       return;
     }
     const evArt = m.kind === 'event' ? this.eventArtFor(m) : null;
-    const card = h('div', { class: 'card tint' }, evArt ? h('div', { class: 'ev-hero small' }, artOrEmoji(evArt.src, m.icon, 'ev-img', m.label, true)) : null, h('div', { class: 'row' }, iconEl(m.art ?? null, m.icon, 'bi', 'span'), h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.label }), h('div', { class: 'mute small', text: m.kind === 'event' ? 'A world event — go take a look!' : m.kind === 'beacon' ? 'Fast-travel beacon' : m.kind === 'core' ? 'Home sweet home' : 'Point of interest' }))));
+    const card = h('div', { class: 'card tint' }, evArt ? h('div', { class: 'ev-hero small' }, artOrEmoji(evArt.src, m.icon, 'ev-img', m.label, true)) : null, h('div', { class: 'row' }, iconEl(m.art ?? null, m.icon, 'bi', 'span'), h('div', { class: 'grow' }, h('div', { class: 'h3', text: m.label }), h('div', { class: 'mute small', text: m.kind === 'event' ? 'A world event — go take a look!' : m.kind === 'beacon' ? 'Fast-travel beacon' : m.kind === 'core' ? 'Home sweet home' : this.poiStatus(m) }))));
     const act = h('div', { style: 'margin-top:.5em' });
     if (m.travel) act.appendChild(btn({ label: '🌀 Fast travel here', cls: 'good block', onClick: () => this.travel(m.id, m.label) }));
     else if (m.kind !== 'core') {
@@ -210,7 +224,17 @@ export class MapPanel extends Panel {
     fill(this.info, card);
   }
 
-  /** Illustration for an event marker (`event_<id>`). */
+  /** "Restocked: open it again", "Restocks in 12 min", "Explored". */
+  private poiStatus(m: MapMarker): string {
+    if (m.loot === 'restocked') return 'Restocked: open it again';
+    if (m.loot === 'done') return 'Explored';
+    if (m.loot === 'waiting') {
+      const left = this.game.sys.world.poiRestockLeft(m.id);
+      return Number.isFinite(left) ? `Explored · restocks in ${Math.max(1, Math.ceil(left / 60))} min` : 'Explored';
+    }
+    return 'Point of interest · not explored yet';
+  }
+
   /** A decoded marker picture, or null while it loads (the emoji stands in) or when it failed. */
   private markerImage(src: string): HTMLImageElement | null {
     let img = this.markerImgs.get(src);
@@ -241,7 +265,7 @@ export class MapPanel extends Panel {
     const disc = this.game.state.world.regionsDiscovered.includes(id);
     const reason = world.lockReason(id);
     const pic = h('div', { class: 'rc-pic' }, artOrEmoji(biomeArt(id), '🗺️', 'rc-img', b.name, true), unlocked ? null : h('div', { class: 'rc-lock', text: '🔒' }));
-    return h(
+    const card = h(
       'div',
       { class: 'card tint region-card' + (unlocked ? '' : ' locked'), data: { region: id } },
       pic,
@@ -251,10 +275,82 @@ export class MapPanel extends Panel {
         h('div', { class: 'h3', text: b.name }),
         h('div', { class: 'mute small', text: unlocked || disc ? b.description : 'An unexplored region far from home.' }),
         unlocked
-          ? h('span', { class: 'chip ' + (disc ? 'good' : 'info'), text: disc ? '✔ Explored' : 'Unlocked — go explore!' })
+          ? h('span', { class: 'chip ' + (disc ? 'good' : 'info'), text: disc ? '✔ Discovered' : 'Unlocked — go explore!' })
           : h('div', { class: 'lock', text: `🔒 ${reason ?? 'Locked'}` }),
       ),
     );
+    const p = this.game.sys.survey.region(id);
+    return p && unlocked ? h('div', { class: 'region-sheet' }, card, this.surveyCard(p)) : card;
+  }
+
+  /** A region's survey: meter, what is left, the next milestone (Claim when reached), "Show me" and the perk. */
+  private surveyCard(p: SurveyProgress): HTMLElement {
+    const g = this.game;
+    const id = p.region;
+    const box = h('div', { class: 'card sv-card', data: { survey: id } });
+    const meter = bar(p.pct / 100, 'sv-bar');
+    for (const m of SURVEY.milestones.slice(0, -1)) {
+      const tick = h('b', { class: 'sv-tick' + (p.pct >= m ? ' on' : '') });
+      tick.style.left = `${m}%`;
+      meter.appendChild(tick);
+    }
+    box.appendChild(h('div', { class: 'sv-head' }, h('span', { class: 'sv-label', text: 'Survey' }), h('b', { class: 'sv-pct', text: `${p.pct}%` })));
+    box.appendChild(meter);
+    const facts = h(
+      'div',
+      { class: 'sv-facts' },
+      h('span', null, h('i', { text: '🗺️' }), `Charted ${Math.floor(p.charted * 100)}%`),
+      h('span', null, h('i', { text: '📍' }), `Sites ${p.pois.done}/${p.pois.total}`),
+      h('span', null, h('i', { text: '🌿' }), `Field guide ${p.specimens.done}/${p.specimens.total}`),
+    );
+    box.appendChild(facts);
+    // what is left, in words; the field guide names the kinds still missing
+    const left = surveyLeftLine(p);
+    box.appendChild(h('div', { class: 'sv-left' + (left ? '' : ' done'), text: left ?? 'Every corner charted, every site explored.' }));
+    if (p.specimens.missing.length && p.specimens.missing.length <= 3) {
+      const names = p.specimens.missing.map((n) => g.data.node(n)?.name ?? n).join(', ');
+      box.appendChild(h('div', { class: 'mute small', text: `Field guide still needs: ${names}` }));
+    }
+    const next = g.sys.survey.next(id);
+    if (next) {
+      const ready = p.claimed < p.reached;
+      const nb = h('div', { class: 'sv-next' + (ready ? ' ready' : '') });
+      nb.appendChild(h('div', { class: 'sv-next-h', text: ready ? `Reward ready · ${milestoneLabel(next.step)}` : `Next · ${milestoneLabel(next.step)}` }));
+      const ul = h('ul', { class: 'sv-prev' });
+      for (const l of milestonePreview(g, id, next.step)) ul.appendChild(h('li', null, h('span', { class: 'ic', text: l.icon }), h('span', { text: l.text })));
+      nb.appendChild(ul);
+      if (ready) nb.appendChild(btn({ label: 'Claim reward', cls: 'good block', id: 'btn-survey-claim', onClick: () => this.claim(id) }));
+      box.appendChild(nb);
+    }
+    if (g.sys.survey.mastered(id)) {
+      const perk = g.sys.survey.preview(id, 3).perk;
+      if (perk) box.appendChild(h('div', { class: 'sv-perk small' }, h('span', { class: 'sv-perk-ic', text: '★' }), h('div', { class: 'sv-perk-tx' }, h('b', { text: perk.title }), h('span', { text: perk.text }))));
+    }
+    const pl = g.state.player;
+    const target = p.pct < 100 ? g.sys.survey.suggest(pl.x, pl.z, Number.POSITIVE_INFINITY, id) : null;
+    if (target) {
+      box.appendChild(
+        btn({
+          label: '📍 Show me what is left',
+          cls: 'info block',
+          id: 'btn-survey-show',
+          onClick: () => {
+            pinSurvey(target, performance.now() / 1000);
+            this.ctx.toast(surveyToast(target), 'info', '🧭');
+            this.ctx.close(this.name);
+          },
+        }),
+      );
+    }
+    return box;
+  }
+
+  private claim(region: string): void {
+    const c = this.game.sys.survey.claim(region);
+    if (!c) return;
+    this.ctx.haptic('success');
+    this.ctx.open('survey_reward', c);
+    this.rev++;
   }
 
   private selectRegion(id: string | null): void {
@@ -286,7 +382,18 @@ export class MapPanel extends Panel {
       sw.style.background = `linear-gradient(135deg, ${b.ground[0]}, ${b.ground[1]})`;
       // named like on the map above it, the Expeditions board and the missions ("Discover the Toxic Marsh"): a "???"
       // here next to "🔒 Toxic Marsh" on the map read as two different places
-      const row = h('div', { class: 'row region' + (unlocked ? '' : ' locked') + (this.selectedRegion === b.id ? ' picked' : ''), data: { region: b.id } }, sw, h('div', { class: 'grow' }, h('div', { class: 'h3', text: b.name }), h('div', { class: 'mute small', text: unlocked ? (disc ? 'Explored' : 'Unlocked — go explore!') : `🔒 ${reason ?? 'Locked'}` })));
+      const p = unlocked ? g.sys.survey.region(b.id) : undefined;
+      const ready = !!p && p.claimed < p.reached;
+      const next = p ? g.sys.survey.next(b.id) : null;
+      const sub = !unlocked ? `🔒 ${reason ?? 'Locked'}` : !p ? (disc ? 'Discovered' : 'Unlocked — go explore!') : p.pct >= 100 && !ready ? '★ Mastered' : next ? `Next: ${milestoneLabel(next.step)}` : '';
+      const meter = p ? h('div', { class: 'sv-row' }, bar(p.pct / 100, 'sv-bar thin'), h('b', { class: 'sv-pct', text: `${p.pct}%` })) : null;
+      const row = h(
+        'div',
+        { class: 'row region' + (unlocked ? '' : ' locked') + (this.selectedRegion === b.id ? ' picked' : '') + (ready ? ' sv-ready' : ''), data: { region: b.id } },
+        sw,
+        h('div', { class: 'grow' }, h('div', { class: 'h3', text: b.name }), meter, h('div', { class: 'mute small', text: sub })),
+        ready ? h('span', { class: 'chip good sv-chip', text: 'Ready' }) : null,
+      );
       row.addEventListener('click', () => this.selectRegion(b.id));
       list.appendChild(row);
     }
@@ -478,6 +585,38 @@ export class MapPanel extends Panel {
     this.centroids = regionCentroids(gen.regionMap, ids);
   }
 
+  /** Little badge on an explored POI: a green dot (restocked), a clock (restocking) or a tick (explored for good). */
+  private lootPip(c: CanvasRenderingContext2D, x: number, y: number, kind: NonNullable<MapMarker['loot']>): void {
+    const r = 5.5;
+    c.beginPath();
+    c.arc(x, y, r, 0, Math.PI * 2);
+    c.fillStyle = kind === 'restocked' ? '#3fbf6f' : kind === 'waiting' ? '#8a7a64' : '#5a4f6e';
+    c.fill();
+    c.lineWidth = 1.6;
+    c.strokeStyle = '#fff';
+    c.stroke();
+    c.beginPath();
+    if (kind === 'done') {
+      c.moveTo(x - 2.4, y + 0.2);
+      c.lineTo(x - 0.6, y + 2);
+      c.lineTo(x + 2.6, y - 1.8);
+    } else if (kind === 'waiting') {
+      c.moveTo(x, y - 2.8);
+      c.lineTo(x, y);
+      c.lineTo(x + 2.2, y + 1.2);
+    } else {
+      c.arc(x, y, 1.6, 0, Math.PI * 2);
+      c.fillStyle = '#fff';
+      c.fill();
+      return;
+    }
+    c.strokeStyle = '#fff';
+    c.lineWidth = 1.5;
+    c.lineCap = 'round';
+    c.stroke();
+    c.lineCap = 'butt';
+  }
+
   private draw(): void {
     this.fit();
     const g = this.game;
@@ -575,6 +714,15 @@ export class MapPanel extends Panel {
       const p = worldToMap(vp, m.x, m.z);
       if (p.x < -20 || p.y < -20 || p.x > vp.w + 20 || p.y > vp.h + 20) continue;
       const r = m.travel ? 15 : 12;
+      // explored points of interest step back; a restocked cache glows
+      const dim = m.loot === 'waiting' || m.loot === 'done';
+      if (dim) c.globalAlpha = 0.55;
+      if (m.loot === 'restocked') {
+        c.beginPath();
+        c.arc(p.x, p.y, r + 5, 0, Math.PI * 2);
+        c.fillStyle = 'rgba(95, 211, 138, 0.35)';
+        c.fill();
+      }
       c.beginPath();
       c.arc(p.x, p.y, r, 0, Math.PI * 2);
       c.fillStyle = m.kind === 'event' ? '#ffcf4a' : m.travel ? '#ffffff' : 'rgba(255,255,255,0.88)';
@@ -591,6 +739,8 @@ export class MapPanel extends Panel {
         c.fillStyle = '#000';
         c.fillText(m.icon, p.x, p.y + 1);
       }
+      if (dim) c.globalAlpha = 1;
+      if (m.loot) this.lootPip(c, p.x + r * 0.72, p.y - r * 0.72, m.loot);
     }
 
     // player arrow

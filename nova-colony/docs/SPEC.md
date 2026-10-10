@@ -142,6 +142,20 @@ sometimes 1–2 Nova). Who and what are rolled from the save seed and a counter 
 and an open wish simply fades after 45 minutes of play: no penalty, ever. A "Good Neighbour" side chain (1 → 10 → 30
 wishes) opens with the first wish.
 
+## 20e. Exploration that pays off: tier-scaled loot, restocking caches, region surveys
+Points of interest hand out goods scaled to the colony's tier, in their own flavour (a wreck is parts and electronics,
+a supply cache food and basics, a ruin research): each is worth a few minutes of a reference colony's output at that
+tier (caches 2.5–6, wrecks and mines 5–8, labs and ruins 10–15, vaults 20; data/survey.ts), never more than 60% of a
+good's storage, plus the POI's own items, Nova and survivors. Caches, wrecks, mines and nests restock every 30–60
+minutes on an absolute clock (time away counts) and wear a soft survey ring when full again; vaults, ruins, labs,
+cabins and rescues stay one-off. A long sweep thins out (past 6 hauls within an hour the goods shrink, never below 20%).
+Every region has a survey meter (land charted 50%, points of interest explored 35%, field guide of its node kinds 15%)
+with milestones claimed from the Map: 25% a cache of the region's goods, 50% a survivor who lives out there, 75% a
+keepsake cosmetic (Nova when owned), 100% a permanent perk (+5% of the region's goods or research, +1 expedition squad
+for the Frozen Ridge). The Map lists every region's meter and next milestone; a tapped region says what is left and
+"Show me" points the guide arrow there. Between things to do, a quiet "Survey" pill under the mission card points at a
+restocked cache, an unopened site or uncharted ground nearby.
+
 ## 21. Juice
 Resources fly to storage, buildings construct piece by piece, upgrade transformation animations,
 resource pops, machines visibly operate, conveyors move items, colonists visibly work, turrets track

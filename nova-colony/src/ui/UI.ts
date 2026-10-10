@@ -23,6 +23,7 @@ import './styles/wishes.css';
 import './styles/photo.css';
 import './styles/wardrobe.css';
 import './styles/chests.css';
+import './styles/survey.css';
 
 import type { Game } from '../core/Game';
 import type { RendererApi } from '../render/api';
@@ -83,6 +84,8 @@ import { backAction } from './logic/back';
 import { autoDailyStep } from './logic/autoDaily';
 import { wireHapticFx } from './fx/HapticFx';
 import { SHOW_ME_SECONDS, wishGuideTarget } from './logic/wishes';
+import { surveyGuideTarget } from './logic/survey';
+import { SurveyRewardPanel } from './panels/SurveyRewardPanel';
 import { PhotoMode } from './photo/PhotoMode';
 import { ChestScene } from './chest/ChestScene';
 import { ChestOddsPanel } from './shop/ChestOddsPanel';
@@ -204,7 +207,8 @@ export class UI {
     this.guide.override = () => {
       const t = wishGuideTarget(this.game, this.wishPin, performance.now() / 1000);
       if (!t && this.wishPin) this.wishPin = null; // done, lapsed or timed out: back to the tutorial's guidance
-      return t;
+      // a survey target the player asked for (the Survey pill, the Map's "Show me"), until reached or timed out
+      return t ?? surveyGuideTarget(this.game, performance.now() / 1000);
     };
     this.threats = new Threats(ctx);
     world.append(this.tip.el, this.guide.layer, this.threats.layer);
@@ -336,6 +340,7 @@ export class UI {
     reg('journal', (c) => new JournalPanel(c));
     reg('wardrobe', (c) => new WardrobePanel(c));
     reg('chest_odds', (c) => new ChestOddsPanel(c));
+    reg('survey_reward', (c) => new SurveyRewardPanel(c));
   }
 
   // ================================================================== services

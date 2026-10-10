@@ -13,10 +13,11 @@ import type { BiomeDef, NodeDef, PoiDef, ResourceBag } from '../data/schema';
 import { ANCHOR_IDS } from '../data/schema';
 import { CELL, HALF_WORLD, WORLD_CELLS, cellOf } from '../core/constants';
 import { bagEntries } from '../core/bag';
-import type { Id } from '../core/state';
+import type { Id, PoiState } from '../core/state';
 import { generateWorld } from './world/generate';
 import { NodeGrid } from './world/grid';
 import { Fog } from './world/fog';
+import { lootThinning, rollPoiLoot } from './world/poiLoot';
 
 export interface WorldNode {
   /** Stable index (used as key in state.world.depleted). */
@@ -74,6 +75,8 @@ declare module '../core/state' {
     /** Fractional gather yield carried between hits (keeps x1.25 yields exact over time). */
     gatherCarry?: Record<string, number>;
     nextDynPoi?: number;
+    /** Epoch ms of the points of interest opened within the last hour (long sweeps thin out: sim/world/poiLoot.ts). */
+    lootLog?: number[];
   }
 }
 
@@ -85,6 +88,8 @@ declare module '../core/events' {
     'world:poiSpawned': { id: string; poi: string };
     /** A depleted resource node grew back. */
     'world:nodeRespawned': { node: number };
+    /** A looted cache / wreck / nest filled up again (also on load, for time away). */
+    'world:poiRestocked': { id: string; poi: string };
   }
 }
 
@@ -147,6 +152,8 @@ export class WorldSystem extends System {
     this.indexWorld();
     this.fog.decode(st.world.fog);
     this.syncMask();
+    // caches that filled up while the app was closed (absolute timers)
+    if (!fresh) this.respawnPois();
 
     // depleted nodes have no hits left
     for (const k in st.world.depleted) {
@@ -600,9 +607,35 @@ export class WorldSystem extends System {
     return p ? this.game.data.poi(p.def) : undefined;
   }
 
-  poiState(id: string): { discovered: boolean; looted: boolean; lootedAt: number } {
+  poiState(id: string): PoiState {
     const w = this.game.state.world;
     return (w.pois[id] ??= { discovered: false, looted: false, lootedAt: 0 });
+  }
+
+  /** Has this POI ever been opened / rescued / activated? (Saves from before `times` count a past loot too.) */
+  poiExplored(id: string): boolean {
+    const s = this.game.state.world.pois[id];
+    return !!s && ((s.times ?? 0) > 0 || s.looted || s.lootedAt > 0);
+  }
+
+  /** A restocking POI that was opened before and has filled up again. */
+  poiRestocked(id: string): boolean {
+    const s = this.game.state.world.pois[id];
+    return !!s && !s.looted && this.poiExplored(id) && (this.poiDef(id)?.respawn ?? 0) > 0;
+  }
+
+  /** Seconds until a looted POI restocks (0 = ready; Infinity = one-off, never). */
+  poiRestockLeft(id: string): number {
+    const s = this.game.state.world.pois[id];
+    if (!s?.looted) return 0;
+    const def = this.poiDef(id);
+    if (!def || def.respawn <= 0) return Number.POSITIVE_INFINITY;
+    return Math.max(0, Math.min(this.restockWall(s) - this.game.now(), (s.lootedAt + def.respawn - this.game.state.playTime) * 1000) / 1000);
+  }
+
+  /** Epoch ms a looted POI restocks at (saves from before absolute timers: never by the wall clock). */
+  private restockWall(s: PoiState): number {
+    return typeof s.restockAt === 'number' && Number.isFinite(s.restockAt) ? s.restockAt : Number.POSITIVE_INFINITY;
   }
 
   /**
@@ -673,16 +706,24 @@ export class WorldSystem extends System {
     this.game.toast('⚠️ The nest guardians are awake!', 'warning');
   }
 
-  /** 1 Hz: restock respawning POIs. */
+  /**
+   * 1 Hz (and on load): restock respawning POIs. The timer is absolute (epoch ms, `restockAt`), so time away counts;
+   * play time is the fallback (saves from before absolute timers, a wall clock set back).
+   */
   private respawnPois(): void {
     const w = this.game.state.world;
+    const now = this.game.now();
+    const play = this.game.state.playTime;
     for (const id in w.pois) {
       const s = w.pois[id];
       if (!s.looted) continue;
       const def = this.poiDef(id);
-      if (def && def.respawn > 0 && w.pois[id] && this.game.state.playTime >= s.lootedAt + def.respawn) {
+      if (!def || def.respawn <= 0) continue;
+      if (now >= this.restockWall(s) || play >= s.lootedAt + def.respawn) {
         s.looted = false;
+        delete s.restockAt;
         this.guarded.delete(id);
+        this.game.bus.emit('world:poiRestocked', { id, poi: def.id });
       }
     }
   }
@@ -700,7 +741,7 @@ export class WorldSystem extends System {
     const ps = this.poiState(poiId);
     if (ps.looted) {
       if (def.respawn > 0) {
-        const left = Math.max(0, Math.ceil(ps.lootedAt + def.respawn - st.playTime));
+        const left = Math.ceil(this.poiRestockLeft(poiId));
         this.game.toast(`${def.icon} ${def.name} restocks in ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`, 'info');
       }
       return false;
@@ -718,11 +759,20 @@ export class WorldSystem extends System {
     ps.discovered = true;
     ps.looted = true;
     ps.lootedAt = st.playTime;
+    ps.times = (ps.times ?? 0) + 1;
+    if (def.respawn > 0) ps.restockAt = this.game.now() + def.respawn * 1000;
 
+    // goods scaled to the colony's tier, in the POI's own flavour (data/survey.ts POI_LOOT); a long sweep thins out
+    const eco = this.game.sys.economy;
+    const now = this.game.now();
+    const log = (st.world.lootLog ??= []).filter((t) => typeof t === 'number' && t > now - 3_600_000 && t <= now);
+    const reward = rollPoiLoot({ data: this.game.data, tier: st.colony.tier, capacity: (id) => eco.capacity(id) }, def.id, this.game.rng, lootThinning(log.length));
+    if (def.kind !== 'beacon') log.push(now);
+    st.world.lootLog = log.slice(-40);
     let colonist: Id | null = null;
     const before = st.colonists.nextId;
-    this.game.grant(def.reward, 'poi', p.x, p.z);
-    if (def.reward.colonist) {
+    this.game.grant(reward, 'poi', p.x, p.z);
+    if (reward.colonist) {
       colonist = st.colonists.nextId > before ? st.colonists.nextId - 1 : -1;
       this.game.bus.emit('survivor:rescued', { poi: poiId, colonist });
       this.game.toast(`${def.icon} Survivor rescued! They join your colony.`, 'success');
@@ -734,7 +784,7 @@ export class WorldSystem extends System {
       this.game.toast(`${def.icon} ${def.name} looted!`, 'reward');
       this.game.bus.emit('sfx', { id: 'crate_open', x: p.x, z: p.z });
     }
-    this.game.bus.emit('world:poiLooted', { id: poiId, poi: p.def, reward: def.reward });
+    this.game.bus.emit('world:poiLooted', { id: poiId, poi: p.def, reward });
     return true;
   }
 

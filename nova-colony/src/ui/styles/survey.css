@@ -1,0 +1,239 @@
+/* ---------- region surveys (ui/panels/MapPanel.ts, SurveyRewardPanel.ts) ---------- */
+
+/* region rows: a slim meter under the name */
+.map-side .region .sv-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  margin: 0.15em 0 0.1em;
+}
+.nv-root .sv-bar {
+  flex: 1 1 auto;
+  height: 0.75em;
+  overflow: visible;
+}
+.nv-root .sv-bar.thin {
+  height: 0.5em;
+}
+.nv-root .sv-bar > i {
+  background: linear-gradient(180deg, #e8c77a, #b8862e);
+}
+.sv-row .sv-pct {
+  flex: 0 0 auto;
+  min-width: 2.6em;
+  font-size: 0.85em;
+  font-weight: 900;
+  text-align: right;
+  color: var(--ink-soft);
+}
+.map-side .region.sv-ready {
+  border-radius: 0.8em;
+  background: rgba(63, 191, 111, 0.1);
+}
+.map-side .region .sv-chip {
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+/* the region sheet: postcard card, then the survey card */
+.region-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+.sv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+}
+.sv-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.sv-label {
+  font-size: 0.78em;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9a6a24;
+}
+.sv-head .sv-pct {
+  font-size: 1.35em;
+  font-weight: 900;
+}
+/* 25 / 50 / 75 markers on the meter */
+.nv-root .sv-bar .sv-tick {
+  position: absolute;
+  top: -0.18em;
+  bottom: -0.18em;
+  width: 0.2em;
+  margin-left: -0.1em;
+  border-radius: 0.1em;
+  background: rgba(110, 76, 40, 0.35);
+}
+.nv-root .sv-bar .sv-tick.on {
+  background: #fff8e6;
+}
+.sv-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 0.9em;
+  font-size: 0.82em;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.sv-facts i {
+  font-style: normal;
+  margin-right: 0.25em;
+}
+.sv-left {
+  font-size: 0.88em;
+  font-weight: 700;
+}
+.sv-left.done {
+  color: #2e8a50;
+}
+.sv-next {
+  padding: 0.55em 0.7em;
+  border-radius: 0.9em;
+  background: rgba(110, 76, 40, 0.07);
+  box-shadow: inset 0 0 0 0.1em rgba(110, 76, 40, 0.14);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+.sv-next.ready {
+  background: #f1fbe9;
+  box-shadow: inset 0 0 0 0.14em #7cc88f;
+}
+.sv-next-h {
+  font-size: 0.8em;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a6420;
+}
+.sv-next.ready .sv-next-h {
+  color: #2e8a50;
+}
+.sv-prev {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2em;
+  font-size: 0.9em;
+  font-weight: 700;
+}
+.sv-prev li {
+  display: flex;
+  gap: 0.45em;
+  align-items: baseline;
+}
+.sv-prev .ic {
+  flex: 0 0 1.3em;
+  text-align: center;
+}
+.sv-hint {
+  margin-top: 0.4em;
+  font-size: 0.88em;
+  font-weight: 800;
+  color: #2e8a50;
+}
+
+/* the permanent perk of a mastered region */
+.sv-perk {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  padding: 0.55em 0.8em;
+  border-radius: 0.9em;
+  background: linear-gradient(180deg, #fff6dc, #f6e3b0);
+  box-shadow: inset 0 0 0 0.14em #d9b25a, 0 0.12em 0 rgba(120, 80, 20, 0.25);
+  text-align: left;
+}
+.sv-perk.small {
+  font-size: 0.9em;
+}
+.sv-perk-ic {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 50%;
+  font-size: 1.05em;
+  color: #fff;
+  background: linear-gradient(180deg, #e8b94a, #b07a1c);
+  box-shadow: inset 0 0 0 0.12em rgba(255, 255, 255, 0.5);
+}
+.sv-perk-tx {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05em;
+  min-width: 0;
+}
+.sv-perk-tx b {
+  font-weight: 900;
+}
+.sv-perk-tx span {
+  font-size: 0.88em;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* the milestone card */
+.survey-card .sv-kicker {
+  font-size: 0.78em;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #9a6a24;
+  margin-bottom: -0.4em;
+}
+.survey-card .cb-art {
+  margin-bottom: 0.7em;
+}
+.survey-card .cb-tag {
+  left: 0;
+  right: 0;
+  width: max-content;
+  margin: 0 auto;
+  transform: none;
+  background: linear-gradient(180deg, #d9a446, #9a6a24);
+}
+.survey-card.mastered .cb-tag {
+  background: linear-gradient(180deg, #ffe08a, #c98a1a);
+  color: #4a2a00;
+  text-shadow: 0 0.06em 0 rgba(255, 255, 255, 0.5);
+}
+.survey-card .reward-cards {
+  margin: 0.1em 0 0.2em;
+}
+@media (orientation: landscape) {
+  .celebrate.has-art.survey-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 0.4em 1.4em;
+  }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  .survey-card .cb-title {
+    font-size: 1.45em;
+  }
+  .survey-card .cb-text {
+    font-size: 0.88em;
+  }
+  .survey-card .main,
+  .survey-card .cb-main {
+    gap: 0.4em;
+  }
+}
+
+/* the HUD's Survey pill: a quiet compass tone */
+.offers .offer.survey {
+  filter: saturate(0.85);
+}

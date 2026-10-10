@@ -2,13 +2,15 @@
  * POIs actor — points of interest from gen.pois (instanced per model, only the ones inside the
  * camera frustum: rebuilt when the camera moves or turns) with a bobbing marker over
  * discovered-but-unlooted ones, plus beam markers for active world events (state.world.events).
+ * A cache that restocked (opened before, full again) also wears a slow survey ring on the ground and lets off a
+ * rare glint, so a returning player can tell it from one never opened.
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
 import { inView } from '../core/context';
 import { Batch, composeYaw, composeEuler } from '../core/Batch';
 import { ViewCull } from '../core/cull';
-import { poiGeometry, poiHeight, markerGeometry, eventMarkerGeometry } from '../models/pois';
+import { poiGeometry, poiHeight, markerGeometry, eventMarkerGeometry, restockGeometry } from '../models/pois';
 import type { WorldGen, WorldPoi } from '../../sim/world';
 import { raySphere } from './Nature';
 
@@ -20,6 +22,8 @@ export class Pois {
   private batches = new Map<string, Batch>();
   private markers: Batch;
   private events: Batch;
+  private restock: Batch;
+  private glintAcc = 0;
   private gen: WorldGen | null = null;
   private models: string[] = [];
   private smokeAcc = 0;
@@ -36,6 +40,7 @@ export class Pois {
     ctx.scene.add(this.group);
     this.markers = new Batch(this.group, markerGeometry(), ctx.mats.set, 16, { color: true });
     this.events = new Batch(this.group, eventMarkerGeometry(), ctx.mats.set, 4, { color: true });
+    this.restock = new Batch(this.group, restockGeometry(), ctx.mats.set, 8, { color: true });
     const bus = ctx.game.bus;
     this.unsub.push(
       bus.on('world:poiLooted', (e) => {
@@ -119,11 +124,16 @@ export class Pois {
     const t = env.t;
     const st = ctx.game.state.world;
 
-    // markers over discovered, unlooted POIs
+    // markers over discovered, unlooted POIs (+ the ring of a restocked cache)
     this.markers.begin();
+    this.restock.begin();
     this.smokeAcc += dt;
     const puff = this.smokeAcc > 0.5;
     if (puff) this.smokeAcc = 0;
+    this.glintAcc += dt;
+    const glint = this.glintAcc > 1.6;
+    if (glint) this.glintAcc = 0;
+    const world = ctx.game.sys.world;
     if (this.gen?.pois) {
       for (let i = 0; i < this.gen.pois.length; i++) {
         const p = this.gen.pois[i];
@@ -137,9 +147,18 @@ export class Pois {
         const def = ctx.game.data.poi(p.def);
         _c.set(def?.kind === 'camp' ? '#8dff9a' : def?.kind === 'beacon' ? '#5ef2ff' : '#ffd84a');
         this.markers.push(_m, _c);
+        if (world.poiRestocked(p.id)) {
+          const gy = ctx.heightAt(p.x, p.z);
+          const k = 1 + Math.sin(t * 1.6 + i) * 0.05;
+          composeEuler(_m, p.x, gy, p.z, 0, t * 0.25 + i, 0, k, 1, k);
+          _c.set('#a8f08a');
+          this.restock.push(_m, _c);
+          if (glint) ctx.particles.sparkles(p.x, gy + 0.4, p.z, '#d8ffb8', 3, 1.6);
+        }
       }
     }
     this.markers.end();
+    this.restock.end();
 
     // world event beams
     this.events.begin();
@@ -202,6 +221,7 @@ export class Pois {
     for (const b of this.batches.values()) b.dispose();
     this.markers.dispose();
     this.events.dispose();
+    this.restock.dispose();
     this.ctx.scene.remove(this.group);
   }
 }

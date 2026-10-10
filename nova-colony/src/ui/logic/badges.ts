@@ -3,6 +3,7 @@ import type { Game } from '../../core/Game';
 import { expeditionBadge } from './expeditions';
 import { wishBadge } from './wishes';
 import { seasonBonusReady } from '../../sim/seasonBonus';
+import { surveyBadge } from './survey';
 
 export interface Badges {
   missions: number;
@@ -19,6 +20,8 @@ export interface Badges {
   journal: number;
   /** Colonists with an open wish (the Crew button's badge turns pink). */
   wishes?: number;
+  /** Region survey milestones waiting for Claim on the Map. */
+  map?: number;
 }
 
 export function claimableMissions(game: Game): string[] {
@@ -68,5 +71,6 @@ export function computeBadges(game: Game): Badges {
     // like the other meta offers: quiet during the guided first session
     journal: lo.offersUnlocked() ? game.sys.achievements.claimableCount() : 0,
     wishes: wishBadge(game),
+    map: surveyBadge(game),
   };
 }

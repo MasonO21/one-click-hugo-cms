@@ -28,6 +28,7 @@ import { AchievementSystem } from '../sim/achievements';
 import { WishSystem } from '../sim/wishes';
 import { ChestSystem } from '../sim/chests';
 import { SpiritSystem } from '../sim/colony/spirit';
+import { SurveySystem } from '../sim/survey';
 import { createMockServices } from '../platform/mock';
 import { reportLoopError } from './guard';
 
@@ -50,6 +51,7 @@ export interface Systems {
   wishes: WishSystem;
   chests: ChestSystem;
   spirit: SpiritSystem;
+  survey: SurveySystem;
 }
 
 export interface GameOptions {
@@ -93,6 +95,7 @@ const UPDATE_ORDER: (keyof Systems)[] = [
   'spirit',
   'achievements',
   'chests',
+  'survey',
 ];
 
 export class Game {
@@ -141,6 +144,7 @@ export class Game {
       wishes: new WishSystem(this),
       chests: new ChestSystem(this),
       spirit: new SpiritSystem(this),
+      survey: new SurveySystem(this),
     };
   }
 

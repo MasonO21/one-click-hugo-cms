@@ -4,6 +4,7 @@
  * Sources:
  *  - completed research `effects`
  *  - Research Mastery levels (sim/mastery.ts: repeatable research, +3% production per level ...)
+ *  - mastered region surveys (sim/survey.ts perks: production of the region's goods, research)
  *  - equipped items (`ItemDef.stats`: gatherYield / gatherSpeed / moveSpeed as adds; armor hp is a flat
  *    add applied by PlayerSystem.maxHp and damage is handled by combat, so neither is a modifier here)
  *  - Colony Pass VIP (production add, offlineHours add)
@@ -62,6 +63,8 @@ export class ModifierTable {
 
     // Research Mastery (repeatable research)
     forEachMasteryAdd(state.research.mastery, (stat, v) => this.add(stat, v));
+    // mastered regions (sim/survey.ts): +5% of the region's goods / research, for good
+    for (const m of game.sys.survey?.perkModifiers() ?? []) this.add(m.stat, m.add);
 
     // equipment
     for (const itemId of Object.values(state.player.equip)) {

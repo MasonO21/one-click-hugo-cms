@@ -51,6 +51,11 @@ export interface MapMarker {
   label: string;
   /** Tapping offers fast travel. */
   travel: boolean;
+  /**
+   * Points of interest already explored: 'restocked' (a cache that filled up again: a green pip), 'waiting' (looted,
+   * restocking: dimmed), 'done' (one-off, explored: dimmed with a tick). Unset: not opened yet.
+   */
+  loot?: 'restocked' | 'waiting' | 'done';
 }
 
 /** Closest marker within `maxPx` of a map point, preferring travel targets. */

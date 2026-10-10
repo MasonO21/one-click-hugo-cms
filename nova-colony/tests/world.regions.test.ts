@@ -204,11 +204,17 @@ describe('points of interest', () => {
     expect(found).toEqual([{ id: cache.id, poi: 'supply_cache' }]);
     expect(game.state.world.pois[cache.id].discovered).toBe(true);
 
-    const wood = game.state.resources.amounts.wood ?? 0;
+    const before = { ...game.state.resources.amounts };
     expect(game.sys.world.lootPoi(cache.id)).toBe(true);
-    expect(game.state.resources.amounts.wood).toBe(wood + 30);
     expect(looted).toHaveLength(1);
     expect(looted[0]).toMatchObject({ id: cache.id, poi: 'supply_cache' });
+    // tier-scaled goods in the cache's flavour (data/survey.ts POI_LOOT), granted exactly as announced
+    const got = looted[0].reward.resources as Record<string, number>;
+    expect(Object.keys(got).length).toBeGreaterThan(0);
+    for (const [k, n] of Object.entries(got)) {
+      expect(['food', 'water', 'wood', 'stone', 'fiber', 'steel']).toContain(k);
+      expect(game.state.resources.amounts[k]).toBe((before[k] ?? 0) + n);
+    }
     expect(game.sys.world.lootPoi(cache.id)).toBe(false); // already looted
     rig.step(1790, 0.25);
     expect(game.sys.world.lootPoi(cache.id)).toBe(false);
@@ -281,10 +287,12 @@ describe('points of interest', () => {
     rig.step(2);
     expect(spawned).toHaveLength(1); // only once
     expect(game.sys.world.lootPoi(nest.id)).toBe(false);
-    const biomass = game.state.resources.amounts.biomass ?? 0;
+    const looted = collectEvents(game, 'world:poiLooted');
     alive = 0;
     expect(game.sys.world.lootPoi(nest.id)).toBe(true);
-    expect(game.state.resources.amounts.biomass).toBe(biomass + 30);
+    expect(looted).toHaveLength(1);
+    expect(looted[0].reward.nova).toBe(3);
+    for (const k of Object.keys(looted[0].reward.resources ?? {})) expect(['biomass', 'crystal', 'fiber', 'nano']).toContain(k);
   });
 
   it('spawns a discovered, persistent survivor camp 10-16 cells away on walkable ground', () => {

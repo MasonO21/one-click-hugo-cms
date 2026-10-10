@@ -229,13 +229,26 @@ export interface ActiveWorldEvent {
 }
 
 // owner: world (world agent)
+/** One point of interest (state.world.pois). `restockAt` / `times` arrived with restocking caches: older saves lack them. */
+export interface PoiState {
+  discovered: boolean;
+  /** Opened and not restocked yet (one-off POIs stay looted for good). */
+  looted: boolean;
+  /** playTime of the last loot (the restock fallback for saves from before `restockAt`). */
+  lootedAt: number;
+  /** Epoch ms when a restocking POI fills up again: an absolute timer, so time away counts. */
+  restockAt?: number;
+  /** Times looted, ever (region survey: "points of interest explored"; restocked caches get their own marker). */
+  times?: number;
+}
+
 export interface WorldState {
   regionsUnlocked: string[];
   regionsDiscovered: string[];
   /** Depleted resource nodes: node index -> playTime when it respawns. */
   depleted: Record<number, number>;
   /** POI state by POI instance id (from world generation). */
-  pois: Record<string, { discovered: boolean; looted: boolean; lootedAt: number }>;
+  pois: Record<string, PoiState>;
   /** Discovered fast-travel beacon POI ids. */
   beacons: string[];
   events: ActiveWorldEvent[];

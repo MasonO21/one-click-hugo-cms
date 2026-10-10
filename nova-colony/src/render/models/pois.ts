@@ -144,6 +144,23 @@ export function markerGeometry(): THREE.BufferGeometry {
   return marker;
 }
 
+let restockMarker: THREE.BufferGeometry | null = null;
+/**
+ * A cache that filled up again: a low survey ring on the ground with four small glints standing on it (glow, tinted
+ * per instance). Subtle on purpose: the bobbing diamond above already says "open me".
+ */
+export function restockGeometry(): THREE.BufferGeometry {
+  if (restockMarker) return restockMarker;
+  const b = new GeoBuilder(1);
+  b.torus(1.75, 0.06, 0, 0.12, 0, '#ffffff', 28, 4, { rx: Math.PI / 2, slot: SLOT_GLOW });
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
+    b.shard(0.09, 0.22, Math.cos(a) * 1.75, 0.34, Math.sin(a) * 1.75, '#ffffff', { slot: SLOT_GLOW });
+  }
+  restockMarker = b.build();
+  return restockMarker;
+}
+
 let eventMarker: THREE.BufferGeometry | null = null;
 /** Tall light beam + ring for active world events. */
 export function eventMarkerGeometry(): THREE.BufferGeometry {

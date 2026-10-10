@@ -84,19 +84,24 @@ export const NODES: NodeDef[] = [
   { id: 'titanium_rich', name: 'Rich Titanium Vein', model: 'titanium', drop: { titanium: 4 }, hits: 11, respawn: 440, toolTier: 3, scale: 1.5, solid: true },
 ];
 
+/**
+ * Points of interest. `reward` is the flavour at the Wood tier: what a POI actually hands out is scaled to the colony's
+ * tier from data/survey.ts POI_LOOT (its goods; items, Nova, colonists and XP from here come on top). Caches, wrecks,
+ * mines and nests restock every 30-60 minutes on an absolute clock (`respawn`, seconds); story POIs are one-off.
+ */
 export const POIS: PoiDef[] = [
   // ---- caches & structures
   { id: 'supply_cache', name: 'Supply Cache', kind: 'cache', model: 'cache', icon: '🎁', description: 'A drop-pod cache from the colony ship.', reward: { resources: { wood: 30, stone: 20, fiber: 15, food: 10 }, xp: 10 }, respawn: 1800 },
-  { id: 'hidden_stash', name: 'Hidden Stash', kind: 'cache', model: 'cache', icon: '🗝️', description: 'Someone buried a stash under a very obvious rock. Finders keepers!', reward: { resources: { iron: 30, copper: 20, coal: 20, fiber: 30 }, items: { medkit: 1 }, xp: 25 }, respawn: 0 },
+  { id: 'hidden_stash', name: 'Hidden Stash', kind: 'cache', model: 'cache', icon: '🗝️', description: 'Someone keeps burying supplies under a very obvious rock. Finders keepers!', reward: { resources: { iron: 30, copper: 20, coal: 20, fiber: 30 }, items: { medkit: 1 }, xp: 25 }, respawn: 3600 },
   { id: 'abandoned_cabin', name: 'Abandoned Cabin', kind: 'structure', model: 'camp', icon: '🏚️', description: 'A dusty cabin with a still-warm kettle. The owners left in a hurry.', reward: { resources: { wood: 60, fiber: 40, food: 40 }, items: { bandage: 2, herbal_salve: 1 }, xp: 20 }, respawn: 0 },
-  { id: 'mining_outpost', name: 'Abandoned Mining Outpost', kind: 'facility', model: 'outpost', icon: '⛏️', description: 'A rusty mining camp with crates of ore still stacked by the door.', reward: { resources: { iron: 80, copper: 60, coal: 60, steel: 15 }, xp: 30 }, respawn: 3600 },
-  { id: 'titanium_cache', name: 'Titanium Cache', kind: 'cache', model: 'cache', icon: '🧰', description: 'A sealed survey crate stuffed with gleaming titanium and nano-material.', reward: { resources: { titanium: 40, nano: 15, energy_cell: 20 }, xp: 100 }, respawn: 7200 },
+  { id: 'mining_outpost', name: 'Abandoned Mining Outpost', kind: 'facility', model: 'outpost', icon: '⛏️', description: 'A rusty mining camp with crates of ore still stacked by the door.', reward: { resources: { iron: 80, copper: 60, coal: 60, steel: 15 }, xp: 30 }, respawn: 2700 },
+  { id: 'titanium_cache', name: 'Titanium Cache', kind: 'cache', model: 'cache', icon: '🧰', description: 'A sealed survey crate stuffed with gleaming titanium and nano-material.', reward: { resources: { titanium: 40, nano: 15, energy_cell: 20 }, xp: 100 }, respawn: 3600 },
   // ---- survivors
   { id: 'survivor_camp', name: 'Survivor Camp', kind: 'camp', model: 'camp', icon: '🏕️', description: 'Someone is waving at you!', reward: { colonist: 'common', xp: 25 }, respawn: 0 },
   { id: 'stranded_scientists', name: 'Stranded Scientists', kind: 'camp', model: 'camp', icon: '🧑‍🔬', description: 'Two scientists and a very sad telescope. They would love a ride home.', reward: { colonist: 'rare', rp: 60, xp: 50 }, respawn: 0 },
   // ---- wrecks
-  { id: 'crashed_ship', name: 'Crashed Spacecraft', kind: 'wreck', model: 'wreck', icon: '🚀', description: 'Salvageable wreckage.', reward: { resources: { iron: 60, copper: 40, electronics: 10, steel: 10 }, rp: 20, xp: 30 }, respawn: 3600 },
-  { id: 'derelict_freighter', name: 'Derelict Freighter', kind: 'wreck', model: 'wreck', icon: '🚢', description: 'An enormous cargo hauler, abandoned mid-journey. Its holds are full.', reward: { resources: { steel: 120, electronics: 60, copper: 100, alloy: 25 }, rp: 90, xp: 70 }, respawn: 5400 },
+  { id: 'crashed_ship', name: 'Crashed Spacecraft', kind: 'wreck', model: 'wreck', icon: '🚀', description: 'Salvageable wreckage.', reward: { resources: { iron: 60, copper: 40, electronics: 10, steel: 10 }, rp: 20, xp: 30 }, respawn: 2700 },
+  { id: 'derelict_freighter', name: 'Derelict Freighter', kind: 'wreck', model: 'wreck', icon: '🚢', description: 'An enormous cargo hauler, abandoned mid-journey. Its holds are full.', reward: { resources: { steel: 120, electronics: 60, copper: 100, alloy: 25 }, rp: 90, xp: 70 }, respawn: 3600 },
   // ---- ancient & research
   { id: 'alien_ruin', name: 'Alien Ruin', kind: 'ruin', model: 'ruin', icon: '🗿', description: 'Ancient glyphs reveal alien technology.', reward: { rp: 80, resources: { crystal: 10 }, nova: 5, xp: 40 }, respawn: 0 },
   { id: 'ancient_vault', name: 'Ancient Vault', kind: 'ruin', model: 'ruin', icon: '🏛️', description: 'A sealed vault older than the stars. It hums when you get close.', reward: { rp: 260, resources: { crystal: 30, alloy: 15 }, nova: 10, xp: 90 }, respawn: 0 },
@@ -104,8 +109,8 @@ export const POIS: PoiDef[] = [
   { id: 'frozen_lab', name: 'Frozen Laboratory', kind: 'facility', model: 'outpost', icon: '🧊', description: 'A lab frozen in time. The coffee is still hot, somehow.', reward: { rp: 180, resources: { electronics: 40, energy_cell: 8 }, items: { research_chip: 2 }, xp: 70 }, respawn: 0 },
   { id: 'toxic_lab', name: 'Overgrown Bio-Lab', kind: 'facility', model: 'outpost', icon: '🧬', description: 'A greenhouse lab that got a little too enthusiastic. Everything is glowing.', reward: { resources: { biomass: 50, electronics: 15 }, rp: 90, xp: 50 }, respawn: 0 },
   // ---- nests
-  { id: 'alien_nest', name: 'Alien Nest', kind: 'nest', model: 'nest', icon: '🪺', description: 'Clear the nest for rare loot.', reward: { resources: { biomass: 30, crystal: 5 }, nova: 3, xp: 40 }, guards: { alien: 'crawler', count: 4 }, respawn: 2400 },
-  { id: 'hive_nest', name: 'Hive Nest', kind: 'nest', model: 'nest', icon: '🕸️', description: 'A big, buzzing hive guarded by brutes. The loot inside smells amazing.', reward: { resources: { biomass: 80, crystal: 30, alloy: 15 }, nova: 8, xp: 90 }, guards: { alien: 'brute', count: 3 }, respawn: 4800 },
+  { id: 'alien_nest', name: 'Alien Nest', kind: 'nest', model: 'nest', icon: '🪺', description: 'Clear the nest for rare loot.', reward: { resources: { biomass: 30, crystal: 5 }, nova: 3, xp: 40 }, guards: { alien: 'crawler', count: 4 }, respawn: 2700 },
+  { id: 'hive_nest', name: 'Hive Nest', kind: 'nest', model: 'nest', icon: '🕸️', description: 'A big, buzzing hive guarded by brutes. The loot inside smells amazing.', reward: { resources: { biomass: 80, crystal: 30, alloy: 15 }, nova: 8, xp: 90 }, guards: { alien: 'brute', count: 3 }, respawn: 3600 },
   // ---- beacons
   { id: 'beacon', name: 'Fast-Travel Beacon', kind: 'beacon', model: 'beacon', icon: '📡', description: 'Activate to fast travel here from the map.', reward: { xp: 15 }, respawn: 0 },
   // ---- temporary world-event markers (their value comes from the event's own reward)
