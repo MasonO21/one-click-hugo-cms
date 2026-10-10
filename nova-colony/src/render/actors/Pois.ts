@@ -29,6 +29,8 @@ export class Pois {
   private readonly cull = new ViewCull(10);
   private refresh = 0;
   private readonly unsub: (() => void)[] = [];
+  /** Photo Mode: no markers in the picture (the bobbing POI diamonds and event beams are markers, like the HUD). */
+  hidden = false;
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
@@ -129,7 +131,7 @@ export class Pois {
         const s = st.pois[p.id];
         const model = this.models[i];
         if (puff && model === 'wreck') ctx.particles.smoke(p.x + 0.4, ctx.heightAt(p.x, p.z) + 2.2, p.z - 0.2, 0.35, '#5a5560', 2.2);
-        if (!s || !s.discovered || s.looted) continue;
+        if (!s || !s.discovered || s.looted || this.hidden) continue;
         const y = ctx.heightAt(p.x, p.z) + poiHeight(model) + 0.9 + Math.sin(t * 2.2 + i) * 0.2;
         composeEuler(_m, p.x, y, p.z, 0, t * 1.4 + i, 0, 1.1);
         const def = ctx.game.data.poi(p.def);
@@ -143,7 +145,7 @@ export class Pois {
     this.events.begin();
     for (let i = 0; i < st.events.length; i++) {
       const e = st.events[i];
-      if (e.claimed) continue;
+      if (e.claimed || this.hidden) continue;
       const y = ctx.heightAt(e.x, e.z);
       const pulse = 1 + Math.sin(t * 3 + i) * 0.08;
       composeEuler(_m, e.x, y, e.z, 0, t * 0.8, 0, pulse, 1, pulse);
