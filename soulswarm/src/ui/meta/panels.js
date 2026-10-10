@@ -339,7 +339,7 @@ export function openTrial(ctx) {
       <div class="tr-mods">${mod(B, 'boon')}${mod(N, 'bane')}</div>
       <div class="tr-rw"><span class="t-label">Clear reward</span><div class="tr-chips">${rw.map((it) => rewardChip(it)).join('')}</div>
         <div class="tr-sig">${rewardChip({ kind: 'sigils', amount: 1 })}<span>${toSigil === 1 ? 'Your next clear also earns a Sigil!' : `A Sigil every ${TRIAL.sigilEvery} clears · ${toSigil} to go`}</span></div>
-        <small class="t-dim">Free: no energy. Falling early still pays ${TRIAL.failGemsPerMin} gems a minute (up to ${TRIAL.failGemsMax}). Records and chapter progress are unaffected.</small></div>
+        <small class="t-dim">Free: no energy. Falling early still pays ${TRIAL.failGemsPerMin} gems a minute (up to ${TRIAL.failGemsMax} a day). Records and chapter progress are unaffected.</small></div>
       ${t.available ? '<button class="btn btn-primary btn-lg btn-block" data-act="go">Begin trial</button>'
         : t.retry ? `<button class="btn btn-ad btn-lg btn-block" data-act="retry">${icon('ad')} Try again</button><small class="t-dim tr-again">One video per attempt, as many as it takes. The prize pays on your first clear today.</small>`
         : `<div class="tr-done">${icon('check')} Beaten today</div>`}
