@@ -102,7 +102,8 @@ export function idleForSurvey(game: Game): boolean {
     watch.value = p.value;
     watch.since = st.playTime;
   }
-  return m.type === 'tier' || st.playTime - watch.since >= WAITING_AFTER;
+  if (m.type === 'tier') return !game.sys.progression.canTierUp();
+  return st.playTime - watch.since >= WAITING_AFTER;
 }
 
 /** The Survey pill's target when the player is between things to do (null: no pill). Call at ~1 Hz. */

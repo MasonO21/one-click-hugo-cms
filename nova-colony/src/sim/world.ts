@@ -781,7 +781,9 @@ export class WorldSystem extends System {
       const rn = this.game.data.biome(p.region)?.name ?? 'Region';
       this.game.toast(`${def.icon} ${rn} beacon activated — fast travel unlocked!`, 'reward');
     } else {
-      this.game.toast(`${def.icon} ${def.name} looted!`, 'reward');
+      // restocking ones say so: a reason to come back (time away counts)
+      const again = def.respawn > 0 ? ` Restocks in ${Math.round(def.respawn / 60)} min.` : '';
+      this.game.toast(`${def.icon} ${def.name} looted!${again}`, 'reward');
       this.game.bus.emit('sfx', { id: 'crate_open', x: p.x, z: p.z });
     }
     this.game.bus.emit('world:poiLooted', { id: poiId, poi: p.def, reward });

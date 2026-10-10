@@ -191,8 +191,10 @@ describe('restocking: absolute timers, one-off story POIs', () => {
   it('restocks online too, and says when', () => {
     const { game, step } = rig();
     const restocked = collectEvents(game, 'world:poiRestocked');
+    const toasts = collectEvents(game, 'ui:toast');
     const stash = game.sys.world.gen.pois.find((p) => p.def === 'hidden_stash')!;
     expect(game.sys.world.lootPoi(stash.id)).toBe(true);
+    expect(toasts.map((t) => t.text)).toContain('🗝️ Hidden Stash looted! Restocks in 60 min.');
     step(3590);
     expect(game.sys.world.lootPoi(stash.id)).toBe(false);
     step(15);
