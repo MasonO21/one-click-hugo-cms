@@ -4,7 +4,7 @@ A top-down "legion survivor" for iOS and Android. Every enemy you kill can rise 
 
 - **Engine:** HTML5 + WebGL ([Three.js](https://threejs.org)) with custom shaders, bloom, GPU particles and instanced hordes. The effects, weather, music and sound effects are generated in code. The painted art (key art, hero splashes, chapters, Bestiary, icons), the heroes' rigged and animated 3D models, the foes' painted 3D models (walked by a vertex shader, so the horde stays instanced), each chapter's painted floor and 3D props, and the voice lines were made with Higgsfield; see `docs/ART_AND_ADS.md`.
 - **Store wrapper:** [Capacitor 7](https://capacitorjs.com). The native Xcode project is in `ios/` and the Android Studio project in `android/`.
-- **Docs:** [`docs/`](docs/) contains the design brief, GDD, monetization model, live-ops calendar, marketing plan and production roadmap.
+- **Docs:** [`docs/`](docs/) contains the design brief, GDD, monetization model, live-ops calendar, marketing plan, production roadmap, store release notes and the privacy policy and terms of use templates.
 
 ## Run it
 
