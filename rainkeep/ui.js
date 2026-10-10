@@ -77,7 +77,8 @@
     // what the player is typing survives a redraw (a chat message arriving, a timer ticking): inputs keep their
     // value and the one in use keeps the caret
     const typed = {}, act = document.activeElement;
-    el.querySelectorAll('input[id],textarea[id]').forEach((i) => { if (i.type !== 'checkbox') typed[i.id] = i.value; });
+    // (only what the player changed: a field the game fills, such as a save code, shows the game's new value)
+    el.querySelectorAll('input[id],textarea[id]').forEach((i) => { if (i.type !== 'checkbox' && !i.readOnly && i.value !== i.defaultValue) typed[i.id] = i.value; });
     const focus = act && el.contains(act) && act.id && act.matches('input,textarea') ? { id: act.id, a: act.selectionStart, b: act.selectionEnd } : null;
     el.innerHTML = html;
     for (const id in typed) { const i = el.querySelector(`#${CSS.escape(id)}`); if (i) i.value = typed[id]; }
@@ -1420,6 +1421,8 @@
     renderAll(true);
   });
   document.addEventListener('keydown', (e) => {
+    // Enter that ends a word being composed (Chinese, Japanese, Korean input) isn't a send
+    if (e.isComposing || e.keyCode === 229) return;
     if (e.key === 'Escape' && UI.sheet && UI.sheet.kind !== 'intro') { ACT.close(); renderAll(true); }
     if (e.key === 'Enter' && e.target && e.target.id === 'wyrm-name') { ACT.rename(); renderAll(true); }
     // an input that names an action for Enter (a chat line, a search) runs it

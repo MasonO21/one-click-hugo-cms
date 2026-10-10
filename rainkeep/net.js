@@ -41,12 +41,30 @@
   KH.netClean = { num, int, str, idOf, cleanProfile, cleanAlliance, cleanMsg, cleanHelp, cleanBoss, cleanBattle };
 
   // ---- the artifact backend ----
-  function ArtifactNet(db, user, me, canWrite, admin) {
+  function ArtifactNet(db, user, me, canWrite, admin, unsure) {
     const st = { calls: 0, errors: 0, lastError: null };
-    const safe = (p, dflt) => { st.calls++; return Promise.resolve(p).then((v) => v, (e) => { st.errors++; st.lastError = (e && (e.code || e.message)) || String(e); return dflt; }); };
+    // a viewer the platform said nothing about finds out with a refused write; a withdrawn grant ends play
+    // online for this visit (db.d.ts: invalid_argument on a well-formed write, revoked)
+    const lost = (e) => {
+      const c = e && e.code;
+      if (canWrite && (c === 'revoked' || (unsure && c === 'invalid_argument'))) { canWrite = false; KH.emit('netReady', { online: false, kind: 'artifact' }); }
+    };
+    // p: a promise, or a function that makes one (refs are built inside it, so a bad path rejects, never throws)
+    const safe = (p, dflt) => {
+      st.calls++;
+      return Promise.resolve().then(() => (typeof p === 'function' ? p() : p)).then((v) => v, (e) => { st.errors++; st.lastError = (e && (e.code || e.message)) || String(e); if (e && e.code === 'revoked') lost(e); return dflt; });
+    };
+    const wsafe = (fn, dflt) => { st.calls++; return Promise.resolve().then(fn).then((v) => v, (e) => { st.errors++; st.lastError = (e && (e.code || e.message)) || String(e); lost(e); return dflt; }); };
     // one write at a time per document (the store asks for it): later writes to the same path wait their turn
     const chain = {};
-    const write = (path, fn) => { const run = (chain[path] || Promise.resolve()).then(fn, fn); chain[path] = run.catch(() => {}); return safe(run.then(() => true), false); };
+    const write = (path, fn) => { const run = (chain[path] || Promise.resolve()).then(fn, fn); chain[path] = run.catch(() => {}); return wsafe(() => run.then(() => true), false); };
+    // a listener the store ended (a budget, a stopped bridge, a withdrawn grant) is dead: only a fresh subscribe
+    // brings it back, which the caller does after a pause (onDead)
+    const listen = (q, map, cb, onDead) => {
+      try {
+        return q().onSnapshot((s) => cb(map(s)), (e) => { st.errors++; st.lastError = e && e.code; lost(e); if (onDead) onDead(e && e.code); });
+      } catch (e) { st.errors++; st.lastError = e && (e.code || e.message); if (onDead) setTimeout(() => onDead('throw'), 0); return () => {}; }
+    };
     const docs = (snap) => (snap && snap.docs ? snap.docs.filter((d) => d.exists) : []);
     const players = () => db.collection('players');
     let lastChat = 0;
@@ -60,74 +78,97 @@
         return Object.fromEntries(list.map((id) => [id, (ps[id] && ps[id].name) || '']));
       },
       putProfile: (p) => write(`players/${me}`, () => db.doc(`players/${me}`).set(p)),
-      player: (id) => safe(db.doc(`players/${id}`).get().then((d) => (d.exists ? cleanProfile(id, d.data()) : null)), null),
+      player: (id) => (idOf(id) ? safe(() => db.doc(`players/${id}`).get().then((d) => (d.exists ? cleanProfile(id, d.data()) : null)), null) : Promise.resolve(null)),
       topPlayers: (by, n) => safe(players().orderBy(by === 'lp' ? 'lp' : 'power', 'desc').limit(Math.min(100, n || 50)).get().then((s) => docs(s).map((d) => cleanProfile(d.id, d.data()))), []),
       opponents: (power, n) => safe(players().where('power', '>=', power * 0.6).where('power', '<=', power * 1.4).limit(60).get()
         .then((s) => docs(s).filter((d) => d.id !== me).map((d) => cleanProfile(d.id, d.data())).sort((a, b) => Math.abs(a.power - power) - Math.abs(b.power - power)).slice(0, n || 8)), []),
       members: (aid) => safe(players().where('aid', '==', aid).limit(60).get().then((s) => docs(s).map((d) => cleanProfile(d.id, d.data()))), []),
       alliances: (n) => safe(db.collection('al').orderBy('created', 'desc').limit(Math.min(50, n || 30)).get().then((s) => docs(s).map((d) => cleanAlliance(d.id, d.data()))), []),
-      alliance: (aid) => safe(db.doc(`al/${aid}`).get().then((d) => (d.exists ? cleanAlliance(aid, d.data()) : null)), null),
+      // null: no such Caravan; undefined: the store couldn't say just now (never read as "gone")
+      alliance: (aid) => (idOf(aid) ? safe(() => db.doc(`al/${aid}`).get().then((d) => (d.exists ? cleanAlliance(aid, d.data()) : null)), undefined) : Promise.resolve(null)),
       createAlliance: async (o) => {
-        const ref = db.collection('al').doc();
-        const ok = await write(`al/${ref.id}`, () => ref.set({ name: str(o.name, 24), tag: str(o.tag, 4), color: o.color, motto: str(o.motto, 80), leader: me, created: Date.now(), open: true }));
-        return ok ? ref.id : null;
+        const id = await safe(() => db.collection('al').doc().id, null);
+        if (!id) return null;
+        const ok = await write(`al/${id}`, () => db.doc(`al/${id}`).set({ name: str(o.name, 24), tag: str(o.tag, 4), color: o.color, motto: str(o.motto, 80), leader: me, created: Date.now(), open: true }));
+        return ok ? id : null;
       },
       updateAlliance: (aid, patch) => write(`al/${aid}`, () => db.doc(`al/${aid}`).update(patch)),
       // membership lives on each player's own profile (mp.js writes it), so joining touches nobody else's data
       joinAlliance: async () => true,
       leaveAlliance: async () => true,
-      watchChat: (channel, cb) => {
-        try {
-          return db.collection(`chat/${channel}/m`).orderBy('at', 'desc').limit(60).onSnapshot((s) => cb(docs(s).map((d) => cleanMsg(d.id, d.data())).filter((m) => m.text).reverse()), (e) => { st.errors++; st.lastError = e && e.code; });
-        } catch (e) { st.errors++; return () => {}; }
-      },
+      watchChat: (channel, cb, onDead) => listen(() => db.collection(`chat/${channel}/m`).orderBy('at', 'desc').limit(60), (s) => docs(s).map((d) => cleanMsg(d.id, d.data())).filter((m) => m.text).reverse(), cb, onDead),
       sendChat: async (channel, text) => {
         const t = str(text, 200);
         if (!t || Date.now() - lastChat < 2000) return false;
         lastChat = Date.now();
-        const col = db.collection(`chat/${channel}/m`);
-        const ok = await safe(col.add({ by: me, at: Date.now(), text: t }).then(() => true), false);
+        const col = () => db.collection(`chat/${channel}/m`);
+        const ok = await wsafe(() => col().add({ by: me, at: Date.now(), text: t }).then(() => true), false);
         // each channel keeps its newest 100: now and then the sender clears what is older
         if (ok && Math.random() < 0.15) {
-          safe(col.orderBy('at', 'desc').limit(300).get().then((s) => Promise.all(docs(s).slice(100).map((d) => col.doc(d.id).delete()))), null);
+          safe(() => col().orderBy('at', 'desc').limit(300).get().then((s) => Promise.all(docs(s).slice(100).map((d) => col().doc(d.id).delete()))), null);
         }
         return ok;
       },
-      askHelp: async (o) => {
-        const ref = db.collection('hp').doc();
-        const ok = await write(`hp/${ref.id}`, () => ref.set({ aid: o.aid, by: me, plot: str(o.plot, 24), label: str(o.label, 40), at: Date.now(), end: o.end, need: o.need, hs: {} }));
-        return ok ? ref.id : null;
+      // onId hears the request's id before it is written: the store shows a write in snapshots before it
+      // confirms it, and the asker's game must already know the request is its own (mp.js applyHelps)
+      askHelp: async (o, onId) => {
+        const id = await safe(() => db.collection('hp').doc().id, null);
+        if (!id) return null;
+        if (onId) onId(id);
+        const ok = await write(`hp/${id}`, () => db.doc(`hp/${id}`).set({ aid: o.aid, by: me, plot: str(o.plot, 24), label: str(o.label, 40), at: Date.now(), end: o.end, need: o.need, hs: {} }));
+        return ok ? id : null;
       },
       // a nested merge: two helpers at once both count
       giveHelp: (rid) => write(`hp/${rid}`, () => db.doc(`hp/${rid}`).update({ hs: { [me]: Date.now() } })),
       dropHelp: (rid) => write(`hp/${rid}`, () => db.doc(`hp/${rid}`).delete()),
-      watchHelps: (aid, cb) => {
-        try {
-          return db.collection('hp').where('aid', '==', aid).limit(100).onSnapshot((s) => cb(docs(s).map((d) => cleanHelp(d.id, d.data()))), (e) => { st.errors++; st.lastError = e && e.code; });
-        } catch (e) { st.errors++; return () => {}; }
-      },
-      oldHelps: (aid, before) => safe(db.collection('hp').where('aid', '==', aid).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`hp/${d.id}`).delete()))), null),
-      boss: (aid, day) => safe(db.doc(`al/${aid}/boss/${day}`).get().then((d) => (d.exists ? cleanBoss(d.data()) : null)), null),
+      watchHelps: (aid, cb, onDead) => listen(() => db.collection('hp').where('aid', '==', aid).limit(100), (s) => docs(s).map((d) => cleanHelp(d.id, d.data())), cb, onDead),
+      oldHelps: (aid, before) => safe(() => db.collection('hp').where('aid', '==', aid).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`hp/${d.id}`).delete()))), null),
+      boss: (aid, day) => safe(() => db.doc(`al/${aid}/boss/${day}`).get().then((d) => (d.exists ? cleanBoss(d.data()) : null)), null),
+      // the day's boss is made once, then every hit is a nested merge of the hitter's own total: two members
+      // striking first at the same moment both count
       hitBoss: async (aid, day, hp, total) => {
-        const ref = db.doc(`al/${aid}/boss/${day}`);
-        return write(ref.path, async () => { const d = await ref.get(); if (d.exists) await ref.update({ dmg: { [me]: total } }); else await ref.set({ hp, dmg: { [me]: total } }); });
+        const path = `al/${aid}/boss/${day}`;
+        const made = await write(path, async () => { const ref = db.doc(path); const d = await ref.get(); if (!d.exists) await ref.set({ hp, dmg: {} }); });
+        if (!made) return false;
+        return write(path, () => db.doc(path).update({ dmg: { [me]: total } }));
       },
-      postBattle: (rec) => safe(db.collection('bt').add({ ...rec, att: me, at: Date.now() }).then(() => true), false),
-      battlesAgainst: (since) => safe(db.collection('bt').where('def', '==', me).where('at', '>', since).limit(50).get().then((s) => docs(s).map((d) => cleanBattle(d.id, d.data()))), []),
-      dropBattles: (before) => safe(db.collection('bt').where('def', '==', me).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`bt/${d.id}`).delete()))), null),
+      postBattle: (rec) => wsafe(() => db.collection('bt').add({ ...rec, att: me, at: Date.now() }).then(() => true), false),
+      // oldest first, so a long list is read in order and nothing is skipped (mp.js remembers what it has seen)
+      battlesAgainst: (since) => safe(() => db.collection('bt').where('def', '==', me).where('at', '>', since).orderBy('at').limit(50).get().then((s) => docs(s).map((d) => cleanBattle(d.id, d.data()))), []),
+      dropBattles: (before) => safe(() => db.collection('bt').where('def', '==', me).where('at', '<', before).limit(50).get().then((s) => Promise.all(docs(s).map((d) => db.doc(`bt/${d.id}`).delete()))), null),
       // moderation (the owner): a reported message is deleted and remembered as removed in cfg/mod, so the
       // reports that name it (they travel in the reporters' own playtest reports, playtest.js) drop off the sheet
       removeMessage: (ch, mid) => {
         if (!/^(world|al-[\w:@+.~-]+)$/.test(ch) || !idOf(mid)) return Promise.resolve(false);
         const mod = db.doc('cfg/mod');
-        return safe(db.doc(`chat/${ch}/m/${mid}`).delete().then(() => write('cfg/mod', async () => { const d = await mod.get(); if (d.exists) await mod.update({ removed: { [mid]: Date.now() } }); else await mod.set({ removed: { [mid]: Date.now() } }); })), false);
+        return safe(() => db.doc(`chat/${ch}/m/${mid}`).delete().then(() => write('cfg/mod', async () => { const d = await mod.get(); if (d.exists) await mod.update({ removed: { [mid]: Date.now() } }); else await mod.set({ removed: { [mid]: Date.now() } }); })), false);
       },
-      moderation: () => safe(db.doc('cfg/mod').get().then((d) => (d.exists && d.data().removed && typeof d.data().removed === 'object' ? d.data().removed : {})), {}),
+      moderation: () => safe(() => db.doc('cfg/mod').get().then((d) => (d.exists && d.data().removed && typeof d.data().removed === 'object' ? d.data().removed : {})), {}),
       putTelemetry: (doc) => write(`pt/${me}`, () => db.doc(`pt/${me}`).set(doc)),
-      allTelemetry: () => safe(db.collection('pt').limit(1000).get().then((s) => docs(s).map((d) => ({ id: d.id, ...d.data() }))), []),
-      config: () => safe(db.doc('cfg/live').get().then((d) => (d.exists ? d.data() : null)), null),
+      allTelemetry: () => safe(() => db.collection('pt').limit(1000).get().then((s) => docs(s).map((d) => ({ id: d.id, ...d.data() }))), []),
+      config: () => safe(() => db.doc('cfg/live').get().then((d) => (d.exists ? d.data() : null)), null),
     };
     return net;
+  }
+
+  // ---- the server's answers pass through the same cleaning as the artifact's ----
+  function cleaned(h) {
+    const each = (f) => (list) => (Array.isArray(list) ? list.map(f).filter(Boolean) : []);
+    const prof = (p) => (p && typeof p === 'object' ? cleanProfile(idOf(p.id), p) : null);
+    const al = (a) => (a && typeof a === 'object' ? cleanAlliance(idOf(a.aid), a) : a === undefined ? undefined : null);
+    const msg = (m) => (m && typeof m === 'object' ? cleanMsg(idOf(String(m.mid != null ? m.mid : m.id)), m) : null);
+    const help = (r) => (r && typeof r === 'object' ? cleanHelp(idOf(String(r.rid != null ? r.rid : r.id)), r) : null);
+    const bt = (r) => (r && typeof r === 'object' ? cleanBattle(idOf(String(r.bid != null ? r.bid : r.id)), r) : null);
+    const then = (k, f) => (...a) => Promise.resolve(h[k](...a)).then(f);
+    return {
+      ...h,
+      player: then('player', prof), topPlayers: then('topPlayers', each(prof)), opponents: then('opponents', each(prof)), members: then('members', each(prof)),
+      alliances: then('alliances', each(al)), alliance: then('alliance', al),
+      watchChat: (ch, cb, onDead) => h.watchChat(ch, (list) => cb(each(msg)(list).filter((m) => m.text)), onDead),
+      watchHelps: (aid, cb, onDead) => h.watchHelps(aid, (list) => cb(each(help)(list)), onDead),
+      boss: then('boss', (b) => (b && typeof b === 'object' ? cleanBoss(b) : null)),
+      battlesAgainst: then('battlesAgainst', each(bt)),
+    };
   }
 
   // ---- offline: every call answers "nothing" ----
@@ -139,6 +180,7 @@
     watchChat: () => () => {}, sendChat: () => Promise.resolve(false), askHelp: none, giveHelp: () => Promise.resolve(false), dropHelp: none, watchHelps: () => () => {}, oldHelps: none,
     boss: none, hitBoss: () => Promise.resolve(false), postBattle: () => Promise.resolve(false), battlesAgainst: () => Promise.resolve([]), dropBattles: none,
     putTelemetry: () => Promise.resolve(false), allTelemetry: () => Promise.resolve([]), config: none, removeMessage: () => Promise.resolve(false), moderation: () => Promise.resolve({}),
+    report: () => Promise.resolve(false), reports: () => Promise.resolve([]),
   };
 
   // KH.net forwards to the backend once it is known; until then (and without one) it is offline
@@ -155,7 +197,7 @@
       try {
         const h = window.RKHttpNet(DATA.server, {});
         await h.ready;
-        if (h.online()) { impl = h; return; }
+        if (h.online()) { impl = cleaned(h); return; }
       } catch (e) { /* fall through */ }
     }
     const C = window.claude;
@@ -165,14 +207,10 @@
     const me = await user.id();
     if (!me) return;
     // a viewer who may not write shared data (Viewer, Commenter) plays alone; when the platform says nothing,
-    // the first write decides
+    // the first refused write decides (ArtifactNet: lost)
     const can = await user.can('data.write');
-    let canWrite = can !== false;
     const admin = (await user.isOwner()) || (await user.canEdit());
-    if (can == null) {
-      try { await db.doc(`players/${me}`).get(); } catch (e) { canWrite = false; }
-    }
-    impl = ArtifactNet(db, user, me, canWrite, admin);
+    impl = ArtifactNet(db, user, me, can !== false, admin, can == null);
   }
   KH.on('booted', () => {
     pick().catch(() => {}).then(() => { resolveReady(facade.online()); KH.emit('netReady', { online: facade.online(), kind: facade.kind() }); });

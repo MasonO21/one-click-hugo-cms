@@ -1283,6 +1283,9 @@ const DATA = {
 
   // ---------- Rival Keeps (rivals.js): other keeps on the Dunes to scout, raid, and fear ----------
   // playing with real people (mp.js, NETWORK.md): a real Caravan, its help and daily boss, and the Arena
+  // the Rainkeep server (server/README.md) for the native app or a hosted web build, e.g.
+  // 'https://rainkeep.example.com'; empty: online play runs on the claude.ai link's shared database, or not at all
+  server: '',
   online: {
     caravanMax: 30, found: 5, // members at most; the Rainwyrm level that founds a Caravan
     help: { need: 8, cut: 0.01, min: 3, points: 10, daily: 30 }, // helpers per request; each cuts 1% of the job (3 s at least); Caravan points per help, paid 30 times a day

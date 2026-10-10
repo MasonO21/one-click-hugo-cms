@@ -21,7 +21,7 @@ const FONT_CACHE = 'rainkeep-fonts-v1';
 const NETWORK_TIMEOUT_MS = 4000;
 
 const SHELL = [
-  'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'gfx.js', 'net.js',
+  'index.html', 'style.css', 'data.js', 'lore.js', 'audio.js', 'native.js', 'core.js', 'artmap.js', 'art2d.js', 'ui.js', 'gfx.js', 'net-http.js', 'net.js',
   'vendor/three.min.js', 'vendor/three-gltf.js', 'vendor/meshopt-decoder.js', 'art3d.js', 'models3d.js', 'town.js', 'town3d.js', 'events.js', 'keep.js', 'dryseason.js', 'channels.js', 'bond.js', 'cloudrun.js', 'decor.js', 'story.js', 'forge.js', 'trials.js', 'patron.js', 'caravan.js', 'world.js', 'bloom.js', 'deepspring.js', 'crossing.js', 'companions.js', 'road.js', 'rivals.js', 'pacts.js', 'siege.js', 'intel.js', 'formation.js', 'heirloom.js', 'awaken.js', 'talents.js', 'hall.js', 'outposts.js', 'trade.js', 'decrees.js', 'journeys.js', 'charters.js', 'defense.js', 'ranks.js', 'clash.js', 'fishing.js', 'derby.js', 'cookfire.js', 'dig.js', 'founding.js', 'kinships.js', 'leviathan.js', 'charms.js', 'spar.js', 'stars.js', 'arts.js', 'heroic.js', 'orders.js', 'mp.js', 'playtest.js', 'ready.js', 'news.js', 'world3d.js',
   'manifest.webmanifest', 'icon.svg',
   'fonts/el-messiri-latin-500-normal.woff2', 'fonts/el-messiri-latin-600-normal.woff2', 'fonts/el-messiri-latin-700-normal.woff2',

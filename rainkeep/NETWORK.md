@@ -78,7 +78,8 @@ build ends or every help has arrived. Requests older than a day are deleted by w
 
 ### Caravan boss: `al/{aid}/boss/{day}`
 
-`{ hp: number, dmg: { id: damage } }` for one day (`day` = local days since the epoch). Each member attacks up to
+`{ hp: number, dmg: { id: damage } }` for one day (`day` = UTC days since the epoch, the same for every member).
+The first hit of the day creates it with `{ hp, dmg: {} }`. Each member attacks up to
 `DATA.online.boss.hits` times a day; the battle is fought in the game, and the member writes their running total
 with `update({dmg: {[me]: total}})`. The boss falls when the sum of `dmg` reaches `hp`; then every member who hit it
 claims the day's chest (once, recorded in their save), sized by their share.
@@ -109,6 +110,7 @@ One document per tester, readable only by the owner (artifact rule `read: admin`
 | `fps` | median frames per second in the keep, sampled |
 | `err` | the last 20 distinct script errors `{ m ≤ 160, n, at }` |
 | `rep` | the last 20 chat messages this tester reported `{ ch, mid, by, text ≤ 200, at, rat }` |
+| `old` | true for a save that began before playtest reports: no first-session funnel |
 | `fb` | the last 30 feedback notes `{ at, r: 1–5, t ≤ 500, stage, ver }` |
 
 ### Live config: `cfg/live` (artifact, admin-written) · `GET /v1/config` (HTTP)
@@ -147,7 +149,9 @@ in `KH.net.status()`. `watch*` calls return an unsubscribe function.
 | `hitBoss(aid, day, hp, total)` | writes this player's running total |
 | `postBattle(rec)` | writes an Arena record |
 | `battlesAgainst(since)` | records naming this player as defender |
-| `removeMessage(ch, mid)` | deletes a reported message and records it as removed (admin) |
+| `report({ch, mid, by, text, at})` | HTTP only: the server's own copy of a report |
+| `reports()` | HTTP only: the server's open reports (admin) |
+| `removeMessage(ch, mid, rid)` | deletes a reported message and records it as removed, or closes report `rid` on the server (admin) |
 | `moderation()` | `{ mid: time }` of the messages removed (admin) |
 | `putTelemetry(doc)` | this tester's report |
 | `allTelemetry()` | every tester's report (admin) |

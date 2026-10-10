@@ -17,13 +17,19 @@
   const O = DATA.online;
   const net = KH.net;
   let S = null;
-  KH.hooks.boot.push(() => { S = KH.S; });
+  KH.hooks.boot.push(() => {
+    S = KH.S;
+    // an ask cut short by closing the game
+    if (S.online) for (const k of Object.keys(S.online.mine)) if (S.online.mine[k] === 'asking') delete S.online.mine[k];
+  });
   KH.hooks.defaults.push((s) => {
     s.online = { lp: 0, aid: null, attacks: { day: 0, n: 0 }, wins: { day: 0, n: 0 }, seenBt: 0, log: [], boss: { day: 0, hits: 0, total: 0, claimed: 0 },
       helped: {}, helpDay: { day: 0, n: 0 }, applied: {}, mine: {}, chatSeen: {}, autoAsk: true, blocked: {} };
     s.stats.arenaWins = 0; s.stats.onlineHelps = 0; s.stats.bossHits = 0;
   });
-  const today = () => { const d = new Date(); return Math.floor((d.getTime() - d.getTimezoneOffset() * 60000) / 864e5); };
+  // the online day is the same for everyone (UTC): a Caravan's boss of the day is one document for all its
+  // members wherever they live, and the server's attack limit turns over at the same moment
+  const today = () => Math.floor(Date.now() / 864e5);
   const now = () => Date.now();
   const on = () => net.online();
   const me = () => net.me();
@@ -74,26 +80,46 @@
   // ======================================================================
   // The Caravan (alliance): found, join, leave
   // ======================================================================
-  let alUnsub = null, helpUnsub = null, worldUnsub = null, watchedAid = null;
+  let alUnsub = null, helpUnsub = null, worldUnsub = null, watchedAid = null, deadAt = 0;
+  // a listener the store ended comes back on a later tick, after a pause
+  const dead = (which) => () => {
+    deadAt = now();
+    if (which === 'world') { if (worldUnsub) worldUnsub(); worldUnsub = null; } else watchedAid = undefined;
+  };
   function watchAlliance() {
     const aid = S.online.aid;
-    if (aid === watchedAid) return;
+    if (aid === watchedAid || now() - deadAt < 30000) return;
+    const again = watchedAid === undefined && aid && M.al && M.al.aid === aid;
     if (alUnsub) alUnsub(); if (helpUnsub) helpUnsub();
     alUnsub = helpUnsub = null; watchedAid = aid;
-    M.chat.al = []; M.helps = []; M.boss = null; M.al = null; M.members = [];
+    if (!again) { M.chat.al = []; M.helps = []; M.boss = null; M.al = null; M.members = []; }
     if (!aid) return;
-    net.alliance(aid).then((a) => { M.al = a; if (!a) { S.online.aid = null; syncProfile(true); } refresh(); });
+    loadAl(true);
     loadMembers(true);
-    alUnsub = net.watchChat(`al-${aid}`, (list) => { M.chat.al = list; wantNames(list.map((m) => m.by)); refresh(); });
-    helpUnsub = net.watchHelps(aid, (list) => { M.helps = list; applyHelps(); wantNames(list.map((h) => h.by)); refresh(); });
+    alUnsub = net.watchChat(`al-${aid}`, (list) => { M.chat.al = list; wantNames(list.map((m) => m.by)); refresh(); }, dead('al'));
+    helpUnsub = net.watchHelps(aid, (list) => { M.helps = list; applyHelps(); wantNames(list.map((h) => h.by)); refresh(); }, dead('al'));
     loadBoss(true);
     // help requests older than a day go
     net.oldHelps(aid, now() - 864e5);
+  }
+  // the Caravan itself (its motto, colour, leader): re-read now and then, since others change it. Only a read
+  // that says it is gone takes this keep out of it; one that fails says nothing (net.js: undefined)
+  function loadAl(force) {
+    const aid = S.online.aid;
+    if (!aid || (!force && fresh(M.alAt || 0, 30000))) return;
+    M.alAt = now();
+    net.alliance(aid).then((a) => {
+      if (S.online.aid !== aid || a === undefined) return;
+      M.al = a;
+      if (a === null) { S.online.aid = null; syncProfile(true); }
+      refresh();
+    });
   }
   function loadMembers(force) {
     const aid = S.online.aid;
     if (!aid || (!force && fresh(M.membersAt, 30000))) return;
     M.membersAt = now();
+    loadAl();
     net.members(aid).then((list) => { if (S.online.aid !== aid) return; M.members = list; wantNames(list.map((p) => p.id)); refresh(); });
   }
   function loadTop(force) {
@@ -192,7 +218,7 @@
     if (!(await net.sendChat(channel, text))) { el.value = text; KH.toast('Slow down a moment, then send again.', 'warn'); }
   };
   function watchWorld(want) {
-    if (want && !worldUnsub) worldUnsub = net.watchChat('world', (list) => { M.chat.world = list; wantNames(list.map((m) => m.by)); refresh(); });
+    if (want && !worldUnsub && now() - deadAt > 30000) worldUnsub = net.watchChat('world', (list) => { M.chat.world = list; wantNames(list.map((m) => m.by)); refresh(); }, dead('world'));
     if (!want && worldUnsub) { worldUnsub(); worldUnsub = null; }
   }
   const unread = (key) => { const list = M.chat[key]; const last = list.length ? list[list.length - 1] : null; return !!last && last.by !== me() && last.at > (S.online.chatSeen[key] || 0); };
@@ -201,12 +227,17 @@
   // Help: ask the Caravan for help on a build or research, and help theirs
   // ======================================================================
   const jobLabel = (key) => (key === 'research' ? `Research: ${(DATA.techs.find((t) => S.research && t.id === S.research.tech) || { name: 'research' }).name}` : `${KH.plotName(key)} to Lv ${(S.lv[key] || 0) + 1}`);
+  // asks in flight (not saved: a save made mid-ask that still says 'asking' is cleared by applyHelps)
+  const asking = new Set();
   async function ask(key) {
     if (!on() || !S.online.aid || S.online.mine[key]) return;
     const job = KH.findJob(key);
     if (!job || job.end <= S.time) return;
     S.online.mine[key] = 'asking';
-    const rid = await net.askHelp({ aid: S.online.aid, plot: key, label: jobLabel(key), end: now() + (job.end - S.time) * 1000, need: O.help.need });
+    asking.add(key);
+    // the id is known before the request shows up in the Caravan's list, so it is never taken for a stray
+    const rid = await net.askHelp({ aid: S.online.aid, plot: key, label: jobLabel(key), end: now() + (job.end - S.time) * 1000, need: O.help.need }, (id) => { S.online.mine[key] = id; });
+    asking.delete(key);
     if (rid) S.online.mine[key] = rid; else delete S.online.mine[key];
     refresh();
   }
@@ -220,6 +251,9 @@
     for (const h of M.helps) {
       if (h.by !== me()) continue;
       const key = mineByRid[h.rid], job = key && KH.findJob(key);
+      // a request of mine this save doesn't know: one still being asked for (the server's id arrives with the
+      // answer), or a stray from another device or an older save, cleared once it is a few minutes old
+      if (!key && (asking.size || now() - h.at < 3 * 60000)) continue;
       const done = S.online.applied[h.rid] || [];
       const fresh2 = Object.keys(h.hs).filter((id) => id !== me() && !done.includes(id)).slice(0, Math.max(0, h.need - done.length));
       if (fresh2.length && job && job.end > S.time) {
@@ -236,7 +270,10 @@
       }
     }
     // requests of mine the Caravan no longer shows (dropped, or the Caravan changed)
-    for (const [k, rid] of Object.entries(S.online.mine)) if (rid !== 'asking' && !M.helps.some((h) => h.rid === rid) && !(KH.findJob(k) && KH.findJob(k).end > S.time)) delete S.online.mine[k];
+    for (const [k, rid] of Object.entries(S.online.mine)) {
+      if (rid === 'asking') { if (!asking.has(k)) delete S.online.mine[k]; continue; }
+      if (!M.helps.some((h) => h.rid === rid) && !(KH.findJob(k) && KH.findJob(k).end > S.time)) delete S.online.mine[k];
+    }
   }
   const helpable = () => M.helps.filter((h) => h.by !== me() && !S.online.helped[h.rid] && !(me() in h.hs) && Object.keys(h.hs).length < h.need && h.end > now());
   const helpsLeftToday = () => (S.online.helpDay.day === today() ? Math.max(0, O.help.daily - S.online.helpDay.n) : O.help.daily);
@@ -357,7 +394,8 @@
           if (S.online.wins.day !== today()) S.online.wins = { day: today(), n: 0 };
           if (S.online.wins.n < A.paidWins) { S.online.wins.n++; g = KH.scaleReward(A.win); KH.grant(g); }
         } else S.online.lp = Math.max(0, S.online.lp - A.loss);
-        net.postBattle({ def: p.id, win: !!result.win, d, ap: Math.round(KH.power()), dp: p.power });
+        // the server (HTTP) keeps the Arena points itself and answers with this keep's own
+        net.postBattle({ def: p.id, win: !!result.win, d, ap: Math.round(KH.power()), dp: p.power }).then((r) => { if (r && typeof r === 'object' && Number.isFinite(r.lp)) { S.online.lp = Math.max(0, Math.round(r.lp)); refresh(); } });
         if (revenge) S.online.log = S.online.log.map((l) => (l.att === p.id ? { ...l, revenged: true } : l));
         syncProfile(true);
         KH.emit('battle', { kind: 'arena', win: result.win, foe });
@@ -372,21 +410,28 @@
   async function checkBattles() {
     if (!on() || now() - btAt < 60000) return;
     btAt = now();
-    const list = (await net.battlesAgainst(S.online.seenBt)).sort((a, b) => a.at - b.at);
+    // read from ten minutes back, so an attacker whose clock runs a little slow is still seen; each record is
+    // applied once, by its id
+    const seenIds = S.online.seenIds || (S.online.seenIds = []);
+    const list = (await net.battlesAgainst(Math.max(0, S.online.seenBt - 10 * 60000))).sort((a, b) => a.at - b.at).filter((r) => r.bid && !seenIds.includes(r.bid));
     if (!list.length) return;
     let lost = 0;
     for (const r of list) {
-      if (r.at <= S.online.seenBt) continue;
-      S.online.seenBt = r.at;
+      seenIds.push(r.bid);
+      S.online.seenBt = Math.max(S.online.seenBt, r.at);
       if (r.win) { S.online.lp = Math.max(0, S.online.lp - r.d); lost += r.d; }
       S.online.log.unshift({ att: r.att, at: r.at, win: r.win, d: r.d });
     }
+    S.online.seenIds = seenIds.slice(-200);
+    // a long backlog is read fifty at a time
+    if (list.length >= 50) btAt = 0;
     S.online.log = S.online.log.slice(0, 12);
     wantNames(list.map((r) => r.att));
     const wins = list.filter((r) => r.win).length;
     if (wins) KH.toast(`${wins === 1 ? 'A warden' : `${wins} wardens`} broke through your walls in the Arena: −${lost} points. Revenge waits in the Caravan tab.`, 'warn', 'mpbt', 30);
     else KH.toast('Your walls held against an Arena attack.', 'good', 'mpbt', 30);
     if (Math.random() < 0.2) net.dropBattles(now() - 3 * 864e5);
+    if (net.kind() === 'http') net.player(me()).then((pr) => { if (pr && Number.isFinite(pr.lp)) { S.online.lp = pr.lp; refresh(); } });
     syncProfile(true);
     KH.save(); refresh();
   }
@@ -412,7 +457,9 @@
     } else watchWorld(false);
   });
   KH.on('netReady', (e) => {
-    if (!e.online || !S) return;
+    if (!S) return;
+    // a refused write (a viewer who can't write) or a withdrawn grant: back to the single-player Caravan
+    if (!e.online) { watchWorld(false); refresh(); return; }
     if (UI.sub.caravan == null) UI.sub.caravan = 'online';
     syncProfile(true);
     watchAlliance();
@@ -447,7 +494,10 @@
     UI.sheet = null;
     if (!m) return;
     // the report goes to the game's keepers with this player's playtest report (playtest.js), which only they read
-    const ok = KH.playtest ? KH.playtest.addReport({ ch: sh.ch === 'world' ? 'world' : `al-${S.online.aid}`, mid: m.mid, by: m.by, text: m.text, at: m.at }) : false;
+    // (the server keeps reports of its own as well: net.report)
+    const r = { ch: sh.ch === 'world' ? 'world' : `al-${S.online.aid}`, mid: m.mid, by: m.by, text: m.text, at: m.at };
+    const sent = await net.report(r);
+    const ok = (KH.playtest ? KH.playtest.addReport(r) : false) || sent;
     KH.toast(ok ? 'Reported. The game\'s keepers will look at it.' : 'The report could not be sent just now.', ok ? 'good' : 'warn');
   };
   KH.sheets.mpmsg = () => {

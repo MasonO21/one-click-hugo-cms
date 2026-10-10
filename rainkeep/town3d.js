@@ -1016,20 +1016,24 @@
     const buckets = new Map();
     const take = (root, all) => {
       if (!root) return;
-      root.updateMatrixWorld(true);
+      // the parents' world matrices too: on the first frame nothing has been rendered yet to compute them
+      root.updateWorldMatrix(true, true);
       root.traverse((o) => {
         if (!o.isMesh || o.isSkinnedMesh || (!all && !o.userData.baked) || o.userData.keep) return;
         for (let q = o; q && q !== root.parent; q = q.parent) if (q.userData.dyn) return;
         const m = o.material;
         if (!m || Array.isArray(m) || m.transparent || !o.geometry.attributes.position) return;
-        const k = `${m.uuid}|${o.castShadow ? 1 : 0}|${o.geometry.attributes.color ? 1 : 0}`;
-        if (!buckets.has(k)) buckets.set(k, { m, cast: o.castShadow, list: [] });
+        // bucketed by whether the part casts a shadow at all and whether it's big, so the shadow policy can
+        // treat a batch the way it treats its parts when the graphics setting changes
+        const cast = o.userData.cs0 !== undefined ? o.userData.cs0 : o.castShadow, big = isBig(o);
+        const k = `${m.uuid}|${cast ? 1 : 0}|${big ? 1 : 0}|${o.geometry.attributes.color ? 1 : 0}`;
+        if (!buckets.has(k)) buckets.set(k, { m, cast, big, list: [] });
         buckets.get(k).list.push(o);
       });
     };
     for (const p of DATA.plots) { const pl = plots[p.id]; if (pl.key && !pl.key.startsWith('locked')) { take(pl.model, false); take(pl.path, true); } }
     batchG = new THREE.Group();
-    for (const { m, cast, list } of buckets.values()) {
+    for (const { m, cast, big, list } of buckets.values()) {
       for (const o of list) o.visible = true;
       if (list.length < 2) continue; // nothing to gain
       const geos = list.map((o) => {
@@ -1038,7 +1042,8 @@
         return g.applyMatrix4(o.matrixWorld);
       });
       const mm = new THREE.Mesh(A.mergeGeos(geos, !!geos[0].attributes.color), m);
-      mm.castShadow = cast; mm.receiveShadow = true;
+      mm.userData.cs0 = cast; mm.userData.big = big;
+      mm.castShadow = cast && (!KH.gfx || KH.gfx.tier().id !== 'mid' || big); mm.receiveShadow = true;
       batchG.add(mm);
       for (const o of list) o.visible = false;
     }
@@ -2125,13 +2130,16 @@
       if (o.userData.cs0 === undefined) o.userData.cs0 = o.castShadow;
       if (!o.userData.cs0) return;
       if (id !== 'mid') { o.castShadow = true; return; }
-      if (o.userData.big === undefined) {
-        const gm = o.geometry;
-        if (!gm.boundingSphere) gm.computeBoundingSphere();
-        o.userData.big = gm.boundingSphere.radius * o.getWorldScale(wsc).x >= 1.1;
-      }
-      o.castShadow = o.userData.big;
+      o.castShadow = isBig(o);
     });
+  }
+  function isBig(o) {
+    if (o.userData.big === undefined) {
+      const gm = o.geometry;
+      if (!gm.boundingSphere) gm.computeBoundingSphere();
+      o.userData.big = gm.boundingSphere.radius * o.getWorldScale(wsc).x >= 1.1;
+    }
+    return o.userData.big;
   }
   let skinned = [];
   const frus = new THREE.Frustum(), pvm = new THREE.Matrix4(), cullS = new THREE.Sphere(new V3(), 1.8);
@@ -2140,6 +2148,8 @@
     cam.updateMatrixWorld();
     pvm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
     frus.setFromProjectionMatrix(pvm);
+    // with shadows on, a margin: someone just off screen still throws a shadow onto it
+    cullS.radius = sh ? 4.5 : 1.8;
     for (const m of skinned) {
       cullS.center.setFromMatrixPosition(m.matrixWorld);
       m.visible = frus.intersectsSphere(cullS);

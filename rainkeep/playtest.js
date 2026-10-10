@@ -37,7 +37,8 @@
   KH.hooks.boot.push((fresh) => {
     S = KH.S;
     const P = S.pt, t = now();
-    if (!P.first) P.first = t;
+    // a save from before playtest reports: its first session is long past, so it gives no funnel times
+    if (!P.first) { P.first = t; if (S.stage > 1 || S.stats.upgrades > 0) P.old = true; }
     // a new session after half an hour away
     if (t - (P.last || 0) > 30 * 60000) P.sessions++;
     P.last = t;
@@ -55,7 +56,7 @@
     lastT = t;
     P.last = t;
     if (!P.days.includes(today())) P.days = P.days.concat(today()).slice(-60);
-    for (const [k, , test] of FTUE) if (P.ftue[k] == null && test(S)) P.ftue[k] = Math.round((t - P.first) / 1000);
+    if (!P.old) for (const [k, , test] of FTUE) if (P.ftue[k] == null && test(S)) P.ftue[k] = Math.round((t - P.first) / 1000);
     const sk = UI.sheet ? UI.sheet.kind + (UI.sheet.id ? `:${UI.sheet.id}` : '') : null;
     if (sk && sk !== lastSheet) bump(sk);
     lastSheet = sk;
@@ -80,7 +81,7 @@
       stage: S.stage, wyrm: S.lv.wyrm, power: Math.round(KH.power()), ver: DATA.version,
       feat: Object.fromEntries(feat), spend: { n: (S.purchases || []).length || 0, usd: Math.round((S.spentUsd || 0) * 100) / 100 },
       dev: { tier: g.tier || null, gpu: (g.device && g.device.gpu) || '', mem: (g.device && g.device.mem) || 0, cores: (g.device && g.device.cores) || 0, w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1, ua: navigator.userAgent.slice(0, 120), ui: T.ui || null, keep3d: T.keep3d || null, dunes3d: T.dunes3d || null },
-      fps: KH.gfx && KH.gfx.fps ? KH.gfx.fps() : null, err: P.err, fb: P.fb, rep: P.rep || [],
+      fps: KH.gfx && KH.gfx.fps ? KH.gfx.fps() : null, err: P.err, fb: P.fb, rep: P.rep || [], old: !!P.old,
     };
   }
   KH.playtestReport = () => (S ? report() : null);
@@ -147,7 +148,7 @@
   ACT.ptremove = async (rid) => {
     const r = (T.reports || []).find((x) => x.rid === rid);
     if (!r || !net.isAdmin()) return;
-    if (await net.removeMessage(r.ch, r.mid)) { T.reports = T.reports.filter((x) => x.rid !== rid); KH.toast('Message removed.', 'good'); KH.renderAll(); }
+    if (await net.removeMessage(r.ch, r.mid, r.rid)) { T.reports = T.reports.filter((x) => x.rid !== rid); KH.toast('Message removed.', 'good'); KH.renderAll(); }
   };
   ACT.ptcopy = () => {
     const txt = summaryText();
@@ -157,7 +158,14 @@
     if (!net.isAdmin() || now() - T.at < 20000) return;
     T.at = now();
     const list = await net.allTelemetry();
-    T.list = list.filter((r) => r && typeof r === 'object' && r.first);
+    // each tester wrote their own report: anything not shaped as expected is dropped, so one odd report can't
+    // break the sheet
+    const arr = (v) => (Array.isArray(v) ? v.filter((x) => x && typeof x === 'object' && !Array.isArray(x)) : []);
+    const obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    T.list = list.filter((r) => r && typeof r === 'object' && r.first).map((r) => ({
+      ...r, days: Array.isArray(r.days) ? r.days.filter((d) => Number.isFinite(d)) : [], err: arr(r.err), fb: arr(r.fb), rep: arr(r.rep),
+      ftue: r.old ? {} : obj(r.ftue), feat: obj(r.feat), dev: obj(r.dev),
+    }));
     // chat reports travel in the reporters' own reports; the ones whose message the owner removed drop off
     const removed = await net.moderation(), seen = new Set();
     T.reports = [];
@@ -167,6 +175,8 @@
       seen.add(mid);
       T.reports.push({ rid: mid, mid, ch, by: KH.netClean.idOf(x.by), text: KH.netClean.str(x.text, 200), rep: r.id, rat: N(x.rat) });
     }
+    // and the server's own reports (HTTP backend), each closed by its id there
+    for (const x of await net.reports()) if (x && x.mid && !seen.has(x.mid)) { seen.add(x.mid); T.reports.push(x); }
     T.reports.sort((a, b) => b.rat - a.rat);
     T.names = await net.names(T.list.map((r) => r.id).concat(T.reports.map((r) => r.by)));
     KH.renderAll();

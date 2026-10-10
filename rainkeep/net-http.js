@@ -110,6 +110,8 @@
         }
         st.online = true;
         if (r.ok) return r.data;
+        // 'gone': a 404 answers null ("there is no such thing"), unlike a failure, which answers the fallback
+        if (soft === 'gone' && r.status === 404) return null;
         if (!(soft && r.status === 404)) note(method + ' ' + path.split('?')[0] + ' ' + r.status + ' ' + ((r.data && r.data.error) || ''));
         return fallback;
       } catch (e) {
@@ -265,11 +267,13 @@
       opponents: safe(async (power, n) => rememberAll(await call('GET', '/v1/players/opponents?' + query({ power, limit: n || 10 }), undefined, [])), []),
       members: safe(async (aid) => rememberAll(await call('GET', '/v1/players?' + query({ aid }), undefined, [])), []),
       alliances: safe(async (n) => arr(await call('GET', '/v1/alliances?' + query({ limit: n || 20 }), undefined, [])).map(caravan), []),
+      // null when the Caravan is gone, undefined when the server couldn't be asked (never read as "gone")
       alliance: safe(async (aid) => {
-        const a = await call('GET', '/v1/alliances/' + seg(aid), undefined, null, true);
+        const a = await call('GET', '/v1/alliances/' + seg(aid), undefined, undefined, 'gone');
+        if (a === undefined) return undefined;
         if (a) rememberAll(a.members);
         return caravan(a);
-      }, null),
+      }, undefined),
       createAlliance: safe(async (o) => { const r = await call('POST', '/v1/alliances', o || {}, null); return (r && r.aid) || null; }, null),
       updateAlliance: safe(async (aid, patch) => !!(await call('PATCH', '/v1/alliances/' + seg(aid), patch || {}, null)), false),
       joinAlliance: safe(async (aid) => !!(await call('POST', '/v1/alliances/' + seg(aid) + '/join', {}, null)), false),

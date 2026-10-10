@@ -636,15 +636,17 @@
   W3.look = () => ({ tx: view.tx, tz: view.tz, zoom: view.zoom });
   // tiles under the dust past the wyrm's sight, or off screen, are not drawn: the painted beasts can't be culled
   // by three (their bounds sit in bind space), and a map holds some seventy of them
+  // A ruin's beacon stands some seven units tall and rises above the dust from beyond the wyrm's sight, so its
+  // tile is tested with a taller sphere and never hidden for distance.
   const frus = new THREE.Frustum(), pvm = new THREE.Matrix4(), cs = new THREE.Sphere(new V3(), TS * 0.75);
   function cullTiles(reach) {
     cam.updateMatrixWorld();
     pvm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
     frus.setFromProjectionMatrix(pvm);
     for (const k in tiles) {
-      const e = tiles[k];
-      cs.center.copy(e.g.position); cs.center.y += 1;
-      e.g.visible = Math.hypot(e.x - C, e.y - C) <= reach && frus.intersectsSphere(cs);
+      const e = tiles[k], beam = e.g.userData.beam && e.g.userData.beam.visible;
+      cs.center.copy(e.g.position); cs.center.y += beam ? 3.5 : 1; cs.radius = beam ? Math.max(TS * 0.75, 4) : TS * 0.75;
+      e.g.visible = (beam || Math.hypot(e.x - C, e.y - C) <= reach) && frus.intersectsSphere(cs);
     }
   }
   W3.stats = () => renderer && { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, scene };
@@ -747,7 +749,10 @@
   function build() {
     built = true;
     const t0 = performance.now();
-    if (!init()) { failed = true; return false; }
+    // a scene that fails to build leaves the 2D map in place, as when WebGL is missing
+    let ok = false;
+    try { ok = init(); } catch (e) { console.warn('Dunes 3D', e); ok = false; }
+    if (!ok) { failed = true; W3.active = false; KH.world3dActive = false; if (cv) cv.style.visibility = 'hidden'; return false; }
     KH.timing.dunes3d = Math.round(performance.now() - t0);
     octx = ov.getContext('2d');
     return true;
@@ -798,6 +803,7 @@
     // idle animation for creatures, camp fires, ruin beacons
     for (const k in tiles) {
       const e = tiles[k], ud = e.g.userData;
+      if (!e.g.visible) continue; // culled last frame
       if (ud.glb) animGlbBeast(ud, t, e.t.v);
       else if (ud.body) { ud.body.position.y = Math.abs(Math.sin(t * 2 + e.t.v * 6)) * 0.08; ud.body.rotation.y = Math.sin(t * 0.5 + e.t.v * 9) * 0.5; }
       if (ud.fire) ud.fire.scale.set(1, 0.8 + Math.sin(t * 13 + e.t.v * 5) * 0.25, 1);
