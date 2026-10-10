@@ -18,7 +18,7 @@
   KH.hooks.boot.push(() => { S = KH.S; });
   KH.hooks.defaults.push((s) => {
     s.stars = { by: {}, chests: {}, upTo: 0 };
-    s.stats.stars = 0; s.stats.starChests = 0; s.stats.starReplays = 0; s.stats.starFull = 0;
+    s.stats.stageStars = 0; s.stats.starChests = 0; s.stats.starReplays = 0; s.stats.starFull = 0;
   });
 
   const count = (m) => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
@@ -47,7 +47,7 @@
     const was = of(n), now = was | m, got = count(now) - count(was);
     if (!got) return 0;
     S.stars.by[n] = now;
-    S.stats.stars += got;
+    S.stats.stageStars += got;
     if (count(now) === 3) S.stats.starFull++;
     KH.emit('stars', { n, got });
     return got;
@@ -82,7 +82,7 @@
     const foe = KH.enemyFor(n), team = KH.teamStats(foe.cls);
     UI.sheet = null;
     KH.fightLive({
-      title: `Stage ${n} · for the stars`, foe, team,
+      title: `Stage ${n} · for the stars`, foe, team, opts: { art: KH.artOf() },
       onEnd: (result) => {
         const m = earned(n, result, team), got = record(n, m);
         S.stats.starReplays++;
@@ -161,10 +161,10 @@
     const rows = CH.slice(0, top + 1).reverse().map((c) => `<div class="row st-ch"><div class="grow"><b>${esc(c.name)}</b><div class="muted small">Stages ${c.from}-${c.to} · ${icon('i-star')}${chStars(c)}/${chMax(c)}</div></div>
       ${chests(c)}<button class="btn small alt" data-act="starsgo" data-arg="${c.from}" aria-label="Go to ${esc(c.name)}">Go</button></div>`).join('');
     return {
-      title: 'Stage Stars', lvl: `${fmt(S.stats.stars)}`,
+      title: 'Stage Stars', lvl: `${fmt(S.stats.stageStars)}`,
       body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'stars', '') : ''}<p class="muted small">Every story stage holds three stars: the victory, ending with half the squad's health, and winning within ${T.swift} rounds. Each chapter's stars fill three chests.</p><div class="card stack">${rows}</div>`,
     };
   };
-  KH.side.push({ id: 'stars', icon: 'i-star', label: 'Stars', act: 'stars', show: () => !!S && S.stage > 2, dot: anyReady, badge: () => (anyReady() ? `${readyCount()}` : `${S.stats.stars}`) });
+  KH.side.push({ id: 'stars', icon: 'i-star', label: 'Stars', act: 'stars', show: () => !!S && S.stage > 2, dot: anyReady, badge: () => (anyReady() ? `${readyCount()}` : `${S.stats.stageStars}`) });
   KH.stars = { earned, record, of, count, chapters: () => CH, chStars, ready, anyReady, swiftOf };
 })();

@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.38.0',
+  version: '4.40.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1867,7 +1867,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.40', items: [
-      { icon: 'i-veil', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:world', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
+      { icon: 'i-veil', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:expedition', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
     ] },
     { v: '4.39', items: [
       { icon: 'i-star', name: 'Stage Stars', text: "Every story stage now holds three stars: the victory, ending the fight with half the squad's health, and winning within five rounds. Tap a cleared stage on the Expedition tab to fight it again for the stars it is missing; each chapter's stars fill three chests.", act: 'stars', open: (S) => S.stage > 2, needs: 'Clear stage 2' },
@@ -2229,11 +2229,11 @@ const DATA = {
     { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
-    { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 3 } },
+    { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 40 } },
     { id: 'arts3', text: 'Learn all three Breath Arts', stat: 'artsOpen', n: 3, reward: { starglass: 60 } },
-    { id: 'stars30', text: 'Win 30 stage stars', stat: 'stars', n: 30, reward: { journals: 3 } },
-    { id: 'stars150', text: 'Win 150 stage stars', stat: 'stars', n: 150, reward: { starglass: 100 } },
-    { id: 'stars300', text: 'Win 300 stage stars', stat: 'stars', n: 300, reward: { starglass: 200, beacons: 2 } },
+    { id: 'stars30', text: 'Win 30 stage stars', stat: 'stageStars', n: 30, reward: { journals: 40 } },
+    { id: 'stars150', text: 'Win 150 stage stars', stat: 'stageStars', n: 150, reward: { starglass: 100 } },
+    { id: 'stars300', text: 'Win 300 stage stars', stat: 'stageStars', n: 300, reward: { starglass: 200, beacons: 2 } },
     { id: 'starfull20', text: 'Take all three stars on 20 stages', stat: 'starFull', n: 20, reward: { starglass: 60 } },
     { id: 'charm3', text: 'Have three heroes wear relic charms', stat: 'charmsWorn', n: 3, reward: { trowel: 10 } },
     { id: 'charm10', text: 'Raise a relic charm to Lv 10', stat: 'charmTop', n: 10, reward: { starglass: 300, charge: 2 } },

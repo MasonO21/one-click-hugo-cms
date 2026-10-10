@@ -462,7 +462,7 @@ const HOURS = Number(process.argv[3] || 8);
             const cand = [];
             for (let n = 1; n < Math.min(S.stage, D.finalStage + 1); n++) if (KH.stars.count(KH.stars.of(n)) < 3) cand.push(n);
             const ratio = (n) => { const f = KH.enemyFor(n); return KH.statPower(KH.teamStats(f.cls)) / KH.statPower(f); };
-            cand.map((n) => [n, ratio(n)]).sort((a, b) => b[1] - a[1]).slice(0, 3).forEach(([n]) => { const s0 = S.stats.stars; A.starfight(n); A.bclose(); st2.replays++; st2.gained += S.stats.stars - s0; });
+            cand.map((n) => [n, ratio(n)]).sort((a, b) => b[1] - a[1]).slice(0, 3).forEach(([n]) => { const s0 = S.stats.stageStars; A.starfight(n); A.bclose(); st2.replays++; st2.gained += S.stats.stageStars - s0; });
           }
         }
         // snowfield
@@ -624,7 +624,7 @@ const HOURS = Number(process.argv[3] || 8);
   console.log('charms:', JSON.stringify(Object.fromEntries(Object.entries(out.charms || {}).map(([id, k]) => [id, k]))), 'top', out.stats.charmTop);
   console.log('kinships:', JSON.stringify({ ...out.kn, fought: out.stats.kinFought }));
   console.log('breath arts:', JSON.stringify({ ...out.ba, switches: out.stats.artSwitches }));
-  console.log('stage stars:', JSON.stringify({ ...out.st2, stars: out.stats.stars, full: out.stats.starFull, wins: out.stats.wins }));
+  console.log('stage stars:', JSON.stringify({ ...out.st2, stars: out.stats.stageStars, full: out.stats.starFull, wins: out.stats.wins }));
   console.log('buried city:', JSON.stringify({ ...out.dg, relics: out.stats.relics, grand: out.stats.grandRelics }));
   console.log('final lv', JSON.stringify(out.lv), 'tech', JSON.stringify(out.tech), 'ending', out.end, 'element', out.element, 'quest', out.quest);
   console.log('stats', JSON.stringify(out.stats));

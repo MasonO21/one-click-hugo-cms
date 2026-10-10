@@ -478,7 +478,8 @@
       breath: !S.dormant && !opts.noBreath ? (opts.breathHp || foe.hp) * breathShare(team, opts) : 0,
       breathUsed: false,
       // Breath Arts: what the one breath does (the Torrent unless another is chosen and open)
-      art: artOf(opts.art), share: breathShare(team, opts), veil: 0, stun: 0,
+      // (only fights that offer the choice pass opts.art: expedition stages, star replays and the Leviathan)
+      art: opts.art ? artOf(opts.art) : 'torrent', share: breathShare(team, opts), veil: 0, stun: 0,
       skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge + (KH.talentBoost ? KH.talentBoost(id, 'charge') : 0), k: 0.85 + 0.15 * skillScale(id) })),
       guard: 0, sunder: 0,
       windup: (foe.boss ? BT.boss.first : BT.windupFirst) === 1, // the coming round's blow is a wind-up
@@ -489,6 +490,7 @@
   // the breath's share: of the foe's health for a Torrent, of the squad's for a Mist Veil
   const breathShare = (team, opts = {}) => DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0) + (team.fx.torrent || 0));
   const artOpen = (a) => !!DATA.battle.arts[a] && S.lv.wyrm >= DATA.battle.arts[a].unlock;
+  // the chosen art (or the one asked for), if learned; the Torrent otherwise
   const artOf = (a) => { a = a || S.breathArt || 'torrent'; return artOpen(a) ? a : 'torrent'; };
   const roundHit = (st) => dmgOf(st.team.atk, st.fdef * (st.sunder ? 1 - DATA.battle.skills.pierce.cut * (st.traits && st.traits.includes('armored') ? 2 : 1) : 1)) * (st.shell > 0 ? 1 - DATA.traits.list.shell.cut : 1);
   // acts: { breath: true, skills: [index, ...] } applied before the round's blows
@@ -1121,7 +1123,7 @@
     if (!squadHome().length) return toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const foe = enemyFor(S.stage), team = teamStats(foe.cls);
     KH.fightLive({
-      title: `Stage ${foe.n} · ${foe.chapter}`, foe, team,
+      title: `Stage ${foe.n} · ${foe.chapter}`, foe, team, opts: { art: KH.artOf ? KH.artOf() : 'torrent' },
       onEnd: (result) => {
         let rewards = null;
         const chapterBefore = chapterOf(S.stage).from;

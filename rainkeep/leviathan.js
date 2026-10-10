@@ -3,7 +3,8 @@
  * time. It cannot be killed: each of three attacks a hunt is a full 12-round battle (live, with breath and skills),
  * scored by the damage done before the squad falls back or the rounds run out. The best attack of the hunt ranks
  * you among the Hall of Wardens' fifty, whose own attacks are their share of your par by power with some luck on
- * the day; par is what the squad that makes the hunt's first attack does on auto-battle, and marks for beating it pay as soon as
+ * the day; par is what the strongest squad to attack this hunt does on auto-battle (it only ever rises, so a weak
+ * first attack can't set it low), and marks for beating it pay as soon as
  * they are reached. Each hunt it fights as one troop class, so the squad that counters it does most. When the hunt
  * ends the rank pays by mail.
  */
@@ -37,7 +38,7 @@
     const f = foe();
     team = team || KH.teamStats(f.cls);
     let t = 0;
-    for (let k = 0; k < 5; k++) t += damageOf(f, KH.simulateBattle(team, f, { breathHp: f.base }));
+    for (let k = 0; k < 5; k++) t += damageOf(f, KH.simulateBattle(team, f, { breathHp: f.base, art: KH.artOf() }));
     return Math.max(1, Math.round(t / 5));
   }
   // the other wardens' best attacks this hunt: their share of your par by power, and their luck on the day
@@ -60,7 +61,7 @@
   function surface() {
     const v = V();
     v.hunt++; v.start = S.time; v.left = L.attacks; v.best = 0; v.marks = [];
-    // par is set by the hunt's first attack, from the squad that makes it (not whoever was home when it surfaced)
+    // par is set by the attacks themselves, from the squads that make them (not whoever was home when it surfaced)
     v.stage = S.stage; v.par = 0;
   }
   function endHunt() {
@@ -96,10 +97,11 @@
     if (!unlocked() || v.left < 1) return KH.toast('No attacks left this hunt. The Leviathan surfaces again tomorrow.', 'warn');
     if (!KH.squadHome().length) return KH.toast('Your squad is out on the Dunes. Wait for them to return.', 'warn');
     const f = foe(), team = KH.teamStats(f.cls), hunt = v.hunt;
-    if (!v.par) v.par = parNow(team);
+    // par only ever rises: a weak squad sent first can't set it low for the real attacks to beat
+    v.par = Math.max(v.par || 0, parNow(team));
     v.left--;
     KH.fightLive({
-      title: `Hunt ${v.hunt} · attack ${L.attacks - v.left} of ${L.attacks}`, foe: f, team, opts: { breathHp: f.base },
+      title: `Hunt ${v.hunt} · attack ${L.attacks - v.left} of ${L.attacks}`, foe: f, team, opts: { breathHp: f.base, art: KH.artOf() },
       intro: 'The sand heaves. The Leviathan rises out of the dune…',
       onEnd: (result) => {
         // the hunt ended while the fight went on: it counts for nothing (the Leviathan had already dived)
@@ -136,7 +138,7 @@
           ${f.traits.length && KH.traitRows ? `<div class="traits">${KH.traitRows(f, KH.squadHome())}</div>` : ''}${KH.artRow ? KH.artRow(f) : ''}
           <div class="row"><span class="lv-pips">${Array.from({ length: L.attacks }, (_, i) => `<i class="${i < v.left ? 'on' : ''}"></i>`).join('')}</span><span class="grow muted small">${v.left} attack${v.left === 1 ? '' : 's'} left · best ${fmt(v.best)}</span>
           <button class="btn gold ${v.left ? '' : 'off'}" data-act="levattack">${icon('i-sword')}Attack</button></div></div>
-        <div class="card stack"><div class="section-label">Marks this hunt · par ${v.par ? fmt(v.par) : 'set by your first attack'}</div>${v.par ? marks : ''}<p class="muted small">Par is what the squad that makes the hunt's first attack does on auto-battle. Breathe into its wind-ups and time the skills to beat it.</p></div>
+        <div class="card stack"><div class="section-label">Marks this hunt · par ${v.par ? fmt(v.par) : 'set by your first attack'}</div>${v.par ? marks : ''}<p class="muted small">Par is what your strongest squad this hunt does on auto-battle, and it only rises. Breathe into its wind-ups and time the skills to beat it.</p></div>
         <div class="card stack"><div class="row"><b class="grow">The hunt so far</b><span class="chip">${v.par ? `Rank ${me + 1}` : 'No attack yet'}</span></div>${table}
           ${g && v.par ? `<div class="row muted small"><span class="grow">If the hunt ended now:</span><div class="costs">${KH.rewardHTML(KH.scaleReward(g))}</div></div>` : ''}</div>
         ${v.last ? `<p class="muted small">Last hunt: rank ${v.last.rank} with ${fmt(v.last.best)} damage.</p>` : ''}`,
