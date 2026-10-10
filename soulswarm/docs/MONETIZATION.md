@@ -47,6 +47,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | Daily quests | 60 / day | Energy refill | 30 energy for 50 gems (no daily cap in the build) |
 | 7-day login | 180 / cycle | Revive (alternative to the ad) | 60 gems, 1 paid revive per run in total |
 | Run rewards | 12–20 per repeat clear; 2 per full 2 minutes survived on a defeat | Gold bundles | 60 / 300 gems |
+| | | **Level-up reroll** (alternative to the ad) | 50 gems each, as often as wanted (`REROLL` in `data.js`) |
 | Account level-ups | 20 each | Altar Sigils (gem shop) | 150 each · 1,350 for 10 |
 | Soul Pass free / premium | 340 / 1,140 per season | Soul Pass catch-up tiers (Planned) | 100 per tier, last 7 days of a season only |
 | Chapter first clears | 70 / 90 / 110 / 130 / 150 for Ch1–5 (one-time, 550 total; only the 12–20 clear gems in it are doubled by Blood Moon or the ad) | | |
@@ -124,6 +125,14 @@ The Bestiary (GDD §5.2) has a painted entry for each of 13 foes (the horde's se
 ### 2.7 The Grimoire (run-start pages, never sold)
 
 The Grimoire (GDD §4.9) is a collection with no price tag: its eight pages unlock from play (runs finished, chapter clears, minions raised, a kill streak, a legion size, foes slain). Every page is a trade (a boon with a price), so none is a straight power purchase, and the blank page stays a fair choice; for that reason pages are **never sold** for gems or money. They pay off monetization indirectly: they give a reason to keep playing (and to replay cleared chapters with a new twist) between hero releases, and new pages can arrive as free Soul Pass rewards to make the pass feel richer without touching its premium value.
+
+### 2.8 Level-up rerolls (gems or ads, as often as wanted)
+
+Every level-up and Relic Chest screen offers **Reroll · 50 gems** beside **Reroll (ad)**, as often as the player likes (`REROLL` in `data.js`; never on a Shrine of Souls blessing). Before Update 8 a run had one ad reroll.
+- **Why 50 gems:** under the 60-gem revive and about the 30-energy refill (50 gems), so it reads as a small, impulsive spend at the moment a build is one card away from an evolution. A daily player earns about 130 gems a day (§2.4), so two or three rerolls a day are affordable without paying; a heavy reroller is the gem pack's best customer.
+- **Why ads stay unlimited:** each ad reroll is a rewarded impression the player chose, at the most engaged moment of a run. The planned 12-ads-a-day global cap (table above) bounds it once it ships.
+- **Guard rails:** the gem button dims when the wallet is short and a tap explains the price instead of opening the shop mid-run; a double tap pays once; the Soul Pact skips the ads, as everywhere.
+- **What to watch:** gems spent on rerolls per DAU, and whether heavy rerolling lowers Altar spend (a sign the price is too low). If rerolls crowd out pulls, raise the price on the third and later rerolls of a run.
 
 ## 3. Spend-depth ladder
 
@@ -263,7 +272,7 @@ Those depths are typical of the genre. They are also why §10's spending limits 
 | Free daily summon | 1 single Soul Altar pull | 1 / day | Soul Altar |
 | Energy refill | +10 energy | 3 / day | Energy popup |
 | Daily free chest | 800–1,499 gold + 10 gems + 1 relic (Common 85% / Rare 15%; showing these odds is Planned) | 1 / day | Shop and home screen |
-| Level-up reroll | Redraw the 3 cards | 1 per run | Level-up screen |
+| Level-up reroll | Redraw the 3 cards (also on a Relic Chest; never a Shrine blessing) | As often as wanted, one ad each (or 50 gems each, below) | Level-up and Relic Chest screens |
 | **Global cap** | | **12 ads / day (Planned)** | |
 
 - *(Planned)* No ad offer appears during the tutorial or in run 1. No ad offer appears within 30 s of a purchase. (Build: every placement is offered from the first run.)

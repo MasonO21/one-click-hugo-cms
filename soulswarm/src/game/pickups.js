@@ -1,4 +1,4 @@
-// Soul shards (XP), hearts, magnets and relic chests.
+// Soul shards (XP), hearts, magnets, relic chests and the Soul Urns' offerings (urns.js offer()).
 import * as THREE from 'three';
 import { gemGeometry } from '../engine/models.js';
 
@@ -9,6 +9,12 @@ const SPECIAL = {
   heart: { col: new THREE.Color(3.2, 0.5, 0.7), glow: [1.6, 0.25, 0.35] },
   magnet: { col: new THREE.Color(0.6, 1.2, 3.4), glow: [0.3, 0.6, 1.7] },
   chest: { col: new THREE.Color(3.2, 2.2, 0.6), glow: [1.6, 1.1, 0.3] },
+  // the Soul Urns' offerings (OFFERINGS in data.js)
+  knell: { col: new THREE.Color(2.8, 2.2, 3.4), glow: [1.4, 1.0, 1.8] },
+  frost: { col: new THREE.Color(1.6, 2.8, 3.4), glow: [0.7, 1.4, 1.8] },
+  lantern: { col: new THREE.Color(0.8, 3.2, 3.2), glow: [0.35, 1.6, 1.6] },
+  gold: { col: new THREE.Color(3.4, 2.6, 0.7), glow: [1.8, 1.3, 0.3] },
+  horn: { col: new THREE.Color(3.0, 2.9, 2.5), glow: [1.3, 1.25, 1.05] },
 };
 
 export class Pickups {
@@ -109,6 +115,7 @@ export class Pickups {
     if (o.kind === 'heart') run.player.heal(run.player.maxHp * 0.3);
     else if (o.kind === 'magnet') { this.magnetAll(); run.audio.sfx('coin'); run.fx.text(run.player.x, 2.4, run.player.z, 'MAGNET!', 'gold'); }
     else if (o.kind === 'chest') run.openChest();
+    else if (run.urns) run.urns.offer(o.kind); // a Soul Urn's offering
   }
 
   render() {

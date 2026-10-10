@@ -17,6 +17,7 @@ import { Hazards } from './hazards.js';
 import { Rites } from './rites.js';
 import { Affixes } from './affixes.js';
 import { Events } from './events.js';
+import { Urns } from './urns.js';
 import { computeStats, rollChoices, applyChoice, banishesPerRun } from './skills.js';
 import { Streak } from './streak.js';
 import { Tutorial } from './tutorial.js';
@@ -94,6 +95,7 @@ export class Run {
     this.projectiles.setBoltColor(this.heroColor);
     this.weapons = new Weapons(this);
     this.pickups = new Pickups(this);
+    this.urns = new Urns(this); // Soul Urns and their offerings (urns.js)
     this.gates = new Gates(this);
     this.boss = new Boss(this);
     this.rites = new Rites(this); // the hero's signature active ability (RITE button)
@@ -102,7 +104,7 @@ export class Run {
 
     this.time = 0; this.t = 0;
     this.ended = false; this.paused = false; this.levelPending = false; this.levelQueue = 0; this.chestQueue = 0;
-    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0, events: 0, rites: 0 };
+    this.counters = { kills: 0, raised: 0, novas: 0, gates: 0, chests: 0, elites: 0, bestStreak: 0, events: 0, rites: 0, urns: 0 };
     this.counters.byType = Object.fromEntries(BESTIARY.order.map((id) => [id, 0])); // Bestiary kills per foe and boss (meta/bestiary.js)
     this.streak = new Streak(this);
     this.nova = 0; this.novaQueue = []; this.novaT = 0; this.novaDmg = 0; this.novaSize = 0;
@@ -773,7 +775,7 @@ export class Run {
       chapter: this.chapter.id, time: this.endless || this.rush ? this.time : Math.min(this.time, RUN_LENGTH + 600), kills: this.counters.kills, raised: this.counters.raised,
       bestLegion: this.legion.peak, novas: this.counters.novas, gates: this.counters.gates, victory, level: this.level,
       bonusGold: this.bonusGold, heroId: this.loadout.heroId, endless: this.endless, bossKills: this.bossKills,
-      trial: this.trial, mutators: this.mut.ids, page: this.page, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
+      trial: this.trial, mutators: this.mut.ids, page: this.page, urns: this.counters.urns, bloodMoon: this.bloodMoon, difficulty: this.diff.id,
       chests: this.counters.chests, elites: this.counters.elites, evolutions: Object.keys(this.evolved).length, events: this.counters.events, rites: this.counters.rites,
       bestStreak: this.counters.bestStreak,
       byType: { ...this.counters.byType }, // Bestiary kills per foe
@@ -829,6 +831,7 @@ export class Run {
       this.legion.update(dt);
       this.projectiles.update(dt);
       this.pickups.update(dt);
+      this.urns.update(dt);
       this.gates.update(dt);
       this.updateNova(dt);
       this.updateBursts(dt);
@@ -870,6 +873,7 @@ export class Run {
     this.weapons.render();
     this.rites.render();
     this.pickups.render();
+    this.urns.render(this.glow);
     this.enemies.render();
     this.affixes.render(); this.events.render();
     this.boss.render(dt);
@@ -966,7 +970,7 @@ export class Run {
     this.gates.dispose();
     this.boss.dispose();
     this.hazards.dispose(); this.projectiles.disposeLobs(); // also restores the fog vignette
-    for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.world, this.affixes, this.events]) sys.dispose();
+    for (const sys of [this.player, this.enemies, this.legion, this.projectiles, this.weapons, this.pickups, this.urns, this.world, this.affixes, this.events]) sys.dispose();
     this.particles.points.geometry.dispose(); this.particles.material.dispose();
     this.glow.points.geometry.dispose(); this.glow.material.dispose();
     this.shadowMesh.geometry.dispose(); this.shadowMesh.material.dispose();

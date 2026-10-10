@@ -283,6 +283,13 @@ export class Events {
     if (run.levelQueue > 0 || run.chestQueue > 0) setTimeout(() => { if (!run.ended && !run.levelPending) run.showLevelUp(); }, 120);
   }
 
+  /** A blessing from outside a shrine (a Soul Urn's Soul Lantern): its own name, icon and duration on the chip. */
+  grant(id, dur, name = BLESSINGS[id].name, ic = BLESSINGS[id].icon) {
+    const b = this.buffs.find((x) => x.id === id);
+    if (b) { b.left = Math.max(b.left, dur); b.dur = Math.max(b.dur, b.left); } else this.buffs.push({ id, name, icon: ic, left: dur, dur });
+    this.restat();
+  }
+
   updateBuffs(dt) {
     const B = this.buffs;
     if (!B.length) return;

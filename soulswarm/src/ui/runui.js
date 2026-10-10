@@ -2,7 +2,7 @@
 import './runui.css';
 import { h, $, fmt, fmtTime, modal, rewardTile, watchAd, toast } from './dom.js';
 import { icon } from './icons.js';
-import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER } from '../game/data.js';
+import { SKILLS, EVOLUTIONS, RARITY_COLOR, MUTATORS, DIFFICULTY, BOSSES, CHAPTERS, bossFor, BOSS_RUSH, BOSS_ORDER, REROLL } from '../game/data.js';
 import { doubleRunRewards, commit, spend } from '../meta/economy.js';
 import { BOSS_ART, CHAPTER_ART, skillArt } from './art.js';
 import { RiteButton } from './riteui.js';
@@ -20,7 +20,7 @@ export class RunUI {
     this.run = run;
     run.ui = this;
     this.wantsNova = false;
-    this.rerolled = false;
+    this.rerolls = 0; // level-up rerolls bought this run (gems or ads)
     const color = '#' + run.heroColorObj.getHexString();
     this.el = h(`<div class="hud pass-through ${app.profile.settings.lefty ? 'lefty' : ''}" style="--lc:${color}">
       <div class="hud-top pass-through">
@@ -233,21 +233,32 @@ export class RunUI {
     };
     render(choices);
     const actions = $(back, '.lvl-actions');
-    if (!this.rerolled && !shrine) {
-      const rr = h(`<button class="btn btn-ad btn-sm">${icon('ad')} Reroll</button>`);
+    if (!shrine) {
+      // Reroll as often as wanted: each one costs REROLL.gems Soul Gems or one rewarded ad
+      const p = this.app.profile;
+      const gem = h(`<button class="btn btn-gem btn-sm btn-reroll">${icon('refresh')} Reroll · ${icon('gems')} <b class="tnum">${REROLL.gems}</b></button>`);
+      const ad = h(`<button class="btn btn-ad btn-sm btn-reroll">${icon('ad')} Reroll</button>`);
       let rolling = false;
-      rr.addEventListener('click', async () => {
-        if (rolling) return;
-        rolling = true; // one ad, one reroll, however fast the taps
-        const ok = await watchAd(this.app, 'reroll');
-        rolling = false;
-        if (!ok || picked || this.rerolled) return;
-        this.rerolled = true;
-        rr.remove();
+      const redraw = async () => {
+        this.rerolls++;
         const { rollChoices } = await import('../game/skills.js');
-        render(rollChoices(this.run, 3));
+        if (!picked) render(rollChoices(this.run, 3));
+      };
+      const mark = () => gem.classList.toggle('is-short', (p.gems || 0) < REROLL.gems);
+      gem.addEventListener('click', async () => {
+        if (rolling || picked) return;
+        if (!spend(p, 'gems', REROLL.gems)) { toast(`Not enough gems: a reroll costs ${REROLL.gems}`); return; }
+        rolling = true; // one payment, one reroll, however fast the taps
+        commit(p); this.app.audio.sfx('purchase'); this.app.haptic('light');
+        try { await redraw(); } finally { rolling = false; mark(); }
       });
-      actions.appendChild(rr);
+      ad.addEventListener('click', async () => {
+        if (rolling || picked) return;
+        rolling = true; // one ad, one reroll, however fast the taps
+        try { if (await watchAd(this.app, 'reroll') && !picked) await redraw(); } finally { rolling = false; }
+      });
+      mark();
+      actions.append(gem, ad);
     }
     this.el.appendChild(back);
   }

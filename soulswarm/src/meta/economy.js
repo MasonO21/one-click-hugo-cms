@@ -449,7 +449,7 @@ function applyRushResult(p, result) {
   s.runs += 1; s.kills += result.kills; s.raised += result.raised; s.bestLegion = Math.max(s.bestLegion, result.bestLegion);
   s.bestStreak = Math.max(s.bestStreak || 0, result.bestStreak || 0);
   addBestiaryKills(p, result.byType);
-  for (const [k, v, m] of [['kills', result.kills], ['raised', result.raised], ['novas', result.novas], ['runs', 1], ['chests', result.chests || 0], ['peak', result.bestLegion || 0, 'max'], ['evolve', result.evolutions || 0], ['bosses', n], ['survive', Math.floor(result.time), 'max']]) questProgress(p, k, v, m);
+  for (const [k, v, m] of [['kills', result.kills], ['raised', result.raised], ['novas', result.novas], ['runs', 1], ['chests', result.chests || 0], ['urns', result.urns || 0], ['peak', result.bestLegion || 0, 'max'], ['evolve', result.evolutions || 0], ['bosses', n], ['survive', Math.floor(result.time), 'max']]) questProgress(p, k, v, m);
   let levelUps = 0;
   p.xp += rewards.passXp;
   while (p.xp >= accountXpFor(p.level)) { p.xp -= accountXpFor(p.level); p.level += 1; levelUps += 1; p.gems += 20; }
@@ -459,7 +459,7 @@ function applyRushResult(p, result) {
 export function applyRunResult(p, result) {
   // a partial or malformed result must not write NaN into the profile (NaN currencies and XP are saved as null)
   result = { ...result, chapter: Math.min(CHAPTERS.length, Math.max(1, Math.floor(result.chapter) || 1)) };
-  for (const k of ['time', 'kills', 'raised', 'bestLegion', 'novas', 'gates', 'bonusGold', 'bossKills', 'chests', 'elites', 'evolutions', 'bestStreak']) result[k] = Math.max(0, +result[k] || 0);
+  for (const k of ['time', 'kills', 'raised', 'bestLegion', 'novas', 'gates', 'bonusGold', 'bossKills', 'chests', 'elites', 'evolutions', 'bestStreak', 'urns']) result[k] = Math.max(0, +result[k] || 0);
   if (result.tutorial) return applyTutorialResult(p, result);
   if (result.rush) return applyRushResult(p, result);
   const L = computeLoadout(p);
@@ -508,6 +508,7 @@ export function applyRunResult(p, result) {
   questProgress(p, 'gates', result.gates);
   questProgress(p, 'runs', 1);
   questProgress(p, 'chests', result.chests || 0);
+  questProgress(p, 'urns', result.urns || 0); // Soul Urns smashed
   questProgress(p, 'elites', result.elites || 0);
   questProgress(p, 'peak', result.bestLegion || 0, 'max');
   questProgress(p, 'evolve', result.evolutions || 0);

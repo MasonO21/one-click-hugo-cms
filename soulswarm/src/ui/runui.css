@@ -131,7 +131,11 @@
 @keyframes shine { from { background-position: 150% 0; } to { background-position: -100% 0; } }
 @keyframes cardin { from { opacity: 0; transform: translateY(30px) scale(.9); } }
 @keyframes blink { 50% { opacity: .3; } }
-.lvl-actions { display: flex; gap: 8px; }
+.lvl-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+/* Reroll (REROLL in data.js): 50 Soul Gems or an ad, as often as wanted; dimmed while the gems fall short (a tap explains) */
+.btn-reroll { gap: 6px; }
+.btn-reroll .icon { width: 15px; height: 15px; }
+.btn-reroll.is-short { opacity: .55; filter: saturate(.6); }
 /* Banish (skills.js banish): a small ✕ on each skill card strikes it from the run's draws; the line under the cards counts them */
 .card.bannable { padding-right: 40px; }
 .card .ban { position: absolute; top: 7px; right: 10px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-dim);

@@ -283,6 +283,24 @@ export const RUN_EVENTS = {
   coffin: { name: 'Cursed Coffin', life: 30, hp: 150, wave: 20, ring: [2.2, 4.6], mini: { hp: 0.5, scale: 0.85, types: ['husk', 'brute', 'witch'] }, reward: 20 },
 };
 // Shrine of Souls blessings (a pick of 3): xp ×, minionDmg ×, speed ×, magnet (every shard and pickup flies in), raise +pp
+// ---------------------------------------------------------------- Soul Urns (urns.js; GDD §4.10)
+// Funerary urns rise around the map: the first at `first` s, then one every `every` s (±25%), `dist` m from the
+// Shepherd (ahead of him first, clear of hazards, the gates and each other), at most `max` standing; one crumbles once
+// he leaves it `far` m behind. Walking into an urn (within `touch` m) smashes it and spills one offering, drawn by
+// `loot` weight (hearts and magnets are the pickups' own; the rest are OFFERINGS). None in the tutorial.
+export const URNS = { first: 18, every: 14, dist: [9, 15], max: 3, touch: 1.3, far: 46,
+  loot: { heart: 16, magnet: 12, knell: 16, frost: 12, lantern: 16, gold: 18, horn: 10 } };
+// knell: every foe within r m loses frac of its max HP (elites eliteFrac, the boss bossFrac; never an event creature);
+// frost: every foe within r m is stunned `stun` s (the boss's next attack only slips, as for a Rite); lantern: the
+// Soul Feast blessing (double XP) for dur s; gold: +gold run gold; horn: n Shades rise around the Shepherd (under the cap)
+export const OFFERINGS = {
+  knell: { name: 'Death Knell', icon: 'pulse', r: 11, frac: 0.6, eliteFrac: 0.25, bossFrac: 0.04 },
+  frost: { name: 'Frost Hourglass', icon: 'hourglass', r: 14, stun: 3 },
+  lantern: { name: 'Soul Lantern', icon: 'lantern', dur: 15 },
+  gold: { name: 'Gilded Skull', icon: 'coin', gold: 60 },
+  horn: { name: 'Ossuary Horn', icon: 'banner', n: 8 },
+};
+
 export const BLESSINGS = {
   feast:  { name: 'Soul Feast',    icon: 'star',   desc: 'Double XP from soul shards',           xp: 2 },
   wrath:  { name: 'Legion Wrath',  icon: 'fang',   desc: 'Minions deal +50% damage',             minionDmg: 1.5 },
@@ -420,6 +438,9 @@ export const SKILLS = {
 
 // Banish: a level-up card's ✕ strikes that skill from the run's draws for good (not evolutions); perRun per run
 export const BANISH = { perRun: 2 };
+// Reroll: redraw the cards on a level-up or Relic Chest screen, as often as wanted, each time for `gems` Soul Gems or
+// one rewarded ad (free with the Soul Pact, whose ads are skipped); never on a Shrine of Souls blessing
+export const REROLL = { gems: 50 };
 
 export const EVOLUTIONS = {
   // Tunables are read by weapons.js (and projectiles.js, legion.js). Radii are in metres, times in seconds, dmg before Might/crits.
@@ -683,6 +704,7 @@ export const QUEST_POOL = [
   { id: 'chest',  text: 'Open 2 Relic Chests',     key: 'chests',  goal: 2 },
   { id: 'elite',  text: 'Slay 3 elites',           key: 'elites',  goal: 3 },
   { id: 'legion', text: 'Lead a legion of 100',    key: 'peak',    goal: 100 },
+  { id: 'urns',   text: 'Smash 6 Soul Urns',       key: 'urns',    goal: 6 },
   { id: 'evolve', text: 'Evolve a weapon',         key: 'evolve',  goal: 1, late: true },
   { id: 'boss',   text: 'Defeat a chapter boss',   key: 'bosses',  goal: 1, late: true },
   { id: 'trial',  text: 'Clear the Daily Trial',   key: 'trial',   goal: 1, late: true },

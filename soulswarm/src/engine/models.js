@@ -310,6 +310,20 @@ export function skullGeometry() {
   ]);
 }
 
+/** A Soul Urn (urns.js): a pale bone-and-bronze funerary urn with a lid, its soul band and slits glowing cyan. */
+export function urnGeometry() {
+  const bone = 0xc8bca2, bronze = 0x6a4e2e, glow = 0x7ff8ff;
+  const prof = [[0.01, 0], [0.24, 0], [0.3, 0.12], [0.37, 0.4], [0.35, 0.62], [0.25, 0.82], [0.18, 0.9], [0.22, 0.98], [0.01, 0.99]].map(([x, y]) => new THREE.Vector2(x, y));
+  return merge([
+    P(new THREE.LatheGeometry(prof, 10), bone),
+    P(Cyl(0.385, 0.385, 0.07, 10), bronze, { p: [0, 0.5, 0] }),
+    P(Cyl(0.39, 0.39, 0.03, 10), glow, { p: [0, 0.5, 0], e: 2 }),
+    P(Sph(0.13, 6, 4), bronze, { p: [0, 1.04, 0], s: [1, 0.7, 1] }),
+    P(Sph(0.05, 4, 3), glow, { p: [0, 1.12, 0], e: 2 }),
+    ...[0, 1, 2, 3].map((k) => P(Box(0.05, 0.16, 0.04), glow, { p: [Math.cos(k * 1.571) * 0.33, 0.3, Math.sin(k * 1.571) * 0.33], r: [0, -k * 1.571, 0], e: 2 })),
+  ]);
+}
+
 /** Gravefall's tombstone (arsenal.js): a carved headstone on a plinth, its cross and skull glowing moonlight blue. */
 export function tombstoneGeometry() {
   const stone = 0x5a6274, dark = 0x343a48, glow = 0xa9c8ff;

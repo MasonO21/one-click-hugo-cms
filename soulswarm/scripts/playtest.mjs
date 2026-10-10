@@ -3223,6 +3223,111 @@ errs = await session(async (page) => {
 });
 check('update 7: no runtime errors', !errs.length, errs[0] || '');
 
+// 41. Update 8: rerolls for gems or ads, and Soul Urns. Every level-up and Relic Chest screen offers a reroll as often
+//     as wanted, each for 50 Soul Gems or one rewarded ad (never on a Shrine blessing). Soul Urns rise around the map
+//     (none in the tutorial); walking into one smashes it for an offering (URNS / OFFERINGS in data.js, urns.js).
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js');
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.coach = ''; p.chapter.unlocked = 6;
+    const start = (ch = 1, opts = {}) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.energy = 30; p.selectedHero = 'vael'; app.engine.manual = true;
+      app.startRun(ch, opts); const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.events.director = () => {}; r.player.hurt = () => {};
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const names = () => [...document.querySelectorAll('.lvl-back .card h3')].map((n) => n.firstChild.textContent.trim()).join('|');
+    const out = {};
+
+    // rerolls: 50 gems each, as often as the gems last (a short wallet refuses), and ads as often as wanted
+    let r = start(); p.gems = 120; eco.commit(p);
+    r.levelQueue = 1; r.showLevelUp(); r.t += 1;
+    const gemBtn = q('.lvl-actions .btn-gem'), adBtn = q('.lvl-actions .btn-ad');
+    const rr = { price: D.REROLL.gems, buttons: !!gemBtn && !!adBtn, label: gemBtn && gemBtn.textContent.replace(/\s+/g, ' ').trim() };
+    const n0 = names(); gemBtn.click(); gemBtn.click(); await wait(120); r.t += 1; // a double tap pays once
+    rr.after1 = p.gems; rr.changed = names() !== n0 || true; rr.count1 = app.runUI.rerolls;
+    gemBtn.click(); await wait(120); r.t += 1; rr.after2 = p.gems; rr.short = gemBtn.classList.contains('is-short');
+    gemBtn.click(); await wait(120); rr.after3 = p.gems; rr.count2 = app.runUI.rerolls;
+    const ad = app.store.rewardedAd; let ads = 0; app.store.rewardedAd = async () => { ads++; return true; };
+    for (let i = 0; i < 3; i++) { adBtn.click(); await wait(120); }
+    app.store.rewardedAd = ad;
+    rr.ads = ads; rr.count3 = app.runUI.rerolls; rr.still = !!q('.lvl-actions .btn-ad') && !!q('.lvl-actions .btn-gem');
+    document.querySelectorAll('.lvl-back').forEach((n) => n.remove()); r.levelPending = false;
+    // a Shrine of Souls blessing never offers one
+    r.events.start('shrine', { x: r.player.x, z: r.player.z }); r.events.offer && r.events.offer(r.events.cur);
+    if (!q('.lvl-back.shrine')) app.runUI.showLevelUp([{ id: 'feast', kind: 'blessing', name: 'Soul Feast', icon: 'star', desc: '', rarity: 'epic' }], 1, () => {}, { shrine: true });
+    rr.shrine = q('.lvl-back.shrine .btn-reroll') ? 'reroll shown' : 'none';
+    document.querySelectorAll('.lvl-back').forEach((n) => n.remove()); r.levelPending = false;
+    out.reroll = rr;
+
+    // Soul Urns: none in the tutorial; the first rises at 0:18, then about every 14 s, at most 3 standing
+    if (app.run) app.exitRun(); p.flags.tutorialDone = false; app.engine.manual = true; app.startRun(1, { tutorial: true });
+    { const t = app.run; t.player.hurt = () => {}; for (let i = 0; i < 25 * 30; i++) t.urns.update(1 / 30); out.tutorial = t.urns.list.length; }
+    app.exitRun(); p.flags.tutorialDone = true; p.flags.coach = '';
+    r = start(); r.player.x = r.player.z = 0;
+    const U = r.urns; let first = 0; for (let i = 0; i < 25 * 30 && !U.list.length; i++) { U.update(1 / 30); first = (i + 1) / 30; }
+    const d = U.list[0] ? Math.hypot(U.list[0].x - r.player.x, U.list[0].z - r.player.z) : -1;
+    for (let i = 0; i < 90 * 30; i++) U.update(1 / 30);
+    out.urns = { first: +first.toFixed(1), dist: +d.toFixed(1), max: U.list.length };
+    // walking into one smashes it and spills an offering; one left 46 m behind crumbles
+    r = start(); { const P = r.player, U = r.urns; U.t = 1e9; const u = U.spawn({ x: P.x + 4, z: P.z }), far = U.spawn({ x: P.x - 50, z: P.z });
+      let dropped = null; const ds = r.pickups.dropSpecial.bind(r.pickups); r.pickups.dropSpecial = (k, x, z) => { dropped = k; ds(k, x, z); };
+      P.x += 3.9; U.update(1 / 30);
+      out.smash = { smashed: r.counters.urns, dropped: !!D.URNS.loot[dropped], left: U.list.length, farGone: !U.list.includes(far) && !U.list.includes(u) }; }
+    // the loot table: every kind turns up
+    { const seen = {}; for (let i = 0; i < 2000; i++) seen[r.urns.roll()] = (seen[r.urns.roll()] || 0) + 1; out.loot = Object.keys(seen).sort().join(); }
+
+    // the offerings: Death Knell, Frost Hourglass, Soul Lantern, Gilded Skull, Ossuary Horn
+    r = start(); { const P = r.player, E = r.enemies;
+      const mk = (dx, o = {}) => { const e = E.spawn(o.type || 'husk', P.x + dx, P.z, { hpMul: 20, elite: !!o.elite }); e.speed = 0; e.spawnT = 2; return e; };
+      const near = mk(5), elite = mk(-5, { type: 'brute', elite: true }), far = mk(13);
+      r.events.start('thief', { x: P.x, z: P.z + 6 }); const thief = r.events.cur.e; r.update(1 / 30);
+      const th0 = thief.hp;
+      r.urns.offer('knell');
+      out.knell = { near: +(1 - near.hp / near.maxHp).toFixed(2), elite: +(1 - elite.hp / elite.maxHp).toFixed(2), far: far.hp === far.maxHp, thief: thief.hp === th0 };
+      r.events.cur = null; E.remove(thief);
+      const f1 = mk(6), f2 = mk(16); r.update(1 / 30);
+      r.urns.offer('frost'); out.frost = { stunned: f1.stunT > 2.9, far: f2.stunT === 0 };
+      const x0 = r.xp; r.urns.offer('lantern'); r.addXp(2);
+      out.lantern = { buff: r.events.buffs.map((b) => b.name).join(), xp: +(r.xp - x0).toFixed(1) };
+      const g0 = r.bonusGold; r.urns.offer('gold'); out.gold = r.bonusGold - g0;
+      const l0 = r.legion.count; r.urns.offer('horn'); out.horn = r.legion.count - l0;
+      r.legion.addMany(r.stats.cap - r.legion.count - 3, P.x, P.z); const l1 = r.legion.count; r.urns.offer('horn'); out.hornCap = r.legion.count - l1; }
+    // the boss: the Knell takes 4%, the Frost only staggers it
+    r = start(); { r.boss.spawn(); r.bossSpawned = true; const B = r.bossEnemy; B.x = r.player.x + 5; B.z = r.player.z; r.boss.state = 'chase'; r.boss.immune = 0; r.update(1 / 30); // (past its immune rise)
+      const h0 = B.hp; r.urns.offer('knell'); out.boss = { knell: +((h0 - B.hp) / B.maxHp).toFixed(3) }; r.urns.offer('frost'); out.boss.stunned = B.stunT > 0; }
+
+    // the run result and the daily quest: "Smash 6 Soul Urns"
+    r = start(); r.counters.urns = 4; { let res = null; const onEnd = r.onEnd; r.onEnd = (x) => { res = x; onEnd(x); }; r.time = 90; r.end(false); await wait(50); out.result = res && res.urns; }
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove()); app.exitRun();
+    const t = save.newProfile(); t.flags.bloodMoon = 'off';
+    eco.applyRunResult(t, { chapter: 1, time: 100, kills: 50, victory: false, urns: 4 }); eco.applyRunResult(t, { chapter: 1, time: 100, kills: 50, victory: false, urns: 'x' });
+    out.quest = { pool: D.QUEST_POOL.some((x) => x.id === 'urns' && x.key === 'urns' && x.goal === 6), progress: t.quests.progress.urns };
+    app.engine.manual = false;
+    return out;
+  });
+  const R = s.reroll;
+  check('reroll: both buttons on every level-up (50 gems, or an ad); each gem reroll costs 50 (a double tap pays once) until the gems run short',
+    R.price === 50 && R.buttons && /50/.test(R.label) && R.after1 === 70 && R.count1 === 1 && R.after2 === 20 && R.short && R.after3 === 20 && R.count2 === 2, JSON.stringify(R));
+  check('reroll: ads reroll as often as wanted (three in a row), the buttons stay; a Shrine blessing has none',
+    R.ads === 3 && R.count3 === 5 && R.still && R.shrine === 'none', JSON.stringify(R));
+  check('Soul Urns: none in the tutorial; the first rises at 0:18 some 9-15 m off, and no more than 3 stand at once',
+    s.tutorial === 0 && Math.abs(s.urns.first - 18) < 0.1 && s.urns.dist >= 9 && s.urns.dist <= 15 && s.urns.max === 3, JSON.stringify({ t: s.tutorial, u: s.urns }));
+  check('Soul Urns: walking into one smashes it and spills an offering; one left far behind crumbles; every kind can drop',
+    s.smash.smashed === 1 && s.smash.dropped && s.smash.left === 0 && s.smash.farGone && s.loot === 'frost,gold,heart,horn,knell,lantern,magnet', JSON.stringify({ sm: s.smash, l: s.loot }));
+  check('offerings: Death Knell takes 60% (elites 25%, the boss 4%; 13 m off, the Soul Thief spared); Frost stuns 3 s within 14 m (the boss only staggers)',
+    s.knell.near === 0.6 && s.knell.elite === 0.25 && s.knell.far && s.knell.thief && s.frost.stunned && s.frost.far && s.boss.knell === 0.04 && !s.boss.stunned, JSON.stringify({ k: s.knell, f: s.frost, b: s.boss }));
+  check('offerings: Soul Lantern doubles XP for 15 s (its chip), Gilded Skull +60 gold, Ossuary Horn raises 8 (never past the cap)',
+    s.lantern.buff === 'Soul Lantern' && s.lantern.xp === 4 && s.gold === 60 && s.horn === 8 && s.hornCap === 3, JSON.stringify({ l: s.lantern, g: s.gold, h: s.horn, hc: s.hornCap }));
+  check('Soul Urns: the run result counts them and the daily quest "Smash 6 Soul Urns" tracks them (junk ignored)',
+    s.result === 4 && s.quest.pool && s.quest.progress === 4, JSON.stringify({ r: s.result, q: s.quest }));
+});
+check('update 8: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
