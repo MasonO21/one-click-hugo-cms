@@ -240,13 +240,18 @@ export class EconomySystem extends System {
 
   /**
    * Add resources (clamped to capacity). Returns the amount actually added.
+   * Rewards (crates, chests, missions, medals, victory chests, daily gifts... everything `game.grant` hands out) may
+   * overfill storage up to capacity x `offlineStorageMult`, like Welcome Back and expedition hauls: a reward card
+   * never promises more than arrives just because the storehouses happen to be full. Production, gathering and
+   * everything else still stop at the cap.
    * `x/z` (world units) lets UI/render animate resources flying from that spot.
    */
   add(id: string, amount: number, source: GainSource, x?: number, z?: number): number {
     const st = this.game.state.resources;
     const cur = st.amounts[id] ?? 0;
     const cap = this.capacity(id);
-    const added = Math.max(0, Math.min(amount, cap - cur));
+    const limit = source === 'reward' ? cap * Math.max(1, this.game.data.balance.offlineStorageMult ?? 1) : cap;
+    const added = Math.max(0, Math.min(amount, limit - cur));
     st.amounts[id] = cur + added;
     st.lifetime[id] = (st.lifetime[id] ?? 0) + added;
     if (added > 0) this.game.bus.emit('resource:gained', { id, amount: added, source, x, z });

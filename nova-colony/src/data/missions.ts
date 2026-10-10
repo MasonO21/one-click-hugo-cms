@@ -303,7 +303,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm51_hangar', chain: 'main', name: 'Hover Time', description: 'Craft a Hover Bike at the hangar.',
     type: 'craft', target: 'r_vehicle_hover_bike', count: 1, reward: R({ nova: 15, resources: { alloy: 80, steel: 200 }, xp: 210 }), next: ['m52_research_nano'],
-    hint: 'Research Hover Technology, build a Hangar, then craft a Hover Bike. It skims over water!', guide: { kind: 'build_menu', ref: 'hangar' },
+    hint: 'Build a Hangar (Hover Technology). The bike needs a Robotic Core: craft it at the Fabricator Bench (Field Robotics) from Workshop Machine Parts.', guide: { kind: 'build_menu', ref: 'hangar' },
     onComplete: { celebrate: 'Hover Bike ready! Nothing can slow you down now.' },
   },
   {
@@ -385,7 +385,7 @@ export const MISSIONS: MissionDef[] = [
   {
     id: 'm66_hovercraft', chain: 'main', name: 'The Pinnacle of Travel', description: 'Craft a Titanium Hovercraft.',
     type: 'craft', target: 'r_vehicle_titanium_hovercraft', count: 1, reward: R({ nova: 80, resources: { titanium: 250, nano: 150 }, xp: 450 }), next: ['m67_super_colony'],
-    hint: 'Research Titanium Hover Drive, then craft the Hovercraft at the hangar.', guide: { kind: 'building', ref: 'hangar' },
+    hint: 'Research Titanium Hover Drive. The Hovercraft needs 2 Titanium Plating from the Titan Forge (Titanium Manufacturing).', guide: { kind: 'building', ref: 'hangar' },
     onComplete: { celebrate: 'The Titanium Hovercraft takes flight!' },
   },
   {
@@ -422,7 +422,7 @@ export const MISSIONS: MissionDef[] = [
   // ---- misc
   { id: 's_spin', chain: 'side', name: 'Feeling Lucky', description: 'Spin the Lucky Wheel.', type: 'spin', target: '*', count: 1, reward: R({ nova: 3, xp: 15 }), hint: 'Build the Lucky Wheel and spin it once a day for free.', guide: { kind: 'build_menu', ref: 'spin_wheel' } },
   { id: 's_toolup', chain: 'side', name: 'Better Tools', description: 'Equip an Iron Pickaxe.', type: 'equip', target: 'iron_pickaxe', count: 1, reward: R({ resources: { iron: 60 }, xp: 30 }), next: ['s_armed'], hint: 'Craft it at the Forge and equip it from the Inventory.', guide: { kind: 'ui', ref: 'inventory' } },
-  { id: 's_armed', chain: 'side', name: 'Locked & Loaded', description: 'Equip an Assault Rifle.', type: 'equip', target: 'assault_rifle', count: 1, reward: R({ resources: { steel: 100 }, nova: 5, xp: 80 }) },
+  { id: 's_armed', chain: 'side', name: 'Locked & Loaded', description: 'Equip an Assault Rifle.', type: 'equip', target: 'assault_rifle', count: 1, reward: R({ resources: { steel: 100 }, nova: 5, xp: 80 }), hint: 'Research Assault Rifles, craft Machine Parts at the Workshop (Assembly Lines), then the rifle, and equip it.' },
   // ====================================================================== LATE SIDE CHAINS (Steel and up; each step waits for its minTier)
   // ---- power grid
   { id: 's_grid_solar', chain: 'side', minTier: 3, name: 'Sun Catcher', description: 'Have six Solar Panels.', type: 'have_building', target: 'solar_panel', count: 6, reward: R({ resources: { steel: 120, electronics: 30 }, xp: 70 }), next: ['s_grid_battery'], hint: 'Solar Panels need no fuel or workers. Tuck them along the colony edge.', guide: { kind: 'build_menu', ref: 'solar_panel' } },
@@ -458,9 +458,9 @@ export const MISSIONS: MissionDef[] = [
   { id: 's_home_nano', chain: 'side', minTier: 5, name: 'Smart Homes', description: 'Have three Nano Residences.', type: 'have_building', target: 'nano_residence', count: 3, reward: R({ resources: { nano: 30, alloy: 120 }, items: { nano_crate: 1 }, nova: 10, xp: 270 }), next: ['s_home_skyline'], guide: { kind: 'build_menu', ref: 'nano_residence' } },
   { id: 's_home_skyline', chain: 'side', minTier: 6, name: 'Skyline', description: 'Have three Titan Skyscrapers.', type: 'have_building', target: 'titan_skyscraper', count: 3, reward: R({ resources: { titanium: 200, nano: 80 }, colonist: 'epic', nova: 25, xp: 450 }), guide: { kind: 'build_menu', ref: 'titan_skyscraper' } },
   // ---- garage & road trips
-  { id: 's_veh_truck', chain: 'side', minTier: 3, name: 'Heavy Hauler', description: 'Craft a Mining Truck.', type: 'craft', target: 'r_vehicle_mining_truck', count: 1, reward: R({ resources: { steel: 120, iron: 200 }, items: { machine_parts: 2 }, xp: 90 }), next: ['s_veh_loot'], hint: 'Research Heavy Haulers, then craft it at the Garage.', guide: { kind: 'building', ref: 'garage' } },
+  { id: 's_veh_truck', chain: 'side', minTier: 3, name: 'Heavy Hauler', description: 'Craft a Mining Truck.', type: 'craft', target: 'r_vehicle_mining_truck', count: 1, reward: R({ resources: { steel: 120, iron: 200 }, items: { machine_parts: 2 }, xp: 90 }), next: ['s_veh_loot'], hint: 'Research Heavy Haulers and craft 3 Machine Parts at the Workshop, then build the truck at the Garage.', guide: { kind: 'building', ref: 'garage' } },
   { id: 's_veh_loot', chain: 'side', minTier: 4, name: 'Road Trip', description: 'Loot 15 points of interest.', type: 'loot', target: '*', count: 15, reward: R({ resources: { alloy: 60, crystal: 60 }, items: { alloy_crate: 1 }, xp: 160 }), next: ['s_veh_rover'], hint: 'Far regions hide richer caches, and they refill over time.', guide: { kind: 'ui', ref: 'map' } },
-  { id: 's_veh_rover', chain: 'side', minTier: 5, name: 'Tank Mode', description: 'Craft an Armored Rover.', type: 'craft', target: 'r_vehicle_armored_rover', count: 1, reward: R({ resources: { alloy: 150, nano: 25 }, nova: 10, xp: 280 }), next: ['s_veh_explorer'], hint: 'Craft it at the Hangar.', guide: { kind: 'building', ref: 'hangar' } },
+  { id: 's_veh_rover', chain: 'side', minTier: 5, name: 'Tank Mode', description: 'Craft an Armored Rover.', type: 'craft', target: 'r_vehicle_armored_rover', count: 1, reward: R({ resources: { alloy: 150, nano: 25 }, nova: 10, xp: 280 }), next: ['s_veh_explorer'], hint: 'It needs 2 Robotic Cores from the Fabricator Bench. Then craft it at the Hangar.', guide: { kind: 'building', ref: 'hangar' } },
   { id: 's_veh_explorer', chain: 'side', minTier: 6, name: 'Seen It All', description: 'Loot 30 points of interest.', type: 'loot', target: '*', count: 30, reward: R({ resources: { titanium: 120 }, items: { titan_crate: 2 }, nova: 15, xp: 380 }), guide: { kind: 'ui', ref: 'map' } },
   // ---- expedition chain (offered once expeditions open: Stone tier + a Radio Tower)
   { id: 's_exp_home', chain: 'side', name: 'Welcome Home', description: 'Collect the haul of an expedition.', type: 'expedition', target: 'collect', count: 1, reward: R({ resources: { food: 120, water: 80 }, xp: 40 }), next: ['s_exp_veteran'], hint: 'When a squad is back, open Expeditions and tap Collect.' },

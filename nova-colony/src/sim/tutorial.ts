@@ -22,7 +22,7 @@ import { System } from './System';
 import { footprintCenter, HALF_WORLD } from '../core/constants';
 import { dist } from '../core/math';
 import { bagIsEmpty } from '../core/bag';
-import type { MissionDef, ResourceBag } from '../data/schema';
+import type { MissionDef, RecipeDef, ResourceBag } from '../data/schema';
 
 export interface GuideTarget {
   text: string;
@@ -118,13 +118,35 @@ export class TutorialSystem extends System {
     const { data } = this.game;
     const gates: (string | undefined)[] = [];
     if (def.type === 'build' || def.type === 'have_building') gates.push(data.building(def.target)?.research);
-    if (def.type === 'craft') gates.push(data.recipe(def.target)?.research);
+    if (def.type === 'craft') {
+      const recipe = data.recipe(def.target);
+      gates.push(recipe?.research);
+      this.partGates(recipe, gates, 0);
+    }
     if (def.guide?.kind === 'build_menu') gates.push(data.building(def.guide.ref ?? '')?.research);
     for (const id of gates) {
       const step = id ? this.game.sys.research.nextStep(id) : null;
       if (step) return step;
     }
     return null;
+  }
+
+  /**
+   * Research behind the crafted parts a recipe consumes that are not in the backpack yet, depth first: the Hover Bike's
+   * Robotic Core (Field Robotics, crafted at the Fabricator Bench: Mass Production) and its Machine Parts (Assembly
+   * Lines). Without this the guide had nothing to point at once the recipe's own research was done.
+   */
+  private partGates(recipe: RecipeDef | undefined, out: (string | undefined)[], depth: number): void {
+    if (!recipe || depth > 3) return;
+    const { data, state } = this.game;
+    for (const [item, n] of Object.entries(recipe.itemInputs ?? {})) {
+      if ((state.player.items[item] ?? 0) >= n) continue;
+      const sub = data.recipes.find((r) => r.outputs.items?.[item]);
+      if (!sub) continue;
+      out.push(sub.research);
+      out.push(data.buildings.find((b) => b.station === sub.station)?.research);
+      this.partGates(sub, out, depth + 1);
+    }
   }
 
   /** Free-form one-time flags (popups already shown, etc.). */
