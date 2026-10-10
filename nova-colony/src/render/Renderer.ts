@@ -69,6 +69,8 @@ export class Renderer implements RendererApi {
   private quality: Quality = 'medium';
   private contextLost = false;
   private frame = 0;
+  /** Compile the whole scene's programs on the next drawn frame (after a quality change). */
+  private compilePending = false;
   /** Time of frames skipped behind an open panel, still owed to the animations. */
   private heldDt = 0;
   private lastGen: WorldGen | undefined | null = null;
@@ -195,6 +197,10 @@ export class Renderer implements RendererApi {
     // materials must recompile when the shadow map toggles
     this.mats.invalidate();
     this.resize();
+    // a level change changes every lit program (lamp count, shadows): once the next frame has the new lights, compile
+    // the programs of what is hidden right now too (festival dressing, the pet, the vehicle…), so they do not compile
+    // one by one mid-game when they first show (boot does the same in warmUp)
+    if (!force) this.compilePending = true;
   }
 
   resize(): void {
@@ -244,6 +250,22 @@ export class Renderer implements RendererApi {
       this.heldDt = 0;
     }
 
+    this.updateScene(dt);
+    if (this.compilePending) {
+      this.compilePending = false;
+      try {
+        this.renderer.compile(this.scene, this.camera);
+      } catch (e) {
+        console.warn('[render] shader compile after a quality change failed', e);
+      }
+    }
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  /** Bring every actor, the camera and the lights up to date for a frame of `dt` seconds (no drawing). */
+  private updateScene(dt: number): void {
+    const game = this.game;
+    const st = game.state;
     this.rig.update(dt);
     const region = this.terrain.regionAt(st.player.x, st.player.z);
     if (region !== this.lastBiome) {
@@ -266,8 +288,38 @@ export class Renderer implements RendererApi {
     this.themeFx.update(dt, this.renderer.getDrawingBufferSize(_buf).y);
     this.overlay.setSelection(this.selectionInfo(game.view.selection));
     this.overlay.update();
+  }
 
-    this.renderer.render(this.scene, this.camera);
+  /**
+   * Compile the shaders of the first frames while the loading screen still covers the page (main.ts awaits this
+   * before fading it). The scene is built for a first frame without drawing it, every material in it is compiled —
+   * in parallel off the main thread where the browser has KHR_parallel_shader_compile — and one frame is drawn, so
+   * any program-link waits left happen behind the loading art. Without it the first visible frame compiled ~35
+   * programs one by one: a frozen, empty canvas for a second or more on a phone. Never throws; gives up after
+   * `timeoutMs` (the first frames then compile what is left, as before).
+   */
+  async warmUp(timeoutMs = 8000): Promise<void> {
+    if (!this.ready || this.contextLost) return;
+    try {
+      const gen = this.game.sys.world.gen ?? null;
+      if (gen !== this.lastGen) {
+        this.lastGen = gen;
+        this.terrain.setGen(gen);
+        this.env.terrainVersion++;
+      }
+      this.updateScene(0);
+      let timer = 0;
+      await Promise.race([
+        this.renderer.compileAsync(this.scene, this.camera),
+        new Promise<void>((res) => {
+          timer = window.setTimeout(res, timeoutMs);
+        }),
+      ]);
+      window.clearTimeout(timer);
+      if (!this.contextLost) this.renderer.render(this.scene, this.camera);
+    } catch (e) {
+      console.warn('[render] shader warm-up failed', e);
+    }
   }
 
   /**

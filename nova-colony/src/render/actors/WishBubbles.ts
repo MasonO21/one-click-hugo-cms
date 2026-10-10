@@ -33,7 +33,10 @@ const EMOJI_FONT = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Seg
 interface Slot {
   sprite: THREE.Sprite;
   mat: THREE.SpriteMaterial;
-  key: string;
+  /** What the slot's texture shows: the icon, at low quality's size, on the painted bubble (compared per frame). */
+  icon: string;
+  low: boolean;
+  art: boolean;
   colonist: number;
   born: number;
   /** Pick sphere (world). */
@@ -41,6 +44,17 @@ interface Slot {
   y: number;
   z: number;
   r: number;
+}
+
+let blank: THREE.DataTexture | null = null;
+/** A 1×1 transparent texture standing in until a slot gets its icon (shared, never disposed). */
+function blankTexture(): THREE.DataTexture {
+  if (!blank) {
+    blank = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
+    blank.colorSpace = THREE.SRGBColorSpace;
+    blank.needsUpdate = true;
+  }
+  return blank;
 }
 
 function smoothstep(a: number, b: number, x: number): number {
@@ -67,14 +81,16 @@ export class WishBubbles {
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
     for (let i = 0; i < POOL; i++) {
-      const mat = new THREE.SpriteMaterial({ transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false });
+      // a placeholder map from the start: the shader is the textured one from boot (compiled with the world, see
+      // Renderer.warmUp), so the first wish never compiles a program mid-game
+      const mat = new THREE.SpriteMaterial({ map: blankTexture(), transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false });
       const sprite = new THREE.Sprite(mat);
       sprite.center.set(0.5, 0); // the tail sits on the anchor above the head
       sprite.renderOrder = 30;
       sprite.visible = false;
       sprite.frustumCulled = false;
       this.group.add(sprite);
-      this.slots.push({ sprite, mat, key: '', colonist: -1, born: 0, x: 0, y: 0, z: 0, r: 0 });
+      this.slots.push({ sprite, mat, icon: '', low: false, art: false, colonist: -1, born: 0, x: 0, y: 0, z: 0, r: 0 });
     }
     if (typeof Image !== 'undefined') {
       const img = new Image();
@@ -111,10 +127,12 @@ export class WishBubbles {
         if (!inView(env, c.x, c.z, -20)) continue;
         const icon = g.data.wish(w.def)?.icon ?? '💭';
         const slot = this.slots[used++];
-        const key = `${icon}|${env.quality === 'low' ? 'l' : 'h'}|${this.bubbleReady ? 1 : 0}`;
-        if (slot.key !== key) {
-          slot.key = key;
-          slot.mat.map = this.texture(icon, env.quality === 'low' ? 96 : 128);
+        const low = env.quality === 'low';
+        if (slot.icon !== icon || slot.low !== low || slot.art !== this.bubbleReady) {
+          slot.icon = icon;
+          slot.low = low;
+          slot.art = this.bubbleReady;
+          slot.mat.map = this.texture(icon, low ? 96 : 128);
           slot.mat.needsUpdate = true;
         }
         if (slot.colonist !== c.id) {
@@ -243,8 +261,8 @@ export class WishBubbles {
     for (const t of this.textures.values()) t.dispose();
     this.textures.clear();
     for (const s of this.slots) {
-      s.key = '';
-      s.mat.map = null;
+      s.icon = '';
+      s.mat.map = blankTexture();
     }
   }
 

@@ -50,6 +50,9 @@ async function boot() {
     (window as any).autoQuality = autoQuality;
   }
 
+  // compile the world's shaders behind the loading art: the first visible frame is then an ordinary one
+  await renderer.warmUp();
+
   const boot = document.getElementById('boot');
   if (boot) {
     boot.style.opacity = '0';
