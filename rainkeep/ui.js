@@ -638,6 +638,7 @@
         <div class="stats"><div class="stat"><span>Attack</span><b>${fmt(s.atk)}</b></div><div class="stat"><span>Defense</span><b>${fmt(s.def)}</b></div><div class="stat"><span>Health</span><b>${fmt(s.hp)}</b></div></div>
         ${skill}
         ${KH.heroKin ? KH.heroKin(id) : ''}
+        ${KH.heroCharm ? KH.heroCharm(id) : ''}
         ${KH.heroHeirloom ? KH.heroHeirloom(id) : ''}
         ${KH.heroTale ? KH.heroTale(id) : ''}
         <div class="card stack"><div class="row"><div class="grow"><b>Level ${h.lvl} / ${cap}</b><div class="muted small">Next level costs ${cost} Field Journals · you have ${fmt(S.journals)}</div></div></div>

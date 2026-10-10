@@ -323,10 +323,10 @@
   function heroStats(id) {
     const h = S.heroes[id], r = DATA.rarities[HERO[id].rarity];
     const m = (1 + 0.09 * (h.lvl - 1)) * (1 + 0.15 * (h.stars - 1)) * (1 + 0.05 * (S.tech.tactics || 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'stat') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'stat') : 0));
-    const tl = (k) => 1 + (KH.talentBoost ? KH.talentBoost(id, k) : 0); // hero talents (talents.js)
+    const tl = (k) => (1 + (KH.talentBoost ? KH.talentBoost(id, k) : 0)) * (1 + (KH.charmBoost ? KH.charmBoost(id, k) : 0)); // hero talents (talents.js), relic charms (charms.js)
     return { atk: r.atk * m * tl('atk'), def: r.def * m * tl('def'), hp: r.hp * m * tl('hp') };
   }
-  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'skill') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'skill') : 0)) * (1 + (KH.talentBoost ? KH.talentBoost(id, 'skill') : 0));
+  const skillScale = (id) => (1 + DATA.skillPerStar * ((S.heroes[id] ? S.heroes[id].stars : 1) - 1)) * (1 + (KH.taleBoost ? KH.taleBoost(id, 'skill') : 0)) * (1 + (KH.heirloomBoost ? KH.heirloomBoost(id, 'skill') : 0)) * (1 + (KH.awakenBoost ? KH.awakenBoost(id, 'skill') : 0)) * (1 + (KH.talentBoost ? KH.talentBoost(id, 'skill') : 0)) * (1 + (KH.charmBoost ? KH.charmBoost(id, 'skill') : 0));
   function skillText(id) {
     const d = HERO[id], k = skillScale(id);
     return d.skill.desc.replace(/\{(\w+)\}/g, (_, key) => `${Math.round(d.skill.fx[key] * k * 100)}%`);

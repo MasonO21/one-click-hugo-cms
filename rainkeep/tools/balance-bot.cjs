@@ -12,7 +12,7 @@
  *   hours    game hours to simulate (36 covers the whole game)
  *   collect  seconds between surplus-bubble taps (default 5; 600 plays like a casual player)
  *   no       comma list of systems to switch off for ablations: surplus,trade,inc,rain,gear,spire,duels,
- *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts, trade, decrees, talents, derby, pacts, dry, journeys, charters, cook, dig, founding, kin, leviathan
+ *            sgspend (spend spare Starglass only on 10-pulls instead of crates and speedups), channels, bond, cloudrun, decor, tales, bloom, deep, crossing, pals, road, rivals, siege, intel, heirloom, formation, fishing, defense, ranks, clash, awaken, outposts, trade, decrees, talents, derby, pacts, dry, journeys, charters, cook, dig, founding, kin, leviathan, charms
  *
  * Results vary a lot between runs (gacha luck, raid timing): compare several seeds, not one.
  */
@@ -391,6 +391,12 @@ const HOURS = Number(process.argv[3] || 8);
           if (on) kn.used[on.id] = (kn.used[on.id] || 0) + 1;
         }
         if (!S.squad.some((id) => KH.heroBusy(id))) S.squad = best;
+        // relic charms: the strongest charms on the squad (skill power counted a little lower)
+        if (KH.charms && KH.charms.unlocked() && !NO.includes('charms')) {
+          const val = (k) => KH.charms.valueOf(k) * (KH.charms.kinds[k].fx === 'skill' ? 0.8 : 1);
+          const ks = Object.keys(KH.charms.kinds).filter((k) => KH.charms.found(k)).sort((a, b) => val(b) - val(a));
+          S.squad.forEach((id, i) => { if (ks[i] && S.charms[id] !== ks[i]) { A.charmset(`${id}:${ks[i]}`); UI.sheet = null; } });
+        }
         for (const id of S.squad) A.lvl(id + ':max');
         const byKind = {};
         for (const id of Object.keys(S.heroes)) { const k = D.heroes.find((h) => h.id === id).steward.kind; if (!byKind[k] || S.heroes[id].stars > S.heroes[byKind[k]].stars) byKind[k] = id; }
@@ -532,7 +538,7 @@ const HOURS = Number(process.argv[3] || 8);
     const hl2 = S.hall ? { rank: KH.hall.rank(), best: S.hall.best, days: S.stats.hallDays } : {};
     const aw = S.awaken ? { n: S.stats.awakened, top: S.stats.awakenTop, heroes: Object.entries(S.awaken).map(([k, v]) => `${k.slice(0, 3)}${v}`).join(','), squad: S.squad.map((id) => `${id.slice(0, 3)}${S.awaken[id] || 0}`).join(',') } : {};
     const rk = S.ranks ? { drilled: S.stats.drilled, champs: S.stats.champs, ranks: Object.entries(S.ranks).map(([c, r]) => `${c}:${r.join('/')}`).join(' '), mult: Object.keys(S.ranks).map((c) => KH.rankMult(c).toFixed(2)).join(',') } : {};
-    return { cx, sg, iv, hl, fs, df, rk, cl, aw, hl2, op, tr, dc, tl, dy, pc, dr, jr, ch, ck, dg, fw, kn, lv, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
+    return { cx, sg, iv, hl, fs, df, rk, cl, aw, hl2, op, tr, dc, tl, dy, pc, dr, jr, ch, ck, dg, fw, kn, lv, charms: S.charms, SG, spent: S.spentUsd, patron: KH.patronLevel(), gear: S.gear, spire: S.spire.floor - 1, duels: S.duels, ending2: S.ending2Seen, sunsteel: S.sunsteel, qLog, idleLog, SRC: Object.fromEntries(Object.entries(SRC).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([r, n]) => [r, Math.round(n)]))])), incPicks: incPicks.length, keep: { rains: S.stats.rains, surplus: S.stats.surplus, incidents: S.stats.incidents, trades: S.stats.trades }, thirst: Math.round(thirstSecs / 60), dorm: Math.round(dormSecs / 60), team_log, thaw, log, ms, errs: errs.slice(0, 15), sick: (100 * sickSecs / popSecs).toFixed(2), stats: S.stats, lv: S.lv, tech: S.tech, end: S.endingSeen, element: S.wyrm.element, quest: S.quest, mailN: S.mail.length };
   }, { MODE, HOURS });
   console.log('SRC', JSON.stringify(out.SRC));
   console.log('builder idle % per 30 min', out.idleLog.join(' '));
@@ -565,6 +571,7 @@ const HOURS = Number(process.argv[3] || 8);
   console.log('cookfire:', JSON.stringify(out.ck));
   console.log('founding:', JSON.stringify(out.fw));
   console.log('leviathan:', JSON.stringify({ attacks: out.lv.attacks, ranks: out.lv.ranks.join(','), best: out.stats.levBest, hunts: out.stats.levHunts }));
+  console.log('charms:', JSON.stringify(Object.fromEntries(Object.entries(out.charms || {}).map(([id, k]) => [id, k]))), 'top', out.stats.charmTop);
   console.log('kinships:', JSON.stringify({ ...out.kn, fought: out.stats.kinFought }));
   console.log('buried city:', JSON.stringify({ ...out.dg, relics: out.stats.relics, grand: out.stats.grandRelics }));
   console.log('final lv', JSON.stringify(out.lv), 'tech', JSON.stringify(out.tech), 'ending', out.end, 'element', out.element, 'quest', out.quest);

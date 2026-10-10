@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.34.0',
+  version: '4.35.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1385,6 +1385,17 @@ const DATA = {
     chargeEvery: 3, // a Blasting Charge in every third layer's chest
     milestones: [[5, { shard_epic: 1 }], [10, { shard_legendary: 1 }], [15, { shard_epic: 2 }], [20, { shard_legendary: 1 }]], // and a Legendary Shard Pouch every 10 layers past 20
     firstFind: { starglass: 30 }, // the first of each kind of relic for the Relic Hall
+    // Relic Charms (charms.js): every kind of relic dug up can be worn by one hero as a charm, its level the number
+    // of that kind found (up to 10); bigger relics give more a level. fx is a hero stat: atk, def, hp, or skill power.
+    charms: {
+      max: 10,
+      kinds: {
+        lamp: { fx: 'hp', per: 0.015 }, seal: { fx: 'def', per: 0.015 }, beads: { fx: 'atk', per: 0.015 }, sandal: { fx: 'skill', per: 0.02 },
+        spear: { fx: 'atk', per: 0.02 }, flute: { fx: 'skill', per: 0.025 }, staff: { fx: 'hp', per: 0.02 },
+        clock: { fx: 'skill', per: 0.03 }, mirror: { fx: 'def', per: 0.025 }, jar: { fx: 'hp', per: 0.025 },
+        idol: { fx: 'hp', per: 0.03 }, tablet: { fx: 'skill', per: 0.04 }, chariot: { fx: 'atk', per: 0.03 },
+      },
+    },
     warPts: 4, // Oasis Wars points per relic tile dug up
   },
 
@@ -1807,6 +1818,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.35', items: [
+      { icon: 'i-dg-idol', name: 'Relic Charms', text: 'Every kind of relic dug up in the Buried City can now be worn by a hero as a charm: health, attack, defense or skill power, a level for every one of its kind you find. Choose one on any hero\'s sheet.', act: 'buriedcity', open: (S) => !!(S.dig && S.dig.found && Object.keys(S.dig.found).length), needs: 'a relic from the Buried City' },
+    ] },
     { v: '4.34', items: [
       { icon: 'i-lev', name: 'The Sand Leviathan', text: 'A leviathan too big to kill surfaces in the deep dunes every day. Attack it three times a hunt: each attack is scored by the damage done, and the best one ranks you among the fifty wardens of the Hall.', act: 'leviathan', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
     ] },
@@ -2152,6 +2166,8 @@ const DATA = {
     { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
+    { id: 'charm3', text: 'Have three heroes wear relic charms', stat: 'charmsWorn', n: 3, reward: { trowel: 10 } },
+    { id: 'charm10', text: 'Raise a relic charm to Lv 10', stat: 'charmTop', n: 10, reward: { starglass: 300, charge: 2 } },
     { id: 'lev1', text: 'Attack the Sand Leviathan', stat: 'levAttacks', n: 1, reward: { whetstone: 3 } },
     { id: 'levtop3', text: 'Finish a Leviathan hunt in the top 3', stat: 'levTop3', n: 1, reward: { starglass: 200, beacons: 2 } },
     { id: 'lev20', text: 'See 20 Leviathan hunts through', stat: 'levHunts', n: 20, reward: { shard_legendary: 1 } },
