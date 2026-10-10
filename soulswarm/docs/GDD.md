@@ -568,6 +568,8 @@ Update 5 (2026-10-09) added the Lv4 pin and the Lv5 twin chain, the pulse's chil
 
 Update 6 (2026-10-10) added Gravefall and Soul Leech on the same bench: Gravefall Lv5 3,080 → Necropolis 3,920 (the crowd weapon, beside the Scythe; Necropolis's raises come on top, with a legion), Soul Leech Lv5 1,710 (beside Soul Bolt, the other focused weapon, plus its healing and elite and boss focus) → Vampiric Communion about 2,700 after its beams went from 135 to 165 a second. The first Soul Leech re-picked the freshest, toughest foe every 0.6 s and never finished one (250 DPS, no kills); its beams now hold their foe and sear what they cross.
 
+**Balance check (Update 6).** With the four new skills in the card pool (the bot takes the first card it is offered, so they turn up at random), five heroes played 4 runs each on Chapters 2 and 4. Average survival, Update 5 → Update 6: Vael 336 → 368 s, Mordrake 373 → 380, Osric 360 → 336, Grimsby 283 → 326, Liora 297 → 323; across the five 330 → 347 s (+5%), inside the ±30 s spread of a 4-run mean. A wider pool lets more builds come together (Grave Ward and the leech's healing help most). Mordrake still leads, and no hero beats him by more than 5%. Boss kill times did not move (33–43 s).
+
 ---
 
 ## 8. Chapters and difficulty scaling
