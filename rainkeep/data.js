@@ -1298,7 +1298,7 @@ const DATA = {
     unlock: 11, w: 6, h: 7,
     free: { every: 2700, cap: 12 }, // a free Trowel every 45 minutes of keep time, while fewer than 12 are in hand
     welcome: { trowel: 20, charge: 1 },
-    beast: 0.06, bossTrowels: 2, // a Trowel now and then from a beast hunt, two from every expedition boss
+    beast: 0.03, bossTrowels: 2, // a Trowel now and then from a beast hunt (one in 33), two from every expedition boss
     rock: (layer) => (layer < 4 ? 0 : Math.min(8, 2 + Math.floor((layer - 4) / 3))),
     sizes: [[1, 2], [1, 2], [1, 3], [2, 2], [2, 3]],
     relics: {
@@ -1312,6 +1312,7 @@ const DATA = {
     chest: { starglass: 20, trowel: 3 },
     chargeEvery: 3, // a Blasting Charge in every third layer's chest
     milestones: [[5, { shard_epic: 1 }], [10, { shard_legendary: 1 }], [15, { shard_epic: 2 }], [20, { shard_legendary: 1 }]], // and a Legendary Shard Pouch every 10 layers past 20
+    firstFind: { starglass: 30 }, // the first of each kind of relic for the Relic Hall
     warPts: 4, // Oasis Wars points per relic tile dug up
   },
 

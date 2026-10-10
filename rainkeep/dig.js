@@ -17,7 +17,7 @@
   let S = null;
   KH.hooks.boot.push(() => { S = KH.S; });
   KH.hooks.defaults.push((s) => {
-    s.dig = { open: false, layer: 1, cells: [], rock: [], dug: [], relics: [], acc: 0 };
+    s.dig = { open: false, layer: 1, cells: [], rock: [], dug: [], relics: [], acc: 0, found: {} };
     s.stats.digs = 0; s.stats.relics = 0; s.stats.grandRelics = 0; s.stats.digLayer = 0;
   });
   const unlocked = () => !!S && S.lv.wyrm >= G.unlock;
@@ -125,6 +125,9 @@
     if (r.done || !relicTiles(r).every((j) => D.dug[j] === 2)) return null;
     r.done = true;
     const g = payOf(r);
+    if (!S.dig.found) S.dig.found = {};
+    if (!S.dig.found[r.kind]) for (const [k, v] of Object.entries(G.firstFind)) g[k] = (g[k] || 0) + v;
+    S.dig.found[r.kind] = (S.dig.found[r.kind] || 0) + 1;
     KH.grant(g);
     S.stats.relics++;
     if (ri === D.relics.length - 1) S.stats.grandRelics++;
@@ -132,7 +135,7 @@
     return { r, g };
   }
   function announce(found) {
-    for (const { r, g } of found) KH.toast(`${KIND[r.kind].name} dug up whole! ${giveText(g)}`, 'good');
+    for (const { r, g } of found) KH.toast(`${KIND[r.kind].name} dug up whole${S.dig.found[r.kind] === 1 ? ', new for the Relic Hall' : ''}! ${giveText(g)}`, 'good');
     if (cleared()) { KH.sfx('victory'); KH.toast(`All five relics of layer ${S.dig.layer} found. Open the chest and go deeper.`, 'good'); } else if (found.length) KH.sfx('claim');
   }
   ACT.digmode = (m) => { UI.digMode = m === 'charge' && UI.digMode !== 'charge' ? 'charge' : 'trowel'; };
@@ -216,7 +219,10 @@
         <p class="muted small">${mode === 'charge' ? '<b>Blasting:</b> tap a tile to clear it and the eight around it.' : 'Tap sand to dig. Dug sand shows how many relic pieces lie in the eight tiles around it. Bedrock takes two Trowels.'}</p>
         <div class="dg-grid ${mode}" style="grid-template-columns:repeat(${W},1fr)">${tiles}</div>
         ${done ? `<div class="card stack dg-chest"><div class="row"><b class="grow">Layer ${D.layer} cleared</b></div><div class="costs">${KH.rewardHTML(chest)}</div><button class="btn gold" data-act="digdown">${icon('i-dg-chest')}Open the chest and dig down to layer ${D.layer + 1}</button></div>` : ''}
-        <div class="card stack"><div class="section-label">Five relics in this layer</div>${relics}</div>`,
+        <div class="card stack"><div class="section-label">Five relics in this layer</div>${relics}</div>
+        <details class="card dg-hall"><summary class="row"><b class="grow">The Relic Hall</b><span class="chip">${Object.keys(D.found || {}).length}/${Object.keys(KIND).length}</span></summary>
+          <p class="muted small">The first of each kind dug up pays ${giveText(G.firstFind)} more.</p>
+          <div class="dg-hall-grid">${Object.values(KIND).map((k) => `<span class="dg-hall-item ${(D.found || {})[k.id] ? 'on' : ''}">${icon(`i-dg-${k.id}`)}<small>${esc(k.name)}</small>${(D.found || {})[k.id] ? `<b>×${D.found[k.id]}</b>` : ''}</span>`).join('')}</div></details>`,
     };
   };
   KH.side.push({ id: 'buriedcity', icon: 'i-dg-trowel', label: 'Buried City', act: 'buriedcity', show: () => unlocked() && S.dig.open, dot: () => cleared() || KH.have('trowel') >= G.free.cap, badge: () => `${fmt(KH.have('trowel'))}` });
