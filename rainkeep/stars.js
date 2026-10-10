@@ -1,8 +1,8 @@
 /*
  * Rainkeep: Stage Stars. Every story stage (1 to 150) holds three stars: one for the victory, one for ending the
- * fight with the squad at half its health or more (Unbroken), and one for winning within six rounds, eight against a
- * boss (Swift). A first clear at the edge of the squad's strength rarely takes all three, so any cleared stage can be
- * fought again from the chapter's stage list for the stars it is missing: no rewards but the stars, and no limit.
+ * fight with the squad at half its health or more (Unbroken), and one for winning within five rounds (Swift). A
+ * first clear at the edge of the squad's strength rarely takes all three, so any cleared stage can be fought again
+ * from the chapter's stage list for the stars it is missing: no rewards but the stars, and no limit.
  * Each chapter's thirty stars fill three chests. The live battle is where the last stars are won: the breath into a
  * wind-up, a Mend before the squad drops below half, a Sunder against armor. First clears report through
  * KH.stageStars (core.js, ACT.fight); replays are fought here; the stage list on the Expedition tab comes from
@@ -24,7 +24,7 @@
   const count = (m) => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
   const of = (n) => S.stars.by[n] || 0;
   const story = (n) => n >= 1 && n <= DATA.finalStage;
-  const swiftOf = (n) => (DATA.bosses[n] ? T.swiftBoss : T.swift);
+  const swiftOf = () => T.swift;
   // the story chapters, each with its first and last stage
   const CH = DATA.chapters.filter((c) => c.from <= DATA.finalStage).map((c, i, a) => ({ from: c.from, to: (a[i + 1] ? a[i + 1].from : DATA.finalStage + 1) - 1, name: c.name }));
   const chOf = (n) => CH.filter((c) => n >= c.from).pop();
@@ -162,7 +162,7 @@
       ${chests(c)}<button class="btn small alt" data-act="starsgo" data-arg="${c.from}" aria-label="Go to ${esc(c.name)}">Go</button></div>`).join('');
     return {
       title: 'Stage Stars', lvl: `${fmt(S.stats.stars)}`,
-      body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'stars', '') : ''}<p class="muted small">Every story stage holds three stars: the victory, ending with half the squad's health, and winning within ${T.swift} rounds (${T.swiftBoss} against a boss). Each chapter's stars fill three chests.</p><div class="card stack">${rows}</div>`,
+      body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'stars', '') : ''}<p class="muted small">Every story stage holds three stars: the victory, ending with half the squad's health, and winning within ${T.swift} rounds. Each chapter's stars fill three chests.</p><div class="card stack">${rows}</div>`,
     };
   };
   KH.side.push({ id: 'stars', icon: 'i-star', label: 'Stars', act: 'stars', show: () => !!S && S.stage > 2, dot: anyReady, badge: () => (anyReady() ? `${readyCount()}` : `${S.stats.stars}`) });

@@ -1331,10 +1331,12 @@ const DATA = {
 
   // ---------- Stage Stars ----------
   // Three stars a story stage: the victory, ending the fight with half the squad's health or more, and winning within
-  // six rounds (eight against a boss). Any cleared stage can be fought again for the stars it is missing. A chapter's
-  // thirty stars fill three chests (resources and journals scale with the keep when claimed).
+  // five rounds. Fights at the edge of the squad's strength run five to seven rounds and end below half health, so a
+  // first clear takes one or two stars and all three want about a third more strength, or a well-played live battle.
+  // Any cleared stage can be fought again for the stars it is missing. A chapter's thirty stars fill three chests
+  // (resources and journals scale with the keep when claimed).
   stars: {
-    unbroken: 0.5, swift: 6, swiftBoss: 8,
+    unbroken: 0.5, swift: 5,
     chests: [[10, { journals: 3, crate_food: 1, speed15: 2 }], [20, { journals: 5, starglass: 20, whetstone: 1 }], [30, { starglass: 40, beacons: 1, whetstone: 2 }]],
   },
 
@@ -1852,7 +1854,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.39', items: [
-      { icon: 'i-star', name: 'Stage Stars', text: "Every story stage now holds three stars: the victory, ending the fight with half the squad's health, and winning within six rounds. Tap a cleared stage on the Expedition tab to fight it again for the stars it is missing; each chapter's stars fill three chests.", act: 'stars', open: (S) => S.stage > 2, needs: 'Clear stage 2' },
+      { icon: 'i-star', name: 'Stage Stars', text: "Every story stage now holds three stars: the victory, ending the fight with half the squad's health, and winning within five rounds. Tap a cleared stage on the Expedition tab to fight it again for the stars it is missing; each chapter's stars fill three chests.", act: 'stars', open: (S) => S.stage > 2, needs: 'Clear stage 2' },
     ] },
     { v: '4.38', items: [
       { icon: 'i-duel', name: 'The Sparring Ring', text: "Up to four heroes sit in the ring on the Heroes tab and fight at the level of your third-best hero outside it, in the squad or anywhere else, so a kinship partner or the hero whose skill answers a foe's trait is ready when you need them.", act: 'tab:heroes', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
