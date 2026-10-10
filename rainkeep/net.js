@@ -131,21 +131,27 @@
       // hit is a nested merge of the hitter's own total, checked once after it lands.
       hitBoss: async (aid, day, hp, total) => {
         const path = `al/${aid}/boss/${day}`;
+        // a boss is "made" once it has its health (a lease may leave an empty document behind it); a member who
+        // finds another mid-way waits for them, up to three times, then the write reports failure and the next hit
+        // tries again (mp.js keeps the running total)
         const made = await write(path, async () => {
           const ref = db.doc(path);
-          let d = await ref.get();
-          if (d.exists && d.data().hp != null) return;
-          const lease = typeof ref.acquire === 'function' ? await ref.acquire({ holder: me, ttlMs: 5000 }) : { acquired: true };
-          if (!lease.acquired) { await new Promise((r) => setTimeout(r, 1500)); return; } // another member is making it
-          d = await ref.get();
-          if (!d.exists || d.data().hp == null) await ref.set({ hp, dmg: {} });
+          const has = async () => { const d = await ref.get(); return d.exists && d.data().hp != null; };
+          for (let i = 0; i < 3; i++) {
+            if (await has()) return;
+            const lease = typeof ref.acquire === 'function' ? await ref.acquire({ holder: me, ttlMs: 5000 }) : { acquired: true };
+            if (lease.acquired) { if (!(await has())) await ref.set({ hp, dmg: {} }); return; }
+            await new Promise((r) => setTimeout(r, 2000));
+          }
+          if (!(await has())) throw Object.assign(new Error('boss not made'), { code: 'unavailable' });
         });
         if (!made) return false;
         const hit = () => write(path, () => db.doc(path).update({ dmg: { [me]: total } }));
         // (a hit just after another member's lease may find the boss not yet made: once more, a moment later)
         if (!(await hit()) && !(await new Promise((r) => setTimeout(r, 1500)).then(hit))) return false;
         const after = await safe(() => db.doc(path).get().then((d) => (d.exists ? cleanBoss(d.data()) : null)), null);
-        return after && after.dmg[me] !== total ? hit() : true;
+        // a total only grows within a day: write again only if a slower write left it lower
+        return after && (after.dmg[me] || 0) < total ? hit() : true;
       },
       postBattle: (rec) => wsafe(() => db.collection('bt').add({ ...rec, att: me, at: Date.now() }).then(() => true), false, true),
       // oldest first, so a long list is read in order and nothing is skipped (mp.js remembers what it has seen)

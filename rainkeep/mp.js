@@ -132,7 +132,7 @@
   function loadTop(force) {
     if (!force && fresh(M.topAt, 30000)) return;
     M.topAt = now();
-    net.topPlayers('power', 100).then((list) => { M.top = list; M.topLoaded = true; wantNames(list.map((p) => p.id)); refresh(); });
+    net.topPlayers('power', 100).then((list) => { M.top = list; M.topLoaded = list.length > 0; /* a read that worked lists this keep itself */ wantNames(list.map((p) => p.id)); refresh(); });
     net.topPlayers('lp', 50).then((list) => { M.lp = list; refresh(); });
   }
   function loadAlliances(force) {
@@ -413,19 +413,28 @@
     });
   };
   // attacks on this keep since it last looked: the points they took, and a chance at revenge
-  let btAt = 0;
+  let btAt = 0, pageFrom = null;
   async function checkBattles() {
     if (!on() || now() - btAt < 60000) return;
     btAt = now();
     // read from ten minutes back, so an attacker whose clock runs a little slow is still seen; each record is
     // applied once, by its id (a save from before ids were kept counts what it had already read as seen)
+    // (a full page last time: read on from exactly where it ended, without the overlap)
     const legacy = !S.online.seenIds;
+    const from = pageFrom != null ? pageFrom : Math.max(0, S.online.seenBt - 10 * 60000);
+    pageFrom = null;
+    const raw = await net.battlesAgainst(from);
+    // an empty answer may be a failed read: an old save keeps waiting to seed what it has seen
+    if (legacy && !raw.length) return;
     const seenIds = S.online.seenIds || (S.online.seenIds = []);
-    const raw = await net.battlesAgainst(Math.max(0, S.online.seenBt - 10 * 60000));
     if (legacy) for (const r of raw) if (r.bid && r.at <= S.online.seenBt && !seenIds.includes(r.bid)) seenIds.push(r.bid);
     const list = raw.slice().sort((a, b) => a.at - b.at).filter((r) => r.bid && !seenIds.includes(r.bid));
-    // a full page means more to read: soon, and past what this page held
-    if (raw.length >= 50) { btAt = 0; S.online.seenBt = Math.max(S.online.seenBt, ...raw.map((r) => r.at)); }
+    // a full page means more to read: soon, from past what this page held (only if that moved on)
+    if (raw.length >= 50) {
+      const top = Math.max(...raw.map((r) => r.at));
+      if (top > from) { pageFrom = top; btAt = 0; }
+      S.online.seenBt = Math.max(S.online.seenBt, top);
+    }
     if (!list.length) return;
     let lost = 0;
     for (const r of list) {

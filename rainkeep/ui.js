@@ -1359,10 +1359,17 @@
         else if (/research/i.test(q.text)) mark('#sheet [data-act="research"]:not(.off)');
         else mark('#sheet [data-act="build"]');
       } else if (UI.sheet.kind === 'hero') {
-        const e = /Steward/.test(q.text) ? mark('#sheet [data-act="station"]') : mark('#sheet [data-primary]:not(.off)') || mark('#sheet [data-act="station"]');
-        // the control the quest wants, brought into view once per sheet (a player scrolling stays where they are)
-        const h = e && $('#sheet .hint');
-        if (h && UI.sheet.hintShown !== q.text) { UI.sheet.hintShown = q.text; h.scrollIntoView({ block: 'nearest' }); }
+        // Level up for a hero quest (nothing when it can't be afforded: the card says what it costs), Station for
+        // the Steward quest
+        const e = /Steward/.test(q.text) ? mark('#sheet [data-act="station"]') : mark('#sheet [data-primary]:not(.off)');
+        // the control the quest wants, brought into view once per sheet by scrolling the sheet's own body (never the
+        // page: a sheet still rising would drag the whole app with it)
+        const h = e && $('#sheet .hint'), body = $('#sheet .sheet-body');
+        if (h && body && UI.sheet.hintShown !== q.text) {
+          UI.sheet.hintShown = q.text;
+          const r = h.getBoundingClientRect(), br = body.getBoundingClientRect();
+          if (r.bottom > br.bottom) body.scrollTop += r.bottom - br.bottom + 16;
+        }
       }
       else if (KH.sheetHint) KH.sheetHint(q, kind, arg, mark);
       return;
@@ -1376,9 +1383,11 @@
     if (UI.tab !== tab) { mark(`#tabs [data-arg="${tab}"]`); return; }
     // the Caravan tab's sides exist only with online play; offline it is the simulated Caravan alone
     if (tab === 'caravan') { if (sub && KH.net && KH.net.online() && UI.sub.caravan !== sub) { mark(`[data-act="mpmode"][data-arg="${sub}"]`); return; } }
-    else if (sub && UI.sub[tab] !== sub) { mark(`.subtabs [data-arg="${tab}:${sub}"]`); return; }
-    if (tab === 'heroes' && UI.sub.heroes === 'roster') { mark('.hcard:not(.missing)'); return; }
-    mark('#panel [data-primary]') || mark('#world [data-primary]');
+    // only the page on screen: the Dunes map's overlay and the panel each keep their last HTML while hidden
+    const vis = UI.tab === 'world' && UI.sub.world === 'map' ? '#world' : '#panel';
+    if (tab !== 'caravan' && sub && UI.sub[tab] !== sub) { mark(`${vis} .subtabs [data-arg="${tab}:${sub}"]`); return; }
+    if (tab === 'heroes' && UI.sub.heroes === 'roster') { mark(`${vis} .hcard:not(.missing)`); return; }
+    mark(`${vis} [data-primary]`);
   }
 
   // ======================================================================
