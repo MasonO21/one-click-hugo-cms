@@ -13,7 +13,7 @@
  */
 import * as THREE from 'three';
 import type { RenderContext } from '../core/context';
-import type { WorldGen } from '../../sim/world';
+import { WATER_LEVEL, type WorldGen } from '../../sim/world';
 import { CELL, HALF_WORLD, WORLD_CELLS, cellIndex, footprintCenter, rotatedSize } from '../../core/constants';
 import { fbm } from '../../core/rng';
 import { clamp } from '../../core/math';
@@ -110,7 +110,7 @@ const WATER_VERT = /* glsl */ `
 /**
  * Painted water: turquoise shallows -> blue depths by the depth below the surface (vShore, world
  * units, from the height field), a thin foam line that breathes along the shore contour (thin enough
- * that a shallow marsh pool is water, not one sheet of foam), crossing ripple highlights and a few
+ * that a shallow marsh pool is water, not one sheet of foam), soft drifting wavelets and a few
  * twinkling sun glints (a hash grid, day only). Night darkens it to a moonlit blue. Toxic Marsh
  * pools (vToxic, per vertex) glow lime green like the painting and keep some of that glow at night.
  */
@@ -121,22 +121,31 @@ const WATER_FRAG = /* glsl */ `
   varying float vWave;
   varying float vShore;
   varying float vToxic;
-  float novaHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  // sin-free hash on small, wrapped inputs: sin() of world-sized arguments loses precision on mobile GPUs and turns
+  // the rare glints into a polka-dot sheet
+  float novaHash(vec2 p) {
+    vec3 p3 = fract(vec3(mod(p.xyx, 997.0)) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+  }
   void main() {
     float depth = vShore;
     vec3 c = mix(uShallow, uDeep, smoothstep(0.08, 1.1, depth));
     c = mix(c, mix(vec3(0.62, 0.95, 0.18), vec3(0.26, 0.62, 0.12), smoothstep(0.05, 0.9, depth)), vToxic);
     c = mix(c, c * 1.08, 0.5 + 0.5 * vWave);
-    float r1 = sin(vWorld.x * 1.9 + vWorld.z * 1.3 + uTime * 1.7);
-    float r2 = sin(vWorld.x * 1.1 - vWorld.z * 2.3 - uTime * 1.2);
-    float ripple = smoothstep(0.8, 0.96, r1 * r2);
-    c = mix(c, uFoam, ripple * 0.35);
+    // soft wavelets: thin, wavy streaks drifting across the surface, brighter in slow patches (the product of two
+    // crossing sines used before peaked on a regular lattice and read as a sheet of polka dots)
+    float bend = sin(vWorld.z * 0.35 + vWorld.x * 0.12 + uTime * 0.4) * 2.2;
+    float streak = smoothstep(0.9, 0.995, sin(vWorld.x * 0.8 + vWorld.z * 0.55 + uTime * 1.1 + bend));
+    float patchy = smoothstep(0.1, 0.9, sin(vWorld.x * 0.21 - vWorld.z * 0.29 + uTime * 0.35) * 0.5 + 0.5);
+    float ripple = streak * patchy;
+    c = mix(c, uFoam, ripple * 0.3);
     float edge = depth + 0.035 * sin(uTime * 1.4 + vWorld.x * 0.9 + vWorld.z * 0.7);
     float foam = 1.0 - smoothstep(0.012, 0.06, edge);
     c = mix(c, mix(uFoam, vec3(0.86, 1.0, 0.6), vToxic), foam * 0.75);
     vec2 gp = vWorld.xz * 2.2;
     vec2 g = floor(gp);
-    float tw = novaHash(g + floor(uTime * 1.5));
+    float tw = novaHash(g + mod(floor(uTime * 1.5), 331.0) * vec2(17.0, 29.0));
     // a round sparkle in the middle of its grid cell, not a square flake
     float glint = step(0.992, tw) * (1.0 - smoothstep(0.06, 0.18, length(fract(gp) - 0.5))) * (1.0 - uNight) * (1.0 - foam);
     c += vec3(glint * 0.9);
@@ -608,12 +617,14 @@ export class Terrain {
           }
         }
         if (shore) {
-          // shore cells sit right under the generator's water threshold: their highest corner ~ the level
           sum += Math.max(this.heightOfVertex(cx, cz), this.heightOfVertex(cx + 1, cz), this.heightOfVertex(cx, cz + 1), this.heightOfVertex(cx + 1, cz + 1));
           n++;
         }
       }
-      levels.push(n ? sum / n + 0.04 : -0.3);
+      // The generator carves every corner of a water cell down to the bed and keeps land at 0 or above, so the water
+      // stands at its WATER_LEVEL, well above the bed: the shoreline then falls inside the bank cells, on the smooth
+      // terrain contour. (Sitting just over the bed, the water filled a square-cornered pit cut into the ground.)
+      levels.push(Math.max(n ? sum / n + 0.04 : WATER_LEVEL, WATER_LEVEL));
     }
     if (count === 0) return;
     // Draw every water cell plus the ring of land cells around it at the lake's level: the terrain
