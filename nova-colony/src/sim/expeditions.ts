@@ -575,8 +575,9 @@ export class ExpeditionSystem extends System {
       if (!isNum(e.seed)) e.seed = e.id * 7919;
       if (!isNum(e.tier)) e.tier = this.game.state.colony.tier;
       if (e.haul === undefined) e.haul = null;
-      if (e.status === 'out' && longest > 0 && e.endsAt - now > longest) {
-        const len = Math.min(Math.max(0, e.endsAt - e.startedAt), longest);
+      // the same for a trip that left "later than now" (the clock was set back since): it walks its own length from now
+      if (e.status === 'out' && ((longest > 0 && e.endsAt - now > longest) || e.startedAt > now)) {
+        const len = Math.max(0, Math.min(e.endsAt - e.startedAt, longest > 0 ? longest : Infinity));
         e.startedAt = now;
         e.endsAt = now + len;
       }

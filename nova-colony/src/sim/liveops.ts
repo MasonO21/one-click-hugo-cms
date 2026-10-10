@@ -149,6 +149,10 @@ export class LiveOpsSystem extends System {
       }
     }
 
+    // the free crate never waits longer than its own cooldown (the device clock was set back since it was opened)
+    const crateMax = now + g.data.balance.freeCrateHours * 3_600_000;
+    if (lo.freeCrateAt > crateMax) lo.freeCrateAt = crateMax;
+
     // nudge: free crate became ready while playing
     const ready = this.freeCrateReady();
     if (ready && !this.crateWasReady) g.toast('🎁 Your free crate is ready!', 'info');

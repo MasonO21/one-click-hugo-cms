@@ -378,7 +378,8 @@ export class ColonistSystem extends System {
     if (free <= 0) return; // full: the clock waits until someone is recruited
     const ms = arrivalSeconds(g) * 1000;
     const now = g.now();
-    if (!(st.refreshAt > 0)) st.refreshAt = now + ms;
+    // never further away than one full interval: the device clock was set back (or ran fast when the seat emptied)
+    if (!(st.refreshAt > 0) || st.refreshAt - now > ms) st.refreshAt = now + ms;
     const due = arrivalsDue(st.refreshAt, now, ms, free);
     if (due.n <= 0) return;
     for (let i = 0; i < due.n; i++) st.candidates.push(this.makeCandidate());
