@@ -197,7 +197,7 @@
         return `<button class="dg-tile hollow ${j}" style="${at(i)}" data-act="dig" data-arg="${i}" aria-label="${n} relic pieces around">${n ? `<b class="n${Math.min(n, 5)}">${n}</b>` : ''}</button>`;
       }
       const cls = [D.rock[i] ? (st === 1 ? 'rock cracked' : 'rock') : 'sand', clear.has(i) ? 'clear' : '', j].join(' ');
-      return `<button class="dg-tile ${cls}" style="${at(i)}" data-act="dig" data-arg="${i}" aria-label="${D.rock[i] ? 'Bedrock' : 'Sand'}"></button>`;
+      return `<button class="dg-tile ${cls}" style="${at(i)}" data-act="dig" data-arg="${i}" aria-label="${D.rock[i] ? 'Bedrock' : 'Sand'}">${D.rock[i] ? icon('i-dg-rock') : ''}</button>`;
     }).join('') + D.relics.map((r, c) => (r.done
       ? `<div class="dg-over" style="grid-area:${r.y + 1}/${r.x + 1}/span ${r.h}/span ${r.w};--c:${COLORS[c]}">${icon(`i-dg-${r.kind}`)}</div>` : '')).join('');
     const relics = D.relics.map((r, i) => {
