@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.36.0',
+  version: '4.37.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1834,6 +1834,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.37', items: [
+      { icon: 'i-check', name: 'Ready now', text: 'A new Ready entry on the left gathers everything waiting for you in one list: idle builders, a quest to claim, attacks left, a full stack of Trowels, dishes to cook. One tap goes to each.', act: 'ready', open: (S) => S.quest >= 6, needs: 'chapter quest 7' },
+    ] },
     { v: '4.36', items: [
       { icon: 'i-tr-armored', name: 'Foe traits', text: 'From stage 16 every foe on the expedition has a trait, and bosses two: Armored, Regenerating, Venomous, Frenzied or Sand-shelled. Each has an answer, from a Sunder through armor to the Torrent against a frenzy, and the stage card says whether your squad has it.', act: 'tab:world', open: (S) => S.stage >= 16, needs: 'expedition stage 16' },
     ] },

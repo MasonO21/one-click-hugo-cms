@@ -1421,3 +1421,8 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .floaty.venom { color: #b4e05a; text-shadow: 0 0 10px #6a9a1a; }
 .tr-need { color: #f0a040; margin-top: 2px; }
 .tr-swap { margin-left: 6px; padding: 2px 10px; font-size: 12px; }
+
+/* Ready now */
+.rd-row { gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #ffffff10; }
+.rd-row:last-child { border-bottom: 0; }
+.rd-ic { width: 34px; height: 34px; flex: none; }
