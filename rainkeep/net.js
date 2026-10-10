@@ -195,7 +195,11 @@
     // a server named in data.js (the native app, a hosted build) comes first
     if (DATA.server && window.RKHttpNet) {
       try {
-        const h = window.RKHttpNet(DATA.server, {});
+        // the server's admin token (the Playtest sheet) is never built in: a team member's own device holds it,
+        // set once by hand (server/README.md)
+        let adminToken;
+        try { adminToken = localStorage.getItem('rk-admin') || undefined; } catch (e) { /* storage blocked */ }
+        const h = window.RKHttpNet(DATA.server, { adminToken });
         await h.ready;
         if (h.online()) { impl = cleaned(h); return; }
       } catch (e) { /* fall through */ }

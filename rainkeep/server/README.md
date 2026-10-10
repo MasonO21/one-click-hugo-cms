@@ -120,17 +120,17 @@ trade-off of SQLite. The generated admin token is in the service's **Environment
 
 ## Pointing the game at it
 
-`net.js` already prefers the server: when `DATA.server` is set and `window.RKHttpNet` exists, it creates
-`RKHttpNet(DATA.server, {})` and uses it if it comes online, before trying the artifact backend. Two small edits on
-the game side, not made here, switch it on:
+`net.js` already prefers the server: when `DATA.server` is set (`index.html` loads `net-http.js` before it), it
+creates `RKHttpNet(DATA.server, …)` and uses it if it comes online, before trying the artifact backend. One edit
+switches it on:
 
-1. `data.js`: `server: 'https://rainkeep-server.onrender.com',` (your service's URL; a trailing slash is fine).
-2. `index.html`: load the adapter before `net.js`: `<script src="net-http.js"></script>`.
+- `data.js`: `server: 'https://rainkeep-server.onrender.com',` (your service's URL; a trailing slash is fine).
 
-`npm run build` copies every top-level `.js` file into `www/`, so the native build ships `net-http.js` once
-`index.html` loads it. For the native app set `CORS_ORIGIN` to `capacitor://localhost,https://localhost` (or leave
-`*`). The playtest dashboard needs `RKHttpNet(url, { adminToken })`, which `net.js` doesn't pass today; give it
-the token only in a build for the team, never one players get.
+For the native app set `CORS_ORIGIN` to `capacitor://localhost,https://localhost` (or leave `*`).
+
+The Playtest sheet (Menu → Playtest) needs the admin token, which is never built into the game. On a team member's
+own device, open the game, then its developer console (Safari Web Inspector for iOS, `chrome://inspect` for
+Android), run `localStorage.setItem('rk-admin', '<ADMIN_TOKEN>')` and reload.
 
 The adapter keeps the device id in `localStorage['rk-device']` and the token in `localStorage['rk-token']`. Losing
 the app's storage means a new account: see "What's next".
