@@ -10,6 +10,7 @@ import type { UnlockEntry } from '../logic/describe';
 import { confetti } from '../fx/Confetti';
 import { artOrEmoji, isArtSrc } from '../art';
 import { fill, h, setVar } from '../dom';
+import { noteOf, type MergedEntry } from '../logic/modalMerge';
 
 /** How many chips each list of the tier-up card shows before it folds the rest into a "+N more" chip. */
 export const CELEBRATE_READY_MAX = 8;
@@ -17,6 +18,12 @@ export const CELEBRATE_RESEARCH_MAX = 6;
 /** The research list keeps to four chips on short screens (iPhone SE, landscape phones) so the Onward button stays in view. */
 export function celebrateResearchMax(): number {
   return typeof window !== 'undefined' && window.innerHeight < 740 ? 4 : CELEBRATE_RESEARCH_MAX;
+}
+
+/** Entries a summary card lists before "+N more": fewer on short screens (landscape phones) so its button stays in view. */
+export function summaryListMax(): number {
+  if (typeof window === 'undefined') return 6;
+  return window.innerHeight < 500 ? 2 : window.innerHeight < 740 ? 4 : 6;
 }
 
 export interface CelebrateArg {
@@ -41,6 +48,8 @@ export interface CelebrateArg {
   artKind?: 'tier' | 'biome' | 'event' | 'colonist';
   /** Ring colour of a colonist portrait (the colonist's rarity). */
   ring?: string;
+  /** A summary card: the celebrations folded into it (ui/logic/modalMerge), shown as its notes. */
+  entries?: MergedEntry[];
 }
 
 export class CelebratePanel extends Panel {
@@ -96,11 +105,19 @@ export class CelebratePanel extends Panel {
     }
     // with an illustration the card is picture | text (landscape) or picture over text (portrait)
     const main = a.art ? h('div', { class: 'cb-main' }) : wrap;
+    // a summary of several cards (ui/logic/modalMerge): a smaller burst and a compact list that fits a short screen
+    const summary = !!a.entries?.length;
     if (a.art) wrap.append(this.hero(a, a.tier ?? null), main);
-    else main.appendChild(h('div', { class: 'cb-burst' }, h('div', { class: 'cb-rays' }), h('div', { class: 'cb-ic', text: a.icon ?? (tier ? '🏰' : '🎉') })));
+    else main.appendChild(h('div', { class: 'cb-burst' + (summary ? ' small' : '') }, h('div', { class: 'cb-rays' }), h('div', { class: 'cb-ic', text: a.icon ?? (tier ? '🏰' : '🎉') })));
     main.appendChild(h('h2', { class: 'cb-title', text: a.title }));
     if (a.text) main.appendChild(h('div', { class: 'cb-text', text: a.text }));
-    if (a.notes?.length) main.appendChild(h('ul', { class: 'cb-notes' }, ...a.notes.map((n) => h('li', null, h('span', { class: 'cb-note-ic', text: n.icon }), h('span', { class: 'cb-note-tx', text: n.text })))));
+    let notes = a.notes ?? [];
+    if (summary && a.entries) {
+      const max = summaryListMax();
+      notes = a.entries.slice(0, max).map((e) => ({ icon: e.icon ?? '🎉', text: noteOf(e) }));
+      if (a.entries.length > max) notes.push({ icon: '✨', text: `+${a.entries.length - max} more` });
+    }
+    if (notes.length) main.appendChild(h('ul', { class: 'cb-notes' + (summary ? ' compact' : '') }, ...notes.map((n) => h('li', null, h('span', { class: 'cb-note-ic', text: n.icon }), h('span', { class: 'cb-note-tx', text: n.text })))));
     if (a.unlocks?.length) {
       main.appendChild(h('div', { class: 'mute small center', text: 'Newly available:' }));
       const chips = h('div', { class: 'chips center-chips unlocks' });
@@ -127,6 +144,8 @@ export interface RewardArg {
   title: string;
   reward: Reward;
   icon?: string;
+  /** A summary card: the titles of the reward cards added up into it (ui/logic/modalMerge). */
+  from?: string[];
 }
 
 export class RewardPanel extends Panel {
@@ -153,6 +172,7 @@ export class RewardPanel extends Panel {
     const ic = isArtSrc(a.icon) ? h('div', { class: 'cb-ic art' }, artOrEmoji(a.icon, '🎁', 'cb-ic-img', a.title)) : h('div', { class: 'cb-ic', text: a.icon ?? '🎁' });
     wrap.appendChild(h('div', { class: 'cb-burst small' }, h('div', { class: 'cb-rays' }), ic));
     wrap.appendChild(h('h2', { class: 'cb-title', text: a.title }));
+    if (a.from?.length) wrap.appendChild(h('div', { class: 'cb-text cb-from', text: a.from.join(' · ') }));
     const list = h('div', { class: 'reward-cards' });
     parts.forEach((p, i) => list.appendChild(h('div', { class: 'rcard pop-in', style: { animationDelay: `${120 + i * 100}ms`, '--rc': p.color } }, partIcon(p, 'ri', 'div'), h('b', { class: 'num', text: p.amount }), h('small', { text: p.label }))));
     wrap.appendChild(parts.length ? list : h('div', { class: 'cb-text', text: 'Enjoy your new perks — thank you for playing!' }));

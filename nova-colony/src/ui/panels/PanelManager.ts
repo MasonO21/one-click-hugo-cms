@@ -1,23 +1,27 @@
 /**
  * PanelManager — opens/closes panels with transitions, keeps a stack, queues modals so celebrations,
- * the welcome-back screen and victory chests never pile on top of each other.
+ * the welcome-back screen and victory chests never pile on top of each other. Plain celebration and reward
+ * cards that arrive within ten seconds of each other merge into one summary card (ui/logic/modalMerge).
  */
 import type { UiCtx } from '../ctx';
 import { Panel } from './Panel';
-import { safe } from '../dom';
+import { replay, safe } from '../dom';
 import { backStep } from '../logic/back';
+import { canMerge, mergeArgs, mergeKind, MERGE_WINDOW_MS } from '../logic/modalMerge';
 
 type Factory = (ctx: UiCtx) => Panel;
 
 interface Open {
   panel: Panel;
   closing: boolean;
+  /** performance.now() when it opened (a card may still take in a merge for MERGE_WINDOW_MS). */
+  openedAt: number;
 }
 
 export class PanelManager {
   private factories = new Map<string, Factory>();
   private open_: Open[] = [];
-  private modalQueue: { name: string; arg: unknown }[] = [];
+  private modalQueue: { name: string; arg: unknown; at: number }[] = [];
   private z = 1;
 
   constructor(
@@ -103,9 +107,11 @@ export class PanelManager {
       return;
     }
     const existing = this.get(name);
+    // a celebration / reward a moment after another of its kind: one summary card instead of two to tap through
+    if (mergeKind(name) && this.merge(name, arg)) return;
     if (existing && existing.kind === 'modal' && !sameArg(existing.currentArg(), arg)) {
       // a second celebration / reward while one is showing: queue it instead of replacing what the player is reading
-      if (!this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) this.modalQueue.push({ name, arg });
+      if (!this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) this.modalQueue.push({ name, arg, at: performance.now() });
       return;
     }
     if (existing) {
@@ -118,7 +124,7 @@ export class PanelManager {
     if (panel.kind === 'modal') {
       if (this.open_.some((o) => !o.closing && o.panel.kind === 'modal')) {
         // queue (but never duplicate the same modal with the same content)
-        if (!this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) this.modalQueue.push({ name, arg });
+        if (!this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) this.modalQueue.push({ name, arg, at: performance.now() });
         return;
       }
     } else {
@@ -128,12 +134,40 @@ export class PanelManager {
     this.mountPanel(panel, arg);
   }
 
+  /**
+   * Fold a mergeable card into one of its kind that is waiting in the queue, or that opened less than MERGE_WINDOW_MS
+   * ago (it re-renders as the summary). False when there is nothing to merge with (or it is the very same card).
+   */
+  private merge(name: string, arg: unknown): boolean {
+    if (!canMerge(name, arg)) return false;
+    const now = performance.now();
+    const open = this.open_.find((o) => !o.closing && o.panel.name === name);
+    if ((open && sameArg(open.panel.currentArg(), arg)) || this.modalQueue.some((q) => q.name === name && sameArg(q.arg, arg))) return false;
+    for (let i = this.modalQueue.length - 1; i >= 0; i--) {
+      const q = this.modalQueue[i];
+      if (q.name !== name || now - q.at > MERGE_WINDOW_MS || !canMerge(name, q.arg)) continue;
+      q.arg = mergeArgs(name, q.arg, arg);
+      return true;
+    }
+    if (open && now - open.openedAt <= MERGE_WINDOW_MS && canMerge(name, open.panel.currentArg())) {
+      const merged = mergeArgs(name, open.panel.currentArg(), arg);
+      const p = open.panel;
+      p.setArg(merged);
+      safe(`panel ${name} onArg`, () => p.onArg(merged));
+      p.refresh(true);
+      replay(p.card, 'pop');
+      this.ctx.sfx(name === 'reward' ? 'reward' : 'celebrate');
+      return true;
+    }
+    return false;
+  }
+
   private mountPanel(panel: Panel, arg: unknown): void {
     panel.setArg(arg);
     const frame = panel.mount();
     frame.style.zIndex = String(this.z++);
     (panel.kind === 'modal' ? this.layerModals : this.layerPanels).appendChild(frame);
-    const rec: Open = { panel, closing: false };
+    const rec: Open = { panel, closing: false, openedAt: performance.now() };
     this.open_.push(rec);
     safe(`panel ${panel.name} onOpen`, () => panel.onOpen(arg));
     panel.refresh(true);
