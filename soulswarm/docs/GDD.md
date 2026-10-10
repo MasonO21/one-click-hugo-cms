@@ -937,7 +937,21 @@ Bosses keep their rules (§11.1): the Knell's second toll only staggers a boss, 
 
 **Where it shows.** The roster card carries a rank badge (gold from rank 5); the hero sheet has the mastery panel (rank, XP bar, the ten-rank track with perks and rewards, reached ranks lit) and the Rite's cooldown at the hero's rank; the results screen shows the hero's rank, the XP the run gave and any rank-ups with their perks and rewards (a gold row and a fanfare).
 
-**Balance (rank 10 against rank 1).** The perks are deliberately small next to stars (+12% damage and +8% HP per star): the long-term power is +4% HP, +4% damage and a Rite every 0.8 of its cooldown, and the Ascended Rite is the headline. The power-creep rule (`LIVEOPS.md`: no hero beats Mordrake by more than 5% at equal progression) is checked at equal mastery. Sim results are in the Update 9 notes below.
+**Balance (rank 10 against rank 1).** The perks are deliberately small next to stars (+12% damage and +8% HP per star): the long-term power is +4% HP, +4% damage and a Rite every 0.8 of its cooldown, and the Ascended Rite is the headline. The power-creep rule (`LIVEOPS.md`: no hero beats Mordrake by more than 5% at equal progression) is checked at equal mastery.
+
+Balance bot, 2026-10-10 (`MASTERY=10 HERO=… node scripts/balance.mjs URL 4 2,4`; 4 runs per chapter, equal progression, Rites on). Rank 1 is the mean of the Update 6 and Update 8 runs of the same build where they exist; a 4-run mean moves by about ±30 s and a clear stops near 400 s, which compresses the top:
+
+| Hero | Ch2 rank 10 | Ch4 rank 10 | Mean rank 10 | Mean rank 1 | Gain | vs Mordrake (rank 10) |
+|---|---|---|---|---|---|---|
+| Vael | 381 s (3/4 clears) | 392 s (2/4) | 386 s | 363 s | +6% | −1.2% |
+| Seraphine | 372 s (1/4) | 400 s (2/4) | 386 s | — | — | −1.3% |
+| Nyx | 368 s (2/4) | 376 s (0/4) | 372 s | — | — | −4.9% |
+| Osric | 328 s (1/4) | 391 s (4/4) | 360 s | 336 s | +7% | −8.1% |
+| Liora | 338 s (1/4) | 377 s (2/4) | 358 s | 323 s | +11% | −8.6% |
+| Grimsby | 288 s (0/4) | 394 s (2/4) | 341 s | 326 s | +5% | −12.8% |
+| Mordrake | 384 s (3/4) | 398 s (3/4) | 391 s | 376 s | +4% | — |
+
+Every hero passes the rule at rank 10. A fully mastered hero survives about 4–11% longer than a fresh one: noticeable, never a wall for a player who has not ground it out.
 
 ---
 
