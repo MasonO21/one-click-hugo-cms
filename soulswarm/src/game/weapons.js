@@ -6,10 +6,11 @@ import { makeArc, makeRuneCircle } from './fxmeshes.js';
 import { skullGeometry } from '../engine/models.js';
 import { makeCharMaterial, addInstanceAttrs } from '../engine/materials.js';
 import { hdr } from '../engine/particles.js';
+import { Arsenal } from './arsenal.js';
 
 const TAU = Math.PI * 2;
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _p = new THREE.Vector3(), _s = new THREE.Vector3(1, 1, 1), _e = new THREE.Euler();
-const WEAPONS = ['soulBolt', 'scythe', 'chains', 'spears', 'skullHalo', 'gravePulse', 'witchfire'];
+const WEAPONS = ['soulBolt', 'scythe', 'chains', 'spears', 'skullHalo', 'gravePulse', 'witchfire', 'gravefall', 'soulLeech'];
 const HM = EVOLUTIONS.harvestMoon, CP = EVOLUTIONS.chainsOfPerdition, OB = EVOLUTIONS.ossuaryBarrage, RQ = EVOLUTIONS.requiem, HP = EVOLUTIONS.hallowPyre;
 const BC = EVOLUTIONS.boneCrown;
 const WF = SKILLS.witchfire;
@@ -129,6 +130,7 @@ export class Weapons {
     this.skullSpin = 1; // Osric's Bone Mass turns the halo faster (rites.js)
     this._wfHit = (e) => this.wfTouch(e);
     this._tossHit = (e) => this.tossHit(e);
+    this.arsenal = new Arsenal(run, this); // Gravefall and Soul Leech (arsenal.js)
   }
 
   roll(base) {
@@ -154,7 +156,7 @@ export class Weapons {
   update(dt) {
     const run = this.run, lv = run.skillLv, S = run.stats;
     for (const w of WEAPONS) {
-      if (!lv[w] || w === 'skullHalo') continue;
+      if (!lv[w] || w === 'skullHalo' || w === 'soulLeech') continue; // (always on)
       if (w === 'witchfire' && !run.evolved.hallowPyre && WF.toss(lv[w]) <= 0) continue; // lanterns are thrown from Lv3
       this.timers[w] -= dt;
       if (this.timers[w] <= 0) {
@@ -174,6 +176,7 @@ export class Weapons {
     this.boomT -= dt;
     this.updateRequiem(dt);
     this.updateWitchfire(dt, lv.witchfire);
+    this.arsenal.update(dt);
   }
 
   // ---------------------------------------------------------------- firing
@@ -239,6 +242,7 @@ export class Weapons {
       return true;
     }
     if (w === 'witchfire') return this.tossLanterns(level);
+    if (w === 'gravefall') return this.arsenal.dropStones(level);
     if (w === 'gravePulse') {
       if (run.evolved.requiem) { this.startRequiem(); return true; }
       const R = SKILLS.gravePulse.radius(level) * run.stats.area;
@@ -460,7 +464,7 @@ export class Weapons {
   touch(e) {
     if (e.burnUid !== undefined) return;
     e.burnUid = 0; e.burnT = 0; e.burnPool = 0; e.burnTick = 0; e.burnRaise = 0; e.burnListed = false; e.reapUid = 0; e.reapT = 0;
-    e.wfId = 0; e.wfDmg = 0; e.pinUid = 0; e.pinAt = 0;
+    e.wfId = 0; e.wfDmg = 0; e.pinUid = 0; e.pinAt = 0; e.searMark = 0;
   }
 
   // ---------------------------------------------------------------- Chains of Perdition (burning)
@@ -817,6 +821,7 @@ export class Weapons {
     for (let i = 0; i < this.skullN; i++) g.add(this.skullXZ[i * 2], 1.0, this.skullXZ[i * 2 + 1], 1.1, sk[0] * 0.35, sk[1] * 0.35, sk[2] * 0.35, 0.8);
     this.renderChains(g);
     this.renderWitchfire(g);
+    this.arsenal.render(g);
     if (this.moons.count) {
       const c = this.cols.soul, R = this.moonR;
       for (let i = 0; i < HM.blades; i++) {
@@ -857,6 +862,7 @@ export class Weapons {
   }
 
   dispose() {
+    this.arsenal.dispose();
     for (const a of [...this.arcs, ...this.moonTrails]) { a.geometry.dispose(); a.material.dispose(); }
     this.skulls.geometry.dispose(); this.skullMat.dispose();
     this.moons.geometry.dispose(); this.moonMat.dispose();

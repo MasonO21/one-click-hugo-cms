@@ -17,12 +17,12 @@ import { Hazards } from './hazards.js';
 import { Rites } from './rites.js';
 import { Affixes } from './affixes.js';
 import { Events } from './events.js';
-import { computeStats, rollChoices, applyChoice } from './skills.js';
+import { computeStats, rollChoices, applyChoice, banishesPerRun } from './skills.js';
 import { Streak } from './streak.js';
 import { Tutorial } from './tutorial.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
 import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH } from './data.js';
-import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook } from './data.js';
+import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -136,6 +136,7 @@ export class Run {
     // the beginner tutorial (tutorial.js): its steps direct the run until the King rises, who comes when they say
     this.guide = tutorial ? new Tutorial(this) : null;
     if (this.guide) { this.tutorial = true; this.nextBossAt = Infinity; }
+    this.banished = new Set(); this.banishLeft = banishesPerRun(this); // level-up card banishes (skills.js; none in the tutorial)
     // Osric's congregation: the run opens with a legion already at his back (not in the tutorial, which teaches growing one,
     // nor in Boss Rush, which starts every Shepherd with a deep legion)
     const start = loadout.hero.passive.startLegion;
@@ -391,6 +392,7 @@ export class Run {
     if (!noRaise) {
       let chance = this.stats.raise * (this.novaQueue.length ? 0.5 : 1);
       if (e.burnUid === e.uid) chance = Math.min(0.85, chance + e.burnRaise); // Chains of Perdition: the burning rise more often
+      if (this.evolved.necropolis && this.weapons.arsenal.graveNear(e.x, e.z)) chance = Math.min(0.85, chance + EVOLUTIONS.necropolis.raise); // the slain rise beside its graves
       if (source === 'skull' && this.evolved.boneCrown) chance = 1;
       const HP = this.loadout.hero.passive;
       if (HP.pulseRaise && (source === 'pulse' || (e.tollUid === e.uid && e.tollT > this.time))) chance = Math.min(0.85, chance * HP.pulseRaise); // Liora: the bell marks the dead

@@ -389,6 +389,22 @@ export const SKILLS = {
     toss: L([0, 0, 1, 1, 2]), tossDmg: L([0, 0, 30, 38, 48]), poolR: L([0, 0, 2.2, 2.5, 2.8]), cd: L([2.8, 2.6, 2.4, 2.2, 2.0]),
     desc: (lv) => [`Your lantern drips witchfire where you walk. Foes burn in it.`, `+Damage, wider flames`, `Hurl a lantern that bursts into a burning pool`, `+Damage, bigger pools, faster`, `Two lanterns, blazing`][lv - 1],
   },
+  // tombstones crash onto the horde: every cd s, `count` stones on its densest packs within `reach` m, each after a
+  // `fall` s shadow; one hits everything within r m (× area) for dmg and hurls it out. The stones sink after `sink` s
+  gravefall: {
+    type: 'weapon', name: 'Gravefall', icon: 'tomb', max: 5, reach: 11, fall: 0.55, sink: 0.7,
+    dmg: L([26, 32, 40, 50, 58]), count: L([1, 2, 2, 3, 4]), r: L([1.6, 1.7, 1.9, 2.1, 2.3]), cd: L([2.4, 2.2, 2.0, 1.8, 1.6]),
+    desc: (lv) => [`Tombstones crash down on the thickest of the horde.`, `+1 tombstone`, `+Damage, wider impact`, `+1 tombstone, faster`, `+1 tombstone, crushing damage`][lv - 1],
+  },
+  // drain beams lock onto the toughest foes within range (the boss, then elites, then the most HP) and hold them until
+  // they fall or escape; a beam on a common foe jumps to a boss or an unheld elite that comes into reach, and every beam
+  // may take the boss. dps a second each in ticks of `tick` s; foes the beam passes through (within searR m) are seared
+  // for `sear` of it. The Shepherd heals `leech` of the damage, at most healCap HP a second
+  soulLeech: {
+    type: 'weapon', name: 'Soul Leech', icon: 'leech', max: 5, tick: 0.2, healCap: 3, retarget: 0.6, sear: 0.4, searR: 0.6,
+    dps: L([45, 58, 72, 90, 115]), beams: L([1, 1, 2, 2, 3]), range: L([6, 6.5, 7, 7.5, 8]), leech: L([0.04, 0.04, 0.05, 0.05, 0.06]),
+    desc: (lv) => [`A drain beam latches onto the toughest foe near you and feeds you its life.`, `+Damage, longer reach`, `A second beam`, `+Damage, longer reach`, `A third beam, deeper drain`][lv - 1],
+  },
   // Passives
   raiseDead: { type: 'passive', name: 'Raise Dead', icon: 'raise', max: 5, desc: () => `+6% chance slain foes rise as minions` },
   legionCap: { type: 'passive', name: 'Legion Cap', icon: 'banner', max: 5, desc: () => `+10 maximum legion size` },
@@ -398,7 +414,12 @@ export const SKILLS = {
   soulMagnet: { type: 'passive', name: 'Soul Magnet', icon: 'magnet', max: 5, desc: () => `+30% pickup radius` },
   might: { type: 'passive', name: 'Might', icon: 'sword', max: 5, desc: () => `+10% damage` },
   frenzy: { type: 'passive', name: 'Frenzy', icon: 'hourglass', max: 5, desc: () => `+8% attack speed` },
+  graveWard: { type: 'passive', name: 'Grave Ward', icon: 'ward', max: 5, desc: () => `-6% damage taken` },
+  dreadReach: { type: 'passive', name: 'Dread Reach', icon: 'reach', max: 5, desc: () => `+10% weapon area` },
 };
+
+// Banish: a level-up card's ✕ strikes that skill from the run's draws for good (not evolutions); perRun per run
+export const BANISH = { perRun: 2 };
 
 export const EVOLUTIONS = {
   // Tunables are read by weapons.js (and projectiles.js, legion.js). Radii are in metres, times in seconds, dmg before Might/crits.
@@ -437,6 +458,18 @@ export const EVOLUTIONS = {
     dps: 52, r: 1.75, life: 3.6,                     // the trail
     toss: 3, tossDmg: 62, poolR: 3.0, cd: 1.8,       // the lanterns
     burst: 1.6, burstLife: 1.4, burstMax: 8,         // a witchfire kill leaves a burst pool this wide; at most burstMax a second
+  },
+  // the stones stand as graves for `grave` s; a foe slain within graveR m (× area) of a standing grave gets +raise pp
+  // Raise Chance (still capped at 85%)
+  necropolis: {
+    name: 'Necropolis', from: 'gravefall', needs: 'legionCap', icon: 'tomb', desc: 'EVOLVED: Six tombstones at once. They stand as graves, and the slain beside them rise far more often.',
+    count: 6, dmg: 70, r: 2.6, cd: 1.4, grave: 3, graveR: 3, raise: 0.4,
+  },
+  // twin beams fork from each target to the next foe within `fork` m; while the Shepherd is at full HP the stolen life
+  // mends his most wounded minions instead
+  vampiricCommunion: {
+    name: 'Vampiric Communion', from: 'soulLeech', needs: 'graveWard', icon: 'leech', desc: 'EVOLVED: Four beams that fork into the horde. Stolen life heals you, then your legion.',
+    beams: 4, dps: 165, range: 8.5, leech: 0.08, healCap: 6, fork: 3, forkDps: 0.6, mend: 3,
   },
   requiem: {
     name: 'Requiem', from: 'gravePulse', needs: 'soulMagnet', icon: 'pulse', desc: 'EVOLVED: Drags the horde in, then detonates. Draws in soul shards.',

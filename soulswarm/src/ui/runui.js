@@ -187,21 +187,38 @@ export class RunUI {
       <div class="lvl-title">${shrine ? '<b>SHRINE OF SOULS</b><span>Accept one blessing</span>' : draft ? `<b>WAR COUNCIL</b><span>Arm yourself for the Court · ${draft[0]} of ${draft[1]}</span>` : chest ? '<b>RELIC CHEST</b><span>Claim one treasure</span>' : `<b>LEVEL ${level}</b><span>Choose a power</span>`}</div>
       ${this.coach && !shrine ? ((t) => (t ? `<div class="co-card">${t}</div>` : ''))(this.coach.cardLine(chest)) : ''}
       <div class="cards"></div>
+      <div class="lvl-ban"></div>
       <div class="lvl-actions"></div>
     </div>`);
     const cards = $(back, '.cards');
-    let picked = false, shownT = 0;
+    let picked = false, shownT = 0, current = choices;
     const render = (list) => {
+      current = list;
       shownT = this.run.t; // run time keeps ticking while paused: ignore taps in the first 0.3 s (stray swipes)
       cards.innerHTML = '';
+      const banOk = !shrine && this.run.banishLeft > 0; // Banish: the ✕ strikes a skill from this run's draws
       list.forEach((c, i) => {
         const evo = c.kind === 'evolution';
         const rc = evo ? RARITY_COLOR.legendary : RARITY_COLOR[c.rarity] || RARITY_COLOR.common;
         const pips = c.max ? Array.from({ length: c.max }, (_, k) => `<i class="${k < c.level - 1 ? 'on' : k === c.level - 1 ? 'next' : ''}"></i>`).join('') : '';
         const tag = evo ? '<span class="pill pill-gold">Evolution</span>' : c.isNew ? '<span class="pill pill-soul">New</span>' : c.kind === 'weapon' || c.kind === 'passive' ? `<span class="pill">Lv ${c.level}</span>` : c.tag ? `<span class="pill pill-soul">${c.tag}</span>` : '';
-        const card = h(`<button class="card ${evo ? 'evo' : ''}" style="--rc:${rc}; animation-delay:${i * 70}ms">
+        const canBan = banOk && (c.kind === 'weapon' || c.kind === 'passive');
+        const card = h(`<button class="card ${evo ? 'evo' : ''} ${canBan ? 'bannable' : ''}" style="--rc:${rc}; animation-delay:${i * 70}ms">
           <div class="ic">${skillArt(c.id, c.icon)}</div>
-          <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div></button>`);
+          <div><h3>${c.name} ${tag}</h3><p>${c.desc}</p>${pips ? `<div class="pips">${pips}</div>` : ''}</div>
+          ${canBan ? `<span class="ban" role="button" tabindex="0" aria-label="Banish ${c.name}">${icon('close')}</span>` : ''}</button>`);
+        const ban = card.querySelector('.ban');
+        if (ban) ban.addEventListener('click', async (ev) => {
+          ev.stopPropagation(); // (not a pick)
+          if (picked || this.run.t - shownT < 0.3) return;
+          const { banish } = await import('../game/skills.js');
+          if (picked || !current.includes(c)) return;
+          const next = banish(this.run, c, current.filter((o) => o !== c));
+          if (!next) return;
+          this.app.audio.sfx('click', { pitch: 0.7 });
+          this.app.haptic('light');
+          render(current.map((o) => (o === c ? next : o)));
+        });
         card.addEventListener('click', () => {
           if (picked || this.run.t - shownT < 0.3) return;
           picked = true;
@@ -211,6 +228,8 @@ export class RunUI {
         });
         cards.appendChild(card);
       });
+      const note = $(back, '.lvl-ban');
+      if (note) note.textContent = banOk && list.some((c) => c.kind === 'weapon' || c.kind === 'passive') ? `✕ Banish a skill from this run · ${this.run.banishLeft} left` : '';
     };
     render(choices);
     const actions = $(back, '.lvl-actions');

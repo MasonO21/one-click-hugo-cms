@@ -14,6 +14,7 @@ const W = {
   scythe: [{ scythe: 5, haste: 1 }, 'harvestMoon'], chains: [{ chains: 5, frenzy: 1 }, 'chainsOfPerdition'],
   spears: [{ spears: 5, vitality: 1 }, 'ossuaryBarrage'], gravePulse: [{ gravePulse: 5, soulMagnet: 1 }, 'requiem'],
   witchfire: [{ witchfire: 5, raiseDead: 1 }, 'hallowPyre'],
+  gravefall: [{ gravefall: 5, legionCap: 1 }, 'necropolis'], soulLeech: [{ soulLeech: 5, graveWard: 1 }, 'vampiricCommunion'],
 };
 const b = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const p = await (await b.newContext({ viewport: { width: 390, height: 844 } })).newPage();

@@ -93,6 +93,7 @@ export class Player {
     if (this.invuln > 0 || this.dead || this.run.ended || this.run.bossDead) return; // the chapter is won: no vent or burn tick may fell him in the victory beat
     const run = this.run;
     if (run.rites) dmg *= run.rites.guard; // Osric's Bone Mass wards him
+    dmg *= run.stats.ward; // the Grave Ward passive
     this.hp -= dmg;
     if (dot) {
       this.flash = Math.max(this.flash, 0.45);
@@ -126,12 +127,13 @@ export class Player {
   /** Brute slam knockback (an impulse in m/s that decays in ~0.3 s). */
   knock(x, z) { if (!this.dead) { this.kx += x; this.kz += z; } }
 
-  heal(n) {
+  /** quiet: no number or sound (a steady trickle such as Soul Leech shows its own total). */
+  heal(n, quiet = false) {
     if (this.dead) return;
     const before = this.hp;
     this.hp = Math.min(this.maxHp, this.hp + n);
     const d = Math.round(this.hp - before);
-    if (d > 0) { this.run.fx.text(this.x, 2.3, this.z, '+' + d, 'heal'); this.run.audio.sfx('heal'); }
+    if (d > 0 && !quiet) { this.run.fx.text(this.x, 2.3, this.z, '+' + d, 'heal'); this.run.audio.sfx('heal'); }
   }
 
   usePainted(m) {

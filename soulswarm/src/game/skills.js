@@ -1,5 +1,5 @@
 // In-run stats and the level-up card draw.
-import { SKILLS, EVOLUTIONS, WEAPON_SLOTS, BASE } from './data.js';
+import { SKILLS, EVOLUTIONS, WEAPON_SLOTS, BASE, BANISH } from './data.js';
 
 export function computeStats(L, lv, chapter, level) {
   const g = (k) => lv[k] || 0;
@@ -17,13 +17,15 @@ export function computeStats(L, lv, chapter, level) {
     minionHp: BASE.minionHp * (1 + 0.08 * (level - 1)) * (1 + 0.4 * ch),
     novaMul: L.novaMul,
     crit: 0.1,
-    area: 1,
+    area: 1 + 0.10 * g('dreadReach'),
+    ward: 1 - 0.06 * g('graveWard'), // damage taken
   };
 }
 
-/** Draw up to n distinct upgrade cards, weighted toward deepening the current build. */
-export function rollChoices(run, n = 3) {
-  const lv = run.skillLv;
+/** Draw up to n distinct upgrade cards, weighted toward deepening the current build. Banished skills and the ids in
+ *  `exclude` (the cards already on the table, when one is replaced) are left out. */
+export function rollChoices(run, n = 3, exclude = null) {
+  const lv = run.skillLv, ban = run.banished;
   const pool = [];
   for (const [id, ev] of Object.entries(EVOLUTIONS)) {
     if (!run.evolved[id] && (lv[ev.from] || 0) >= 5 && (lv[ev.needs] || 0) >= 1) pool.push({ id, kind: 'evolution', weight: 1000 });
@@ -31,7 +33,7 @@ export function rollChoices(run, n = 3) {
   const weaponsOwned = Object.keys(SKILLS).filter((k) => SKILLS[k].type === 'weapon' && lv[k]).length;
   for (const [id, s] of Object.entries(SKILLS)) {
     const cur = lv[id] || 0;
-    if (cur >= s.max) continue;
+    if (cur >= s.max || (ban && ban.has(id)) || (exclude && exclude.includes(id))) continue;
     if (s.type === 'weapon' && !cur && weaponsOwned >= WEAPON_SLOTS) continue;
     let w = cur ? 1.5 : 1.0;
     if (id === 'raiseDead' || id === 'legionCap' || id === 'minionFury') w *= 1.3;
@@ -51,6 +53,17 @@ export function rollChoices(run, n = 3) {
   if (!picks.length) picks.push({ id: 'heal', kind: 'bonus' }, { id: 'gold', kind: 'bonus' });
   return picks.map((p) => describe(run, p));
 }
+
+/** Banish: strike a card's skill from this run's draws (never an evolution or a bonus card) and draw its replacement,
+ *  never one of the other cards on the table. Returns the new card, or null when no banish is left. */
+export function banish(run, card, others) {
+  if (!(run.banishLeft > 0) || (card.kind !== 'weapon' && card.kind !== 'passive')) return null;
+  run.banished.add(card.id); run.banishLeft--;
+  const [next] = rollChoices(run, 1, others.map((c) => c.id));
+  return next.kind === 'bonus' && others.some((c) => c.id === next.id) ? describe(run, { id: next.id === 'heal' ? 'gold' : 'heal', kind: 'bonus' }) : next;
+}
+
+export const banishesPerRun = (run) => (run.tutorial ? 0 : BANISH.perRun);
 
 export function describe(run, p) {
   const lv = run.skillLv;

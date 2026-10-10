@@ -43,6 +43,12 @@ Generated with Higgsfield on 2026-10-06 (the chapter and Bestiary paintings on 2
 | `skill-boneCrown.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Bone Crown (evolution) ability icon: level-up cards, results | `51b2a962-a6ef-4eb6-b262-302aba69881a` |
 | `skill-harvestMoon.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Harvest Moon (evolution) ability icon: level-up cards, results | `01bd078e-a2e5-4e62-b3d5-89f99f11145b` |
 | `skill-chainsOfPerdition.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Chains of Perdition (evolution) ability icon: level-up cards, results | `cff6d7bc-d41d-478b-ba18-1cd6f50ddd70` |
+| `skill-gravefall.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Gravefall ability icon (Update 6, 2026-10-10): level-up cards, results | `8aee3506-02d4-488c-9383-5f5af4d9103d` |
+| `skill-necropolis.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Necropolis (evolution) ability icon | `cab5d41b-156f-436d-995b-042fb595a5cc` |
+| `skill-soulLeech.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Soul Leech ability icon | `e3446b2c-900b-40e3-b666-476d12d7a953` |
+| `skill-vampiricCommunion.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Vampiric Communion (evolution) ability icon | `70dd45f7-4616-4c71-896d-67ef0bd279e9` |
+| `skill-graveWard.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Grave Ward (passive) ability icon | `5ff9eae7-8d13-4ea2-a5ce-17f99c6bc124` |
+| `skill-dreadReach.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Dread Reach (passive) ability icon | `de66c8f4-e03e-4e37-8597-987a1425a042` |
 | `skill-ossuaryBarrage.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Ossuary Barrage (evolution) ability icon: level-up cards, results | `04f7b31c-5d39-498d-bf97-23d6bcdcd103` |
 | `skill-requiem.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Requiem (evolution) ability icon: level-up cards, results | `b6e7e36a-d31c-418c-a1c0-55f4f1e6d564` |
 | `skill-witchfire.jpg` | 1024×1024 | Nano Banana Pro (the lantern as the reference) | Witchfire Lantern ability icon: level-up cards, results, hero detail | `0b7eb7ca-0203-47c7-b685-5bc8f524eb4a` |
@@ -153,7 +159,7 @@ To run it:
 - 9 Nano Banana Pro 2K images at 2 credits each, including Liora's splash;
 - 1 GPT Image 2.5 high image at 2.75 credits.
 
-The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more.
+The 12 chapter and Bestiary paintings (2026-10-07) add 24 credits at the same rate (12 Nano Banana Pro 2K images at 2 credits each). Gravemaw's Bestiary portrait is cut from his existing splash, so it cost nothing. Update 5's two Bestiary paintings (2026-10-09) add 4 more, and Update 6's six ability icons (2026-10-10; the Witchfire icons' prompt with the lantern as the reference) 12 more.
 
 Re-cutting the ads in the sandbox costs no credits.
 

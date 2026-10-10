@@ -132,6 +132,13 @@
 @keyframes cardin { from { opacity: 0; transform: translateY(30px) scale(.9); } }
 @keyframes blink { 50% { opacity: .3; } }
 .lvl-actions { display: flex; gap: 8px; }
+/* Banish (skills.js banish): a small ✕ on each skill card strikes it from the run's draws; the line under the cards counts them */
+.card.bannable { padding-right: 40px; }
+.card .ban { position: absolute; top: 7px; right: 10px; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; color: var(--ink-dim);
+  background: rgba(4,6,14,.72); box-shadow: inset 0 0 0 1px rgba(255,255,255,.16); }
+.card .ban svg { width: 13px; height: 13px; filter: none; }
+.card .ban:active { color: #ff6a7a; box-shadow: inset 0 0 0 1px #ff6a7a; }
+.lvl-ban { min-height: 14px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
 
 /* Shrine of Souls (events.js): the blessing pick and the timed blessing chips under the legion counter */
 .lvl-back.shrine { background: radial-gradient(80% 60% at 50% 45%, rgba(8,64,58,.62), rgba(2,4,8,.9)); }

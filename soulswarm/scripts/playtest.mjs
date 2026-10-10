@@ -2953,6 +2953,144 @@ errs = await session(async (page) => {
 });
 check('update 5: no runtime errors', !errs.length, errs[0] || '');
 
+// 39. Update 6, the Grave Arsenal: Gravefall (tombstones on the horde's densest packs; Necropolis's graves raise the slain
+//     beside them), Soul Leech (drain beams that hold the toughest foe, jump to elites and the boss, sear what they cross
+//     and heal the Shepherd; Vampiric Communion forks and feeds the legion), the Grave Ward and Dread Reach passives and
+//     Banish on the level-up cards. A quiet arena frame-stepped at 30 fps, as section 38.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, rnd = Math.random;
+    const D = await import('/src/game/data.js'), A = await import('/src/ui/art.js'), SK = await import('/src/game/skills.js');
+    app.engine.manual = true;
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.chapter.unlocked = 6;
+    const start = (ch = 1) => {
+      if (app.run) app.exitRun();
+      document.querySelectorAll('.modal-back, .lvl-back').forEach((n) => n.remove());
+      p.selectedHero = 'vael'; p.energy = 30; app.startRun(ch);
+      const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0; r.events.director = () => {};
+      r.addXp = () => {}; r.player.hurt = () => {}; r.input.tx = r.input.tz = 0; r.pickups.dropSpecial = () => {}; r.stats.crit = 0;
+      r.hazards.update = () => {}; r.skillLv.soulBolt = 0;
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const foe = (r, dx, dz, o = {}) => { const e = r.enemies.spawn(o.type || 'husk', r.player.x + dx, r.player.z + dz, { hpMul: o.hp ?? 50, elite: !!o.elite }); e.spawnT = 2; e.speed = 0; return e; };
+    const out = {};
+
+    // the content: two weapons, their evolutions and two passives, all painted
+    out.data = { weapons: [D.SKILLS.gravefall.type, D.SKILLS.soulLeech.type].join(), passives: [D.SKILLS.graveWard.type, D.SKILLS.dreadReach.type].join(),
+      evo: [D.EVOLUTIONS.necropolis.from, D.EVOLUTIONS.necropolis.needs, D.EVOLUTIONS.vampiricCommunion.from, D.EVOLUTIONS.vampiricCommunion.needs].join(),
+      art: ['gravefall', 'necropolis', 'soulLeech', 'vampiricCommunion', 'graveWard', 'dreadReach'].every((id) => !!A.SKILL_ART[id]) };
+
+    // the passives: Grave Ward -6% damage taken a level, Dread Reach +10% area a level
+    let r = start(); r.skillLv.graveWard = 2; r.skillLv.dreadReach = 3; r.recomputeStats();
+    const P0 = r.player, h0 = P0.hp; P0.invuln = 0; Object.getPrototypeOf(P0).hurt.call(P0, 20);
+    out.passives = { ward: +r.stats.ward.toFixed(2), took: +(h0 - P0.hp).toFixed(1), area: +r.stats.area.toFixed(2) };
+
+    // Gravefall: Lv1 drops one stone on the pack of eight, not on the lone foe; Lv5 drops four, spread apart
+    r = start(); let W = r.weapons, Ar = W.arsenal, P = r.player;
+    const pack = []; for (let i = 0; i < 8; i++) pack.push(foe(r, 6 + (i % 3) * 0.6, (i / 3 | 0) * 0.6));
+    const lone = foe(r, -8, 0); r.update(1 / 30);
+    Ar.dropStones(1); const st = Ar.stones[0];
+    const at = { n: Ar.stones.length, onPack: Math.hypot(st.x - (P.x + 6.6), st.z - (P.z + 0.6)) < 1.5 };
+    step(r, 0.7);
+    out.fall = { ...at, hit: pack.filter((e) => e.hp < e.maxHp).length, lone: lone.hp === lone.maxHp };
+    r = start(); W = r.weapons; Ar = W.arsenal; P = r.player;
+    for (let k = 0; k < 4; k++) for (let i = 0; i < 4; i++) foe(r, Math.cos(k * 1.57) * 7 + (i % 2) * 0.5, Math.sin(k * 1.57) * 7 + (i / 2 | 0) * 0.5);
+    r.update(1 / 30); Ar.dropStones(5);
+    const S5 = Ar.stones, gaps = []; for (let i = 0; i < S5.length; i++) for (let j = i + 1; j < S5.length; j++) gaps.push(Math.hypot(S5[i].x - S5[j].x, S5[i].z - S5[j].z));
+    out.fall.lv5 = { n: S5.length, minGap: +Math.min(...gaps).toFixed(1) };
+
+    // Necropolis: six stones that stand 3 s as graves; a foe slain beside one rises (a 0.5 roll against 30% + 40 pp), elsewhere not
+    r = start(); W = r.weapons; Ar = W.arsenal; P = r.player; r.evolved.necropolis = true; r.skillLv.gravefall = 5; W.timers.gravefall = 1e9; r.stats.raise = 0.3; // (only the stones dropped here)
+    for (let k = 0; k < 6; k++) for (let i = 0; i < 3; i++) foe(r, Math.cos(k) * 7 + i * 0.4, Math.sin(k) * 7);
+    r.update(1 / 30); Ar.dropStones(5); step(r, 0.7);
+    const g = Ar.stones[0], gx = g.x, gz = g.z;
+    out.necro = { n: Ar.stones.length, standing: Ar.stones.every((x) => x.state === 1), near: Ar.graveNear(gx + 1, gz), far: Ar.graveNear(gx + 30, gz) };
+    const raised0 = r.counters.raised;
+    Math.random = () => 0.5;
+    try { const a = foe(r, 0, 0, { hp: 0.01 }); a.x = gx + 0.5; a.z = gz; r.enemies.kill(a, 'bolt'); const b = foe(r, 0, 0, { hp: 0.01 }); b.x = gx + 40; b.z = gz; r.enemies.kill(b, 'bolt'); }
+    finally { Math.random = rnd; }
+    out.necro.rose = r.counters.raised - raised0;
+    step(r, 3.2); out.necro.after = Ar.graveNear(gx, gz);
+
+    // Soul Leech Lv3: two beams, the elite first then the toughest common foe; they hold their foes; the Shepherd heals
+    r = start(); W = r.weapons; Ar = W.arsenal; P = r.player; r.skillLv.soulLeech = 3; delete W.update;
+    const commons = [foe(r, 3, 0, { hp: 40 }), foe(r, -3, 1, { hp: 60 }), foe(r, 0, -4, { hp: 50 })], el = foe(r, 2, 3, { type: 'brute', elite: true, hp: 30 });
+    P.hp = P.maxHp * 0.5; const hp0 = P.hp;
+    step(r, 0.3);
+    const first = Ar.beams.map((b) => b.e), held = first.find((e) => !e.elite);
+    out.leech = { beams: first.length, elite: first.includes(el), toughest: held === commons[1] };
+    commons[0].hp = commons[0].maxHp * 5; // a fresher, tougher foe appears: the beam keeps its own
+    step(r, 1.5);
+    out.leech.kept = Ar.beams.some((b) => b.e === commons[1]) && !Ar.beams.some((b) => b.e === commons[0]);
+    out.leech.healed = +(P.hp - hp0).toFixed(1); out.leech.cap = +(D.SKILLS.soulLeech.healCap * 1.8 + 0.5).toFixed(1);
+    // the sear: a foe on the beam's path burns, one beside the Shepherd off its path does not
+    r = start(); W = r.weapons; Ar = W.arsenal; P = r.player; r.skillLv.soulLeech = 1; delete W.update;
+    const tgt = foe(r, 6, 0), path = foe(r, 3, 0), off = foe(r, 0, 4);
+    tgt.maxHp = tgt.hp = 1e6; path.maxHp = path.hp = off.maxHp = off.hp = 5000; // (the target is the toughest from the first frame)
+    step(r, 1);
+    out.sear = { on: Ar.beams[0] && Ar.beams[0].e === tgt, path: path.hp < path.maxHp, off: off.hp === off.maxHp };
+    // the boss takes every beam
+    r = start(); W = r.weapons; Ar = W.arsenal; P = r.player; r.skillLv.soulLeech = 5; delete W.update;
+    foe(r, 3, 0); foe(r, -3, 0); foe(r, 0, 3);
+    r.boss.spawn(); r.bossSpawned = true; const B = r.bossEnemy; B.x = P.x + 5; B.z = P.z; r.boss.state = 'chase';
+    step(r, 1);
+    out.boss = Ar.beams.map((b) => b.e.type === 'boss').join();
+
+    // Vampiric Communion: four beams that fork; at full HP the stolen life mends the most wounded minions
+    r = start(); W = r.weapons; Ar = W.arsenal; P = r.player; r.skillLv.soulLeech = 5; r.evolved.vampiricCommunion = true; delete W.update;
+    for (let i = 0; i < 10; i++) foe(r, Math.cos(i * 0.63) * 4, Math.sin(i * 0.63) * 4, { hp: 80 });
+    r.legion.raise(P.x - 1, P.z, { fx: false }); const mn = r.legion.list[0];
+    step(r, 0.2); mn.hp = mn.maxHp * 0.3; mn.x = P.x - 1; mn.z = P.z; P.hp = P.maxHp;
+    step(r, 1.5);
+    out.vc = { beams: Ar.beams.length, forks: Ar.beams.filter((b) => b.f).length, mended: mn.hp > mn.maxHp * 0.3 + 1 };
+
+    // Banish: two a run (none in the tutorial); a banished skill never comes back; its card is replaced by one not on the table
+    r = start();
+    out.ban = { left: r.banishLeft };
+    const hand = SK.rollChoices(r, 3), victim = hand.find((c) => c.kind === 'weapon' || c.kind === 'passive');
+    const repl = SK.banish(r, victim, hand.filter((c) => c !== victim));
+    let back = 0; for (let i = 0; i < 300; i++) if (SK.rollChoices(r, 3).some((c) => c.id === victim.id)) back++;
+    out.ban = { ...out.ban, after: r.banishLeft, repl: !!repl && repl.id !== victim.id && !hand.some((c) => c !== victim && c.id === repl.id), back };
+    // the cards: a ✕ on each skill card replaces it in place and counts down; at zero the ✕s are gone
+    r = start(); r.levelQueue = 1; r.showLevelUp();
+    const q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    r.t += 1; const names0 = [...document.querySelectorAll('.lvl-back .card h3')].map((n) => n.firstChild.textContent.trim());
+    const ui = { bans: document.querySelectorAll('.lvl-back .card .ban').length, note: q('.lvl-ban').textContent };
+    q('.lvl-back .card .ban').click(); await wait(80); r.t += 1;
+    const names1 = [...document.querySelectorAll('.lvl-back .card h3')].map((n) => n.firstChild.textContent.trim());
+    ui.replaced = names1.length === 3 && names1[0] !== names0[0] && names1[1] === names0[1]; ui.note2 = q('.lvl-ban').textContent;
+    q('.lvl-back .card .ban').click(); await wait(80);
+    ui.none = document.querySelectorAll('.lvl-back .card .ban').length; ui.left = r.banishLeft;
+    document.querySelectorAll('.lvl-back').forEach((n) => n.remove()); r.levelPending = false;
+    out.banUi = ui;
+
+    app.exitRun(); app.engine.manual = false;
+    return out;
+  });
+  check('update 6: Gravefall and Soul Leech (weapons), Grave Ward and Dread Reach (passives), Necropolis and Vampiric Communion, all painted',
+    s.data.weapons === 'weapon,weapon' && s.data.passives === 'passive,passive' && s.data.evo === 'gravefall,legionCap,soulLeech,graveWard' && s.data.art, JSON.stringify(s.data));
+  check('passives: Grave Ward Lv2 takes 12% off a hit (20 → 17.6); Dread Reach Lv3 is +30% weapon area',
+    s.passives.ward === 0.88 && s.passives.took === 17.6 && s.passives.area === 1.3, JSON.stringify(s.passives));
+  check('Gravefall: a stone falls on the densest pack (not the lone foe) and lands after its shadow; Lv5 drops four, spread apart',
+    s.fall.n === 1 && s.fall.onPack && s.fall.hit >= 6 && s.fall.lone && s.fall.lv5.n === 4 && s.fall.lv5.minGap > 2, JSON.stringify(s.fall));
+  check('Necropolis: six stones stand as graves for 3 s; the slain beside one rise (+40 pp), elsewhere not',
+    s.necro.n === 6 && s.necro.standing && s.necro.near && !s.necro.far && s.necro.rose === 1 && !s.necro.after, JSON.stringify(s.necro));
+  check('Soul Leech: beams take the elite and the toughest foe, hold them, and heal the Shepherd within the bank\'s cap',
+    s.leech.beams === 2 && s.leech.elite && s.leech.toughest && s.leech.kept && s.leech.healed > 0 && s.leech.healed <= s.leech.cap, JSON.stringify(s.leech));
+  check('Soul Leech: the beam sears the foe it crosses, not one off its path; every beam takes the boss',
+    s.sear.on && s.sear.path && s.sear.off && s.boss === 'true,true,true', JSON.stringify({ sear: s.sear, boss: s.boss }));
+  check('Vampiric Communion: four beams that fork; at full HP the stolen life mends the most wounded minion',
+    s.vc.beams === 4 && s.vc.forks === 4 && s.vc.mended, JSON.stringify(s.vc));
+  check('Banish: two a run; a banished skill never returns; its replacement is not already on the table',
+    s.ban.left === 2 && s.ban.after === 1 && s.ban.repl && s.ban.back === 0, JSON.stringify(s.ban));
+  const U = s.banUi;
+  check('Banish on the cards: a ✕ on each skill card replaces it in place, the count goes down, and at zero the ✕s are gone',
+    U.bans === 3 && /2 left/.test(U.note) && U.replaced && /1 left/.test(U.note2) && U.none === 0 && U.left === 0, JSON.stringify(U));
+});
+check('update 6: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

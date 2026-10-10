@@ -310,6 +310,19 @@ export function skullGeometry() {
   ]);
 }
 
+/** Gravefall's tombstone (arsenal.js): a carved headstone on a plinth, its cross and skull glowing moonlight blue. */
+export function tombstoneGeometry() {
+  const stone = 0x5a6274, dark = 0x343a48, glow = 0xa9c8ff;
+  return merge([
+    P(Box(0.72, 0.9, 0.2), stone, { p: [0, 0.55, 0] }),
+    P(Cyl(0.36, 0.36, 0.2, 10), stone, { p: [0, 1.0, 0], r: [Math.PI / 2, 0, 0] }),
+    P(Box(0.95, 0.16, 0.4), dark, { p: [0, 0.08, 0.02] }),
+    P(Box(0.07, 0.4, 0.04), glow, { p: [0, 0.68, 0.11], e: 2 }),
+    P(Box(0.26, 0.07, 0.04), glow, { p: [0, 0.76, 0.11], e: 2 }),
+    ...mirror((x) => P(Sph(0.035, 4, 3), glow, { p: [0.09 * x, 1.05, 0.11], e: 2 })),
+  ]);
+}
+
 // ---------------------------------------------------------------- props (decor)
 export function propGeometry(type) {
   const stone = 0x2a3140, stone2 = 0x1d232f;
