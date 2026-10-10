@@ -211,7 +211,7 @@ A lean variant (4–5 generalists plus contractors) is possible. It roughly doub
 | **Apr 2027** | Monetization test | **Phase C starts 5 Apr** (+ Nordics). Full shop, Soul Pact, Soul Pass seasons, ads mediation tuning. Boss Rush v1. Replay verification live. | Purchases and ads stable. No economy exploits. |
 | **May 2027** | Launch readiness | Season 1–3 content complete (2-season buffer). Featuring nominations. Pre-registration. Press kit. Load test (100k CCU). **Go/no-go review 31 May – 4 Jun.** | All gates "Go", or written risk acceptance. |
 | **Jun 2027** | **Global launch (14 Jun)** | UA ramp, launch In-App Event, live-ops on-call rota. | Crash-free ≥ 99.5%, store rating ≥ 4.5. |
-| **Jul–Sep 2027** | Live S2–S4 | Liora (S2), Osric (S4), Nightmare difficulty, Relic Ascension, hero loadout presets, replay sharing. Coven development. | KPIs within `LIVEOPS.md` targets. |
+| **Jul–Sep 2027** | Live S2–S4 | Liora (S2), Osric (S4), Nightmare difficulty, Relic Ascension (both already in the prototype), hero loadout presets, replay sharing. Coven development. | KPIs within `LIVEOPS.md` targets. |
 | **Oct–Dec 2027** | Live S5–S7 | Halloween and winter events, **Covens (S6)**, Legion Raids development. | — |
 
 **If soft-launch gates slip:** global launch moves in 4-week steps (up to 8 weeks). The live-ops calendar shifts with it, because seasons are relative to launch.

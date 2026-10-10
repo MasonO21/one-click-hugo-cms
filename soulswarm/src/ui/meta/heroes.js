@@ -4,13 +4,13 @@ import { icon } from '../icons.js';
 import { relicArt, skillArt, talentArt } from '../art.js';
 import {
   HEROES, HERO_ORDER, HERO_MAX_STARS, SKILLS, RARITY_COLOR, RARITY_LABEL, RARITIES, RELICS, RELIC_SLOTS,
-  relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES, MASTERY,
+  relicValue, formatRelicValue, TALENTS, talentCost, SKINS, RITES, MASTERY, ASCENSION,
 } from '../../game/data.js';
 import { heroMastery } from '../../meta/mastery.js';
 import { riteIcon } from '../riteui.js';
 import {
   onChange, commit, computeLoadout, heroAction, heroNextCost, selectHero, equipRelic, upgradeTalent, notifications,
-  starterAvailable, equipSkin } from '../../meta/economy.js';
+  starterAvailable, equipSkin, ascendCost, canAscend, ascendRelic } from '../../meta/economy.js';
 import { portrait, bar, stars, tap, delegate, keepScroll } from './util.js';
 import { openStarter } from './panels.js';
 import { renderBestiary, openFoe } from './bestiary.js';
@@ -32,6 +32,20 @@ function masteryPanel(p, id) {
     ${m.max ? '' : bar(m.into / m.need)}
     <small class="t-dim ms-how">Every run with ${hero.name} earns mastery XP (the run's Soul Pass XP).</small>
     <div class="ms-track">${rows.join('')}</div>
+  </div>`;
+}
+
+/** Relic Ascension (Lv10 relics): five stars, the shards and gold the next one costs, and its stat after. */
+function ascensionPanel(p, r) {
+  const cost = ascendCost(r), s = r.stars || 0, stars = Array.from({ length: ASCENSION.max }, (_, i) => `<i class="${i < s ? 'on' : ''}">★</i>`).join('');
+  if (!cost) return `<div class="rd-asc is-max"><div class="rd-stars">${stars}</div><div class="rd-next">Fully ascended</div></div>`;
+  const next = { ...r, stars: cost.star }, okS = (r.dups || 0) >= cost.shards, okG = p.gold >= cost.gold;
+  return `<div class="rd-asc">
+    <div class="rd-stars">${stars}</div>
+    <div class="rd-next t-dim">Ascend to ★${cost.star}: ${formatRelicValue(next)}</div>
+    <button class="btn btn-primary btn-block rd-asc-b ${okS && okG ? '' : 'is-short'}" data-a="asc">Ascend ★${cost.star}
+      <span class="rd-cost"><b class="${okS ? '' : 'short'}">${icon('shard')}${r.dups || 0}/${cost.shards}</b><b class="${okG ? '' : 'short'}">${icon('gold')}${fmt(cost.gold)}</b></span></button>
+    <small class="t-dim">Shards are duplicates of this relic found after Lv10.</small>
   </div>`;
 }
 
@@ -64,7 +78,7 @@ export function createHeroes(ctx) {
     const p = app.profile;
     const n = notifications(p);
     tabsEl.innerHTML = ['heroes', 'relics', 'talents', 'bestiary'].map((k) =>
-      `<button class="subtab ${sub === k ? 'on' : ''}" data-sub="${k}">${{ heroes: 'Heroes', relics: 'Relics', talents: 'Talents', bestiary: 'Bestiary' }[k]}${(k === 'heroes' && n.heroes) || (k === 'bestiary' && n.bestiary) || (k === 'talents' && p.flags.coach === 'talent') ? '<i class="badge-dot"></i>' : ''}</button>`).join('');
+      `<button class="subtab ${sub === k ? 'on' : ''}" data-sub="${k}">${{ heroes: 'Heroes', relics: 'Relics', talents: 'Talents', bestiary: 'Bestiary' }[k]}${(k === 'heroes' && n.heroes) || (k === 'relics' && n.relics) || (k === 'bestiary' && n.bestiary) || (k === 'talents' && p.flags.coach === 'talent') ? '<i class="badge-dot"></i>' : ''}</button>`).join('');
     keepScroll(el, () => {
       root.className = 'hz hz-' + sub;
       root.innerHTML = sub === 'heroes' ? renderRoster(p) : sub === 'relics' ? renderRelics(p) : sub === 'talents' ? renderTalents(p) : renderBestiary(p);
@@ -194,7 +208,8 @@ export function createHeroes(ctx) {
     const eq = p.equipped.includes(r.uid);
     return `<button class="relic r-${r.rarity} ${cls} ${eq ? 'is-eq' : ''}" data-act="relic" data-uid="${r.uid}" style="--rc:${c}">
       <span class="relic-ic">${relicArt(r.type)}</span>
-      <span class="relic-lv tnum">Lv ${r.level || 1}</span>
+      <span class="relic-lv tnum">${r.stars ? `<i class="relic-st">★${r.stars}</i>` : `Lv ${r.level || 1}`}</span>
+      ${canAscend(p, r) ? '<i class="badge-dot relic-dot"></i>' : ''}
       ${eq ? `<span class="relic-eq">${icon('check')}</span>` : ''}
     </button>`;
   };
@@ -214,7 +229,7 @@ export function createHeroes(ctx) {
       </div>
       <div class="sec-h"><span class="sec-t t-display">Inventory</span><span class="sec-r inv-counts">${counts.map(([r, c]) => `<span class="inv-c" style="--rc:${RARITY_COLOR[r]}" title="${RARITY_LABEL[r]}"><i></i>${c}</span>`).join('')}</span></div>
       <div class="relic-grid">${inv.map((r) => relicTile(r, p)).join('')}</div>
-      <div class="mhint t-dim">${icon('info')} Duplicates merge into +1 level (+15% stat). Summon relics at the Soul Altar.</div>`;
+      <div class="mhint t-dim">${icon('info')} Duplicates merge into +1 level (+15% stat). Past Lv10 they become ascension shards: ascend a Lv10 relic up to ★5 (+10% stat each). Summon relics at the Soul Altar.</div>`;
   }
   function openRelic(uid) {
     const p = app.profile;
@@ -229,9 +244,9 @@ export function createHeroes(ctx) {
       body.innerHTML = `
         <div class="rd-art" style="--rc:${c}"><span class="rd-ic">${relicArt(r.type)}</span></div>
         <div class="rd-name t-display">${d.name}</div>
-        <div class="hd-tags">${rarityPill(r.rarity)}<span class="pill tnum">Lv ${r.level || 1}/10</span></div>
+        <div class="hd-tags">${rarityPill(r.rarity)}<span class="pill tnum">Lv ${r.level || 1}/10</span>${r.stars ? `<span class="pill pill-gold tnum">★${r.stars}</span>` : ''}</div>
         <div class="rd-val" style="--rc:${c}">${formatRelicValue(r)}</div>
-        ${(r.level || 1) < 10 ? `<div class="rd-next t-dim">Next duplicate: ${formatRelicValue(next)}</div>` : '<div class="rd-next t-dim">Max level reached</div>'}
+        ${(r.level || 1) < 10 ? `<div class="rd-next t-dim">Next duplicate: ${formatRelicValue(next)}</div>` : ascensionPanel(p, r)}
         ${replaced ? `<div class="rd-warn">${icon('info')} Slots full: replaces ${RELICS[replaced.type].name}</div>` : ''}
         <button class="btn ${eq ? 'btn-ghost' : 'btn-soul'} btn-lg btn-block" data-a="eq">${eq ? 'Unequip' : 'Equip'}</button>`;
     };
@@ -239,6 +254,18 @@ export function createHeroes(ctx) {
     const off = onChange(draw);
     const m = modal({ body, cls: 'mm-relic', onClose: off });
     body.addEventListener('click', (e) => {
+      if (e.target.closest('[data-a="asc"]')) { // Relic Ascension
+        const r = p.relics.find((x) => x.uid === uid), cost = r && ascendCost(r);
+        if (!cost) return;
+        if ((r.dups || 0) < cost.shards) { tap(app, 'warning', null); toast(`Ascending needs ${cost.shards} shard${cost.shards > 1 ? 's' : ''}: duplicates of this relic at Lv10`); return; }
+        if (p.gold < cost.gold) { tap(app, 'warning', null); toast(`Ascending needs ${fmt(cost.gold)} gold`); return; }
+        const star = ascendRelic(p, uid);
+        if (!star) return;
+        app.audio.sfx('levelup'); app.haptic('success');
+        commit(p);
+        toast(`${RELICS[r.type].name} ascended to ★${star}`);
+        return;
+      }
       if (!e.target.closest('[data-a="eq"]')) return;
       const res = equipRelic(p, uid);
       tap(app, 'medium', 'select');

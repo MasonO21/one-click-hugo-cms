@@ -84,7 +84,7 @@ function migrate(p) {
   for (const k of Object.keys(out.quests.progress)) out.quests.progress[k] = int(out.quests.progress[k], 0);
   const uids = new Set();
   out.relics = out.relics.filter((r) => r && RELICS[r.type] && RARITIES.includes(r.rarity) && r.uid && !uids.has(r.uid) && uids.add(r.uid))
-    .map((r) => ({ ...r, level: int(r.level, 1, 1, 10) }));
+    .map((r) => ({ ...r, level: int(r.level, 1, 1, 10), stars: int(r.stars, 0, 0, 5), dups: int(r.dups, 0, 0, 999) })); // Relic Ascension: stars and shards
   out.equipped = Array.from({ length: RELIC_SLOTS }, (_, i) => { const u = out.equipped[i]; return uids.has(u) && out.equipped.indexOf(u) === i ? u : null; });
   out.relicSeq = Math.max(int(out.relicSeq, 1, 1), ...out.relics.map((r) => (parseInt(String(r.uid).slice(1), 10) || 0) + 1)); // new relics never reuse an id
   out.chapter.unlocked = int(out.chapter.unlocked, 1, 1, CHAPTERS.length); out.chapter.selected = int(out.chapter.selected, 1, 1, CHAPTERS.length);

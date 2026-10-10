@@ -28,6 +28,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 |---|---|---|---|
 | Run rewards (formula in GDD §10) | 3,124 (Ch1 clear) to 5,714 (Ch5 clear); ~1,300–1,750 for a death at 4:00. Nightmare ×1.75, Torment ×2.5 (a Ch5 Torment clear ≈ 14,300) | **Talents** (6 talents, 125 levels) | 1,358,940 to max everything |
 | Daily quests | 2,700 / day | Talent level cap = 10 + 6 × chapters cleared (Planned) | Paces spending |
+| | | **Relic Ascension** (GDD §12.1, Update 11) | 150,000 per relic for ★1–★5 (5k / 10k / 20k / 40k / 75k), plus 9 duplicate shards; 450,000 for three equipped relics |
 | 7-day login | 7,000 / cycle | | |
 | Soul Pass free track | 20,800 / season | | |
 | Starter Pack | 10,000 (one-time) | | |
@@ -37,7 +38,7 @@ Our design stance: **monetise speed, convenience, collection and cosmetics; neve
 | New account | 1,500 (one-time) | | |
 | Bestiary milestones (GDD §5.2) | 2,000 per entry's first milestone, 26,000 in all (one-time) | | |
 
-**Risk:** an engaged player (4–6 runs a day) maxes all talents in roughly 2–3 months, after which gold has no sink. Nightmare and Torment (GDD §8.2) pay ×1.75 / ×2.5 run gold, and that stacks with Blood Moon (×2) and the rewarded-ad double, so a Torment Blood Moon clear with the ad pays ×10 the Normal base. That is acceptable only because Torment players are endgame players whose talents are mostly bought already; it makes the Season 4 gold sink more urgent, not less. Post-launch sinks (Relic Ascension, legion cosmetics bought with gold) are on the live-ops roadmap for Season 4 (see `LIVEOPS.md`). Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
+**Risk:** an engaged player (4–6 runs a day) maxes all talents in roughly 2–3 months, after which gold has no sink. Nightmare and Torment (GDD §8.2) pay ×1.75 / ×2.5 run gold, and that stacks with Blood Moon (×2) and the rewarded-ad double, so a Torment Blood Moon clear with the ad pays ×10 the Normal base. That is acceptable only because Torment players are endgame players whose talents are mostly bought already; it makes the Season 4 gold sink more urgent, not less. **Relic Ascension is in the build (Update 11):** 150,000 gold per relic for ★1–★5, about 450,000 for a full set of three, which absorbs a few weeks of an endgame Torment player's gold; legion cosmetics bought with gold remain on the live-ops roadmap. Watch the median gold balance of D60+ players. If it climbs without stopping, the sink is late.
 
 ### 2.2 Soul Gems (premium)
 

@@ -5,6 +5,7 @@ import {
   RELICS, RELIC_TYPES, RELIC_SLOTS, relicValue, RARITIES,
   TALENTS, talentCost, SKUS, GEM_SHOP, ALTAR, PASS_TIERS, PASS_XP_PER_TIER, passReward,
   QUEST_DAILY, QUEST_SLOTS, QUEST_POOL, LOGIN_REWARDS, ENERGY_MAX, ENERGY_REGEN_SEC, ENERGY_COST, CHAPTERS, SKINS, BASE, TRIAL, MUTATORS, BLOOD_MOON, WEEKLY_CHEST,
+  ASCENSION,
 } from '../game/data.js';
 import { saveProfile, todayKey } from './save.js';
 import { now, today, dayTime } from './clock.js';
@@ -65,6 +66,8 @@ export function spend(p, cur, amt) {
 export function addRelic(p, type, rarity) {
   const existing = p.relics.find((r) => r.type === type && r.rarity === rarity);
   if (existing) {
+    // past Lv10 a duplicate becomes an ascension shard (Relic Ascension) instead of being lost
+    if ((existing.level || 1) >= 10) { existing.dups = Math.min(999, (existing.dups || 0) + 1); return { relic: existing, merged: true, overflow: true }; }
     existing.level = Math.min(10, (existing.level || 1) + 1);
     return { relic: existing, merged: true };
   }
@@ -102,8 +105,8 @@ export function grant(p, rewards = {}) {
   }
   if (rewards.relic) {
     const rarity = rollRelicRarity(rewards.relic);
-    const { relic, merged } = addRelic(p, pick(RELIC_TYPES), rarity);
-    items.push({ kind: 'relic', relic, merged, rarity, amount: 1 });
+    const { relic, merged, overflow } = addRelic(p, pick(RELIC_TYPES), rarity);
+    items.push({ kind: 'relic', relic, merged, overflow, rarity, amount: 1 });
   }
   if (rewards.skin) {
     p.skins[rewards.skin] = true; items.push({ kind: 'skin', skin: rewards.skin, amount: 1 });
@@ -180,6 +183,22 @@ export function equipRelic(p, uid) {
   p.equipped[slot] = uid;
   return 'equipped';
 }
+/** Relic Ascension: what the next star costs ({ star, shards, gold }), or null (below Lv10, or fully ascended). */
+export function ascendCost(r) {
+  const s = r.stars || 0;
+  if ((r.level || 1) < 10 || s >= ASCENSION.max) return null;
+  return { star: s + 1, shards: ASCENSION.shards[s], gold: ASCENSION.gold[s] };
+}
+export const canAscend = (p, r) => { const c = ascendCost(r); return !!c && (r.dups || 0) >= c.shards && p.gold >= c.gold; };
+/** Ascend a Lv10 relic one star: spends its shards and the gold. Returns the new star count, or 0. */
+export function ascendRelic(p, uid) {
+  const r = p.relics.find((x) => x.uid === uid);
+  if (!r || !canAscend(p, r)) return 0;
+  const c = ascendCost(r);
+  if (!spend(p, 'gold', c.gold)) return 0;
+  r.dups -= c.shards; r.stars = c.star;
+  return r.stars;
+}
 export function upgradeTalent(p, key) {
   const lv = p.talents[key] || 0;
   if (lv >= TALENTS[key].max) return false;
@@ -217,8 +236,8 @@ export function summon(p, count, payWith) {
   if (count >= 10 && !rolls.some((r) => r === 'epic' || r === 'legendary')) rolls[rolls.length - 1] = 'epic';
 
   const results = rolls.map((rarity) => {
-    const { relic, merged } = addRelic(p, pick(RELIC_TYPES), rarity);
-    const res = { rarity, relic, merged, shards: null };
+    const { relic, merged, overflow } = addRelic(p, pick(RELIC_TYPES), rarity);
+    const res = { rarity, relic, merged, overflow, shards: null };
     const drops = ALTAR.shardDrops[rarity];
     if (drops) {
       const hid = pick(Object.keys(drops));
@@ -586,5 +605,6 @@ export function notifications(p) {
     heroes: HERO_ORDER.filter((id) => { const c = heroNextCost(p, id); return c && p.heroes[id].shards >= c; }).length,
     bestiary: bestiaryClaimable(p), // milestones ready (the Heroes tab dot)
     grimoire: newPages(p).length, // pages unlocked since the Grimoire was last opened (the chip's dot)
+    relics: p.relics.filter((r) => p.equipped.includes(r.uid) && canAscend(p, r)).length, // equipped relics ready to ascend (the Relics sub-tab dot)
   };
 }

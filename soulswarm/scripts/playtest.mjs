@@ -3570,6 +3570,64 @@ errs = await session(async (page) => {
 });
 check('update 10: no runtime errors', !errs.length, errs[0] || '');
 
+// 45. Update 11, Relic Ascension (ASCENSION in data.js, economy.ascendRelic): a duplicate of a Lv10 relic becomes an
+//     ascension shard instead of being lost; a Lv10 relic ascends ★1 → ★5 (+10% stat each) for shards and gold.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), save = await import('/src/meta/save.js');
+    const out = {};
+    // shards: duplicates past Lv10 are kept as shards (never lost); below Lv10 they still level the relic
+    { const t = save.newProfile(); t.relics = []; t.equipped = [null, null, null];
+      for (let i = 0; i < 10; i++) eco.addRelic(t, 'crown', 'epic');
+      const r = t.relics[0], lv = r.level, d0 = r.dups || 0;
+      const a = eco.addRelic(t, 'crown', 'epic'), b = eco.addRelic(t, 'crown', 'epic');
+      out.shards = { lv, d0, dups: r.dups, overflow: a.overflow && b.overflow && a.merged, level: r.level, count: t.relics.length }; }
+    // ascension: costs, the stat bonus, refusals (below Lv10, short of shards or gold), the cap at ★5
+    { const t = save.newProfile(); t.relics = [{ uid: 'r1', type: 'crown', rarity: 'epic', level: 10, dups: 20 }, { uid: 'r2', type: 'heart', rarity: 'rare', level: 9, dups: 5 }]; t.equipped = ['r1', null, null];
+      const r = t.relics[0], v0 = D.relicValue(r), L0 = eco.computeLoadout(t).dmgMul;
+      t.gold = 4999; const poor = eco.ascendRelic(t, 'r1');
+      t.gold = 1e6; const low = eco.ascendRelic(t, 'r2');
+      const g0 = t.gold, stars = [];
+      for (let i = 0; i < 6; i++) stars.push(eco.ascendRelic(t, 'r1'));
+      out.asc = { poor, low, stars: stars.join(), spent: g0 - t.gold, shardsLeft: r.dups, v: +(D.relicValue(r) / v0).toFixed(2), dmgUp: eco.computeLoadout(t).dmgMul > L0, cost: eco.ascendCost(r) };
+      const u = save.newProfile(); u.relics = [{ uid: 'r3', type: 'eye', rarity: 'common', level: 10, dups: 0 }]; u.gold = 1e6;
+      out.asc.noShard = eco.ascendRelic(u, 'r3'); }
+    // the save keeps stars and shards in range
+    { const raw = save.newProfile(); raw.relics = [{ uid: 'r5', type: 'crown', rarity: 'rare', level: 10, stars: '9', dups: -4 }, { uid: 'r6', type: 'boots', rarity: 'epic', level: 3, stars: 2.7, dups: '12' }];
+      localStorage.setItem('soulswarm.save.v1', JSON.stringify(raw)); const L = save.loadProfile();
+      out.save = L.relics.map((r) => `${r.uid}:${r.stars}/${r.dups}`).join(); }
+    // the UI: the Relics dot when an equipped relic can ascend, the stars on the tile, the sheet's button ascends it
+    p.flags.tutorialDone = true; p.flags.coach = ''; p.gold = 30000;
+    p.relics = [{ uid: 'r90', type: 'crown', rarity: 'epic', level: 10, stars: 2, dups: 3 }, { uid: 'r91', type: 'heart', rarity: 'rare', level: 6 }]; p.equipped = ['r90', 'r91', null];
+    eco.commit(p); app.meta.refresh(); await wait(150);
+    q('[data-nav="heroes"]').click(); await wait(200); q('[data-sub="relics"]').click(); await wait(300);
+    out.ui = { note: eco.notifications(p).relics, subDot: !!q('[data-sub="relics"] .badge-dot'), tile: q('.relic-grid [data-uid="r90"] .relic-st')?.textContent, tileDot: !!q('.relic-grid [data-uid="r90"] .relic-dot') };
+    q('.relic-grid [data-uid="r90"]').click(); await wait(300);
+    out.ui.stars = document.querySelectorAll('.mm-relic .rd-stars i.on').length;
+    q('.mm-relic [data-a="asc"]').click(); await wait(200);
+    out.ui.after = { stars: p.relics[0].stars, dups: p.relics[0].dups, gold: p.gold, lit: document.querySelectorAll('.mm-relic .rd-stars i.on').length, short: !!q('.mm-relic .rd-asc-b.is-short') };
+    q('.mm-relic [data-a="asc"]').click(); await wait(200); out.ui.refused = p.relics[0].stars === 3 && !!q('.toast');
+    document.querySelectorAll('.modal-back').forEach((n) => n.remove());
+    // the Altar reveal and the reward tile read "+1 shard" past Lv10
+    p.relics = D.RELIC_TYPES.map((type, i) => ({ uid: 'r8' + i, type, rarity: 'common', level: 10, dups: 0 })); p.equipped = ['r80', null, null]; // every Common at Lv10: any drop overflows
+    const items = eco.grant(p, { relic: 'common' });
+    const it = items.find((x) => x.kind === 'relic');
+    const { rewardTile } = await import('/src/ui/dom.js');
+    out.reward = { overflow: !!(it && it.overflow), dups: p.relics.reduce((a, r) => a + (r.dups || 0), 0), tile: !!it && /\+1 shard/.test(rewardTile(it)) };
+    return out;
+  });
+  check('ascension: duplicates level a relic to 10, then become ascension shards (never lost, no new relic)',
+    s.shards.lv === 10 && s.shards.d0 === 0 && s.shards.dups === 2 && s.shards.overflow && s.shards.level === 10 && s.shards.count === 1, JSON.stringify(s.shards));
+  check('ascension: ★1-★5 for 1/1/2/2/3 shards and 5k/10k/20k/40k/75k gold (+50% stat at ★5); refused below Lv10, short of gold or shards, and past ★5',
+    s.asc.poor === 0 && s.asc.low === 0 && s.asc.stars === '1,2,3,4,5,0' && s.asc.spent === 150000 && s.asc.shardsLeft === 11 && s.asc.v === 1.5 && s.asc.dmgUp && s.asc.cost === null && s.asc.noShard === 0, JSON.stringify(s.asc));
+  check('ascension: the save keeps stars within 0-5 and shards within 0-999', s.save === 'r5:5/0,r6:2/12', s.save);
+  check('ascension UI: a dot on Relics when an equipped relic can ascend, stars on its tile, the sheet ascends it (then dims when short) and a short tap explains',
+    s.ui.note === 1 && s.ui.subDot && s.ui.tile === '★2' && s.ui.tileDot && s.ui.stars === 2 && s.ui.after.stars === 3 && s.ui.after.dups === 1 && s.ui.after.gold === 10000 && s.ui.after.lit === 3 && s.ui.after.short && s.ui.refused, JSON.stringify(s.ui));
+  check('ascension: a reward relic past Lv10 reads "+1 shard"', s.reward.overflow && s.reward.dups === 1 && s.reward.tile, JSON.stringify(s.reward));
+});
+check('update 11: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

@@ -1131,3 +1131,19 @@
 .ms-rw svg { width: 13px; height: 13px; }
 .ms-r.on .ms-rw { opacity: .45; }
 .hd-master { color: #ffd77a; font-weight: 800; text-shadow: 0 0 8px rgba(245,195,92,.6); }
+
+/* Relic Ascension (heroes.js): a star badge on the tile, five stars and the cost on the relic sheet */
+.relic-st { font-style: normal; color: #ffd77a; text-shadow: 0 0 6px rgba(245,195,92,.7); }
+.relic-dot { position: absolute; top: 9px; left: 9px; }
+.rd-asc { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; clip-path: var(--bevel-sm); background: linear-gradient(180deg, rgba(245,195,92,.1), rgba(255,255,255,.03)); }
+.rd-stars { display: flex; gap: 6px; font-size: 22px; line-height: 1; }
+.rd-stars i { font-style: normal; color: rgba(255,255,255,.14); }
+.rd-stars i.on { color: #ffd77a; text-shadow: 0 0 10px rgba(245,195,92,.8); }
+.rd-asc .rd-next { margin: 0; }
+.rd-asc small { font-size: 11px; text-align: center; }
+.rd-asc-b { display: flex; justify-content: center; align-items: center; gap: 10px; }
+.rd-asc-b.is-short { opacity: .6; filter: saturate(.6); }
+.rd-cost { display: inline-flex; gap: 8px; font-variant-numeric: tabular-nums; }
+.rd-cost b { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; }
+.rd-cost b.short { color: #ff8a8a; }
+.rd-cost svg { width: 14px; height: 14px; }

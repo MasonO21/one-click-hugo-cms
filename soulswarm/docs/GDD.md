@@ -15,7 +15,7 @@ The prototype in `src/` is a playable browser build (Three.js, with Capacitor sh
 |---|---|---|
 | Run | Floating joystick (plus WASD), auto-firing weapons, Raise Chance minions in 7 variants plus Champions (§4.2), legion up to 400 with the overflow fade (§4.3), Soul Gates (+N / ×2 / ×3 / −N / ÷2), Soul Nova with its wind-up (§4.4), kill streaks and Soul Frenzy (§4.7), hit-stop, the level-up pulse, swarm rings, Ghoul packs, Brute slams, Witch lobs, Grave Wraith dives and Corpse Priest raisings, chapter modifiers and hazards (§5, §8), 4 elites (8 in Ch5) with 1-of-3 Relic Chests and elite affixes (Warded, Splitter, Vampiric, Hasted, Commander; §5.1), mid-run events (Soul Thief, Shrine of Souls with 60 s blessings, Cursed Coffin; §4.8), gate guards and soul bursts, five chapter bosses (Gravemaw, Pyrexa, Vaulkar, Azrathel, Vesperine: a sealed arena, three phases, ring slams, gap rings, spiral, a soft enrage, and a chapter twist and signature attack each; §6), level-up cards with rerolls for 50 gems or an ad and 2 banishes (§4.6), **Soul Urns** with five new offerings (§4.10), **the Grimoire**: 8 run-start pages unlocked by account goals (§4.9), 9 weapon evolutions, revive (ad or 60 gems; Mordrake gets 1 free), **Hero Rites**: one signature active ability per hero on its own RITE button (§11.1), each **ascending** at Hero Mastery rank 5 (§11.2), **the beginner tutorial run "The Waking"** with its coach (§16), accessibility settings (§17) | Adaptive music stems (§15), the remaining accessibility options (§17) |
 | Content | 5 chapters, each with its own boss (§6), plus Endless Abyss, **Nightmare and Torment difficulties** for every chapter (§8.2), 7 enemy types plus elites (the Grave Wraith and the Corpse Priest joined on 2026-10-09, §5), 9 weapons, 10 passives, 9 evolutions (Gravefall, Soul Leech, Grave Ward and Dread Reach joined on 2026-10-10, §7), **4 Soul Unions** (§7.4), 7 heroes (1★–5★) each with a Rite (Grimsby Lanternjaw and Osric the Bone Abbot joined on 2026-10-08, §11), 8 relic types × 4 rarities, 6 talents, painted chapter art on the home chapter card, the run intro card and the results header (§8) | Endless leaderboards, further heroes (`LIVEOPS.md`) |
-| Meta and economy | **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **The Bestiary** (§5.2: 13 painted entries, kills per foe and boss, 39 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, Relic Ascension, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
+| Meta and economy | **Hero Mastery** (§11.2: every hero ranks 1–10 by being played, with perks, the Ascended Rite and a reward per rank), **Relic Ascension** (§12.1: Lv10 relics ascend ★1–★5 for gold and spare duplicates), **The Bestiary** (§5.2: 13 painted entries, kills per foe and boss, 39 one-time milestones), Soul Altar (disclosed odds, 60-pull pity, 10-pull Epic guarantee, free daily summon), Soul Pass Season I (30 tiers), 6 rotating daily quests, 7-day login, the Daily Trial (§8.1), energy, all 9 SKUs (simulated), gem shop, Soul Pact, Starter Pack, daily free chest, rewarded-ad placements, account level | Talent level cap by chapters cleared, quest all-clear bonus, weekly quest chest, pass catch-up tiers, Pact grace days, server-side economy and cloud save (`PRODUCTION_ROADMAP.md`) |
 | Live ops and social | Blood Moon weekends, weekly quest chest, **Boss Rush** (the weekly Hollow Court, §8.3), the **share card** (§10.1) | Boss Rush leaderboard, holiday events, leaderboards and leagues, Covens (clans), Legion Raids, replay clips, a store link on the share card |
 
 Everything below describes the build unless it is marked **Planned**.
@@ -973,7 +973,7 @@ Every hero passes the rule at rank 10. A fully mastered hero survives about 4–
 
 ## 12. Relics (gear)
 
-Equip 3. There are 8 types and 4 rarities. Rarity multiplies the Common value (×1 / ×2 / ×3.5 / ×6). **Duplicates** (same type and same rarity) add +1 relic level. Each level adds +15% of that relic's stat. **Max level 10** (×2.35). New relics auto-equip into an empty slot. New accounts start with a Common Crown of Thorns and a Rare Lantern of the Lost equipped.
+Equip 3. There are 8 types and 4 rarities. Rarity multiplies the Common value (×1 / ×2 / ×3.5 / ×6). **Duplicates** (same type and same rarity) add +1 relic level. Each level adds +15% of that relic's stat. **Max level 10** (×2.35). Past Lv10 a duplicate becomes an **ascension shard** for that relic (§12.1); before Update 11 it was lost. New relics auto-equip into an empty slot. New accounts start with a Common Crown of Thorns and a Rare Lantern of the Lost equipped.
 
 | Relic | Stat | Common | Rare | Epic | Legendary |
 |---|---|---|---|---|---|
@@ -985,6 +985,25 @@ Equip 3. There are 8 types and 4 rarities. Rarity multiplies the Common value (�
 | Grave Coin | Gold | +6% | +12% | +21% | +36% |
 | Hourglass of Ash | Attack speed | +3% | +6% | +10.5% | +18% |
 | Abyss Eye | Nova charge | +5% | +10% | +17.5% | +30% |
+
+### 12.1 Relic Ascension (Update 11)
+
+The endgame gold sink, and a home for late duplicates. Numbers live in `ASCENSION` (`data.js`), the logic in `economy.js` (`addRelic`, `ascendCost`, `ascendRelic`).
+- **Shards:** a duplicate of a **Lv10** relic (same type and rarity) becomes one of its **ascension shards** (`relic.dups`, up to 999) instead of being lost. The Altar reveal reads "+1 Ascension shard" and a reward tile "+1 shard".
+- **Stars:** a Lv10 relic ascends **★1 → ★5**; each star adds **+10% of its stat** (×1.5 at ★5, on top of the ×2.35 of Lv10), so a Lv10 ★5 Legendary Crown of Thorns gives +106% damage instead of +71%.
+
+| Star | Shards | Gold |
+|---|---|---|
+| ★1 | 1 | 5,000 |
+| ★2 | 1 | 10,000 |
+| ★3 | 2 | 20,000 |
+| ★4 | 2 | 40,000 |
+| ★5 | 3 | 75,000 |
+| **All five** | **9** | **150,000** |
+
+- **The pace:** a Common relic sees duplicates often (60% of pulls, 8 types), so a first star comes soon after Lv10; an Epic needs 19 copies for ★5 (10 to Lv10, then 9 shards); a Legendary ★5 is a whale's chase (19 copies at 2% a pull, with pity). The 150,000 gold per relic (450,000 for three equipped) is what an endgame Torment player earns in a few weeks, which is the point (`MONETIZATION.md` §2.1).
+- **UI:** the relic tile shows ★n in place of the level once ascended, with a dot when an *equipped* relic can ascend (that dot also lights the Relics sub-tab and the Heroes tab); the relic sheet of a Lv10 relic shows the five stars, the next star's stat and its cost (shards and gold, the short one in red; the button dims, and a tap explains what is missing).
+- **Save:** stars are kept within 0–5 and shards within 0–999.
 
 ---
 

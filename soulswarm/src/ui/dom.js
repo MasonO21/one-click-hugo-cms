@@ -78,7 +78,7 @@ export function rewardTile(it, i = 0) {
     case 'relic':
       color = RARITY_COLOR[it.rarity];
       ic = relicArt(it.relic.type);
-      label = RELICS[it.relic.type].name; sub = `${RARITY_LABEL[it.rarity]}${it.merged ? ' · Lv ' + it.relic.level : ''}`; break;
+      label = RELICS[it.relic.type].name; sub = `${RARITY_LABEL[it.rarity]}${it.overflow ? ' · +1 shard' : it.merged ? ' · Lv ' + it.relic.level : ''}`; break;
     case 'skin':
       ic = `<span style="color:#ffd04a">${icon('crown')}</span>`; label = SKINS[it.skin].name; sub = 'Exclusive skin'; color = '#ffd04a'; break;
     case 'pass':

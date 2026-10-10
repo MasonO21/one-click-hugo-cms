@@ -641,7 +641,11 @@ export const RELICS = {
 };
 export const RELIC_TYPES = Object.keys(RELICS);
 export const RELIC_SLOTS = 3;
-export const relicValue = (r) => RELICS[r.type].base * RARITY_MULT[r.rarity] * (1 + 0.15 * ((r.level || 1) - 1));
+// Relic Ascension (Update 11; economy.ascendRelic): a Lv10 relic ascends ★1 → ★5, each star +`per` of its stat. A duplicate
+// of a Lv10 relic becomes one of its ascension shards (relic.dups) instead of being lost; star n costs shards[n-1] shards
+// and gold[n-1] gold (150,000 gold and 9 shards for all five: the endgame gold sink).
+export const ASCENSION = { max: 5, per: 0.1, shards: [1, 1, 2, 2, 3], gold: [5000, 10000, 20000, 40000, 75000] };
+export const relicValue = (r) => RELICS[r.type].base * RARITY_MULT[r.rarity] * (1 + 0.15 * ((r.level || 1) - 1)) * (1 + ASCENSION.per * (r.stars || 0));
 export const formatRelicValue = (r) => {
   const d = RELICS[r.type]; const v = relicValue(r);
   return d.fmt === 'pct' ? `+${Math.round(v * 100)}% ${d.text}` : `+${Math.round(v)} ${d.text}`;

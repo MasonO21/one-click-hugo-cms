@@ -180,7 +180,7 @@ export function reveal(app, results, { again, againCount = 1, payFor } = {}) {
   const lv = new Map(); const shown = new Array(results.length);
   for (let i = results.length - 1; i >= 0; i--) {
     const r = results[i];
-    if (!r.merged) { shown[i] = 1; continue; }
+    if (!r.merged || r.overflow) { shown[i] = 1; continue; } // past Lv10 a duplicate is an ascension shard: no level shown
     const v = lv.has(r.relic.uid) ? lv.get(r.relic.uid) : r.relic.level;
     shown[i] = v; lv.set(r.relic.uid, v - 1);
   }
@@ -196,7 +196,7 @@ export function reveal(app, results, { again, againCount = 1, payFor } = {}) {
           <span class="rv-ic">${relicArt(r.relic.type)}</span>
           <span class="rv-name">${RELICS[r.relic.type].name}</span>
           <span class="rv-rar">${RARITY_LABEL[r.rarity]}</span>
-          ${r.merged ? `<span class="rv-lv">Lv up! ${shown[i]}</span>` : '<span class="rv-new">New</span>'}
+          ${r.overflow ? '<span class="rv-lv">+1 Ascension shard</span>' : r.merged ? `<span class="rv-lv">Lv up! ${shown[i]}</span>` : '<span class="rv-new">New</span>'}
           ${sh ? `<span class="rv-sh" style="color:${sh.css}">${icon('shard')}<b>${multi ? '' : sh.name + ' '}×${r.shards.amount}</b></span>` : ''}
         </div>
       </div>
