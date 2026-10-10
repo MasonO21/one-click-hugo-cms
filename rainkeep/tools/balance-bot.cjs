@@ -54,7 +54,7 @@ const HOURS = Number(process.argv[3] || 8);
     const qLog = []; { const f = A.claimquest; A.claimquest = () => { const q0 = S.quest; f(); if (S.quest > q0) qLog.push(`${q0}@${Math.round(S.time)}s`); }; }
     const COLLECT = NO.includes('surplus') ? 0 : Number(new URLSearchParams(location.search).get('collect') || 5); let lastCollect = -999; const incPicks = [];
     let idleSecs = 0; const idleLog = []; let lastSpire = -999, lastSpireTry = -999;
-    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 }; const cl = { n: 0, places: [0, 0, 0], swept: 0 }; const op = { raised: 0, reinf: 0 }; const tr = { sent: 0 }; const dc = {}; const dy = { n: 0 }; const pc = { gifts: 0, pacts: 0 }; const dr = {}; const jr = { sent: 0 }; const ck = {}; const dg = { layers: 0, digs: 0, charges: 0 }; const fw = { chests: 0 }; const pw = []; let pwH = -1; const kn = { used: {} }; const lvh = { attacks: 0, ranks: [] }; const tw = { swaps: 0 };
+    const taleTry = {}; const cx = { runs: 0, wins: 0, depth: 0 }; const sg = { n: 0, waves: 0, full: 0, kings: 0, by: [] }; const iv = { sent: 0 }; let hlGot = 0; const fs = { casts: 0, caught: 0 }; const cl = { n: 0, places: [0, 0, 0], swept: 0 }; const op = { raised: 0, reinf: 0 }; const tr = { sent: 0 }; const dc = {}; const dy = { n: 0 }; const pc = { gifts: 0, pacts: 0 }; const dr = {}; const jr = { sent: 0 }; const ck = {}; const dg = { layers: 0, digs: 0, charges: 0 }; const fw = { chests: 0 }; const pw = []; let pwH = -1; const kn = { used: {} }; const lvh = { attacks: 0, ranks: [] }; const tw = { swaps: 0, met: 0, answered: 0, nocand: 0, weak: 0 };
     const team_log = []; let sickSecs = 0, popSecs = 0, thirstSecs = 0, dormSecs = 0, lastFightTry = -999, ttype = 0, lastWin = 0; const thaw = [];
     const W = KH.world;
     const steps = Math.round(HOURS * 3600 / 5);
@@ -423,10 +423,17 @@ const HOURS = Number(process.argv[3] || 8);
           const ans = { armored: ['pierce'], regen: ['atk', 'burst'], venom: ['heal'] };
           for (const t of foe.traits) {
             const need = ans[t];
-            if (!need || S.squad.some((id) => need.includes(KH.skillKind(id)))) continue;
+            if (!need) continue;
+            tw.met++;
+            if (S.squad.some((id) => need.includes(KH.skillKind(id)))) { tw.answered++; continue; }
             const cand = Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && !KH.heroBusy(id) && need.includes(KH.skillKind(id))).sort((x, y) => KH.heroPower(y) - KH.heroPower(x))[0];
             const weakest = S.squad.slice().sort((x, y) => KH.heroPower(x) - KH.heroPower(y))[0];
-            if (cand && weakest && KH.heroPower(cand) >= 0.6 * KH.heroPower(weakest)) { S.squad[S.squad.indexOf(weakest)] = cand; tw.swaps++; }
+            if (!cand) tw.nocand++;
+            else {
+              // worth it if the whole squad (troops and all) loses less than the answer is worth
+              const after = S.squad.map((id) => (id === weakest ? cand : id)), sc = (h) => KH.statPower(KH.teamStats(foe.cls, { heroes: h }));
+              if (weakest && sc(after) >= 0.95 * sc(S.squad)) { S.squad[S.squad.indexOf(weakest)] = cand; tw.swaps++; } else tw.weak++;
+            }
           }
         }
         if (KH.squadHome().length && (KH.statPower(team) * (1 + br) >= KH.statPower(foe) * 0.95 || S.time - lastFightTry > 60)) { lastFightTry = S.time; const st0 = S.stage; if (KH.formation && !NO.includes('formation')) A.formation(KH.formation.best(foe) || ''); A.fight(); A.bclose(); if (S.stage > st0) lastWin = S.time; }
@@ -583,7 +590,7 @@ const HOURS = Number(process.argv[3] || 8);
   console.log('charters:', JSON.stringify(out.ch));
   console.log('cookfire:', JSON.stringify(out.ck));
   console.log('founding:', JSON.stringify(out.fw));
-  console.log('trait swaps:', out.tw.swaps);
+  console.log('trait swaps:', JSON.stringify(out.tw));
   console.log('power by hour:', JSON.stringify(out.pw));
   console.log('leviathan:', JSON.stringify({ attacks: out.lvh.attacks, ranks: out.lvh.ranks.join(','), best: out.stats.levBest, hunts: out.stats.levHunts }));
   console.log('charms:', JSON.stringify(Object.fromEntries(Object.entries(out.charms || {}).map(([id, k]) => [id, k]))), 'top', out.stats.charmTop);
