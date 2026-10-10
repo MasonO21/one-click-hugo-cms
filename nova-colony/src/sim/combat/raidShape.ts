@@ -16,6 +16,7 @@
 import type { Game } from '../../core/Game';
 import type { AlienDef, InvasionDef } from '../../data/schema';
 import type { DataRegistry } from '../../data';
+import { plural } from '../meta/words';
 
 declare module '../../core/state' {
   interface CombatState {
@@ -61,12 +62,6 @@ export interface ScoutEntry {
   advice: string;
 }
 
-/** "Razor Crawler" -> "Razor Crawlers", "Heavy Sentry" -> "Heavy Sentries". */
-export function plural(name: string): string {
-  if (/[^aeiou]y$/i.test(name)) return name.slice(0, -1) + 'ies';
-  if (/s$/i.test(name)) return name;
-  return name + 's';
-}
 
 /** Alien types (group aliens) of every invasion table below `inv`'s tier. */
 function seenBefore(data: DataRegistry, inv: InvasionDef): Set<string> {

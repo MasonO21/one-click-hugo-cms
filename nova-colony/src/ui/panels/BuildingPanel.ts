@@ -1,7 +1,8 @@
 /**
  * BuildingPanel — the inspector opened by tapping a building: status, HP, efficiency, effects,
- * workers (assign / unassign), factory recipe picker, level-up, material upgrades (single, whole
- * room, all of a kind), move / rotate / copy / toggle / remove (with full-refund preview).
+ * workers (assign / unassign), factory recipe picker, level-up (this one, or every building of the kind after a
+ * confirm), material upgrades (single, whole room, all of a kind), move / rotate / copy / toggle / remove (with
+ * full-refund preview).
  */
 import { Panel, type PanelTitle } from './Panel';
 import type { BuildingInstance, Colonist } from '../../core/state';
@@ -15,6 +16,8 @@ import { jobOf, stars } from '../logic/colonist';
 import { bar, btn, costChips, emptyState, portrait, recipeChips, section, tagChips } from '../widgets';
 import { fill, h, replay, setVar, type Child } from '../dom';
 import { buildingIcon, iconEl, itemArt, itemIcon, resIcon, resourceArt } from '../art';
+import { upgradeAll, upgradeAllPlan, type UpgradeAllPlan } from '../../sim/build/upgradeAll';
+import { plural } from '../../sim/meta/words';
 
 const IDLE = { text: 'Idle', cls: 'warn' };
 
@@ -31,6 +34,8 @@ export class BuildingPanel extends Panel {
   private id = -1;
   private picking = false;
   private removing = false;
+  /** The "Upgrade all" confirmation is open. */
+  private confirmAll = false;
 
   title(): PanelTitle {
     const b = this.inst();
@@ -48,6 +53,7 @@ export class BuildingPanel extends Panel {
     this.id = Number(arg);
     this.picking = false;
     this.removing = false;
+    this.confirmAll = false;
     this.select();
     this.rev++;
   }
@@ -78,7 +84,8 @@ export class BuildingPanel extends Panel {
     const afford = this.upgradeCosts(b)
       .map((c) => (c && bagCovers(g.state.resources.amounts, c) ? 1 : 0))
       .join('');
-    return [b.level, b.tier, b.status, Math.round(b.hp / Math.max(1, b.maxHp) * 50), b.workers.join('.'), b.recipe, Math.round(b.eff * 20), Math.round(b.progress * 50), idle, afford, g.state.colony.tier, g.derived.buildingsVersion, this.idleReason(b, this.data.building(b.def))?.kind ?? ''].join('|');
+    const all = upgradeAllPlan(g, b.def);
+    return [b.level, b.tier, b.status, Math.round(b.hp / Math.max(1, b.maxHp) * 50), b.workers.join('.'), b.recipe, Math.round(b.eff * 20), Math.round(b.progress * 50), idle, afford, g.state.colony.tier, g.derived.buildingsVersion, this.idleReason(b, this.data.building(b.def))?.kind ?? '', all.ids.length, all.affordable.length, this.confirmAll ? 1 : 0].join('|');
   }
 
   /** Costs whose affordability affects button states. */
@@ -441,6 +448,22 @@ export class BuildingPanel extends Panel {
           }),
         );
       } else grid.appendChild(this.act('⭐', 'Max level', null, { disabled: 'This building is fully upgraded!', onClick: () => {} }));
+      // every building of this kind one level up, after a confirm (the levelling twin of "all pieces of this tier")
+      const all = upgradeAllPlan(g, b.def);
+      if (all.ids.length > 1) {
+        count++;
+        grid.appendChild(
+          this.act('⏫', `Upgrade all ${plural(d.name)} (${all.ids.length})`, all.total, {
+            disabled: all.affordable.length ? false : 'Not enough resources yet',
+            cls: 'good',
+            onClick: () => {
+              this.confirmAll = true;
+              this.rerender();
+            },
+          }),
+        );
+        if (this.confirmAll) wrap.append(section('Upgrade'), grid, this.upgradeAllConfirm(d, all));
+      }
     }
 
     if (d.piece) {
@@ -490,8 +513,49 @@ export class BuildingPanel extends Panel {
       }
     }
     if (!count) return wrap;
-    wrap.append(section('Upgrade'), grid);
+    if (!wrap.childElementCount) wrap.append(section('Upgrade'), grid);
     return wrap;
+  }
+
+  /** "Upgrade 6 Logging Camps one level?" with the total bill (or the part the resources cover), Yes / Not now. */
+  private upgradeAllConfirm(d: BuildingDef, plan: UpgradeAllPlan): HTMLElement {
+    const n = plan.ids.length;
+    const k = plan.affordable.length;
+    const partial = k < n;
+    return h(
+      'div',
+      { class: 'card remove-confirm upgrade-all-confirm' },
+      h('div', { class: 'h3', text: `Upgrade ${partial ? `${k} of ${n}` : `all ${n}`} ${plural(d.name)} one level?` }),
+      h('div', { class: 'mute small', text: partial ? 'The lowest levels go first; the rest wait for more resources.' : 'Each one goes up a level, lowest first.' }),
+      costChips(this.data, plan.affordableTotal, this.game.state.resources.amounts),
+      h(
+        'div',
+        { class: 'row', style: 'margin-top:.5em' },
+        btn({
+          label: partial ? `Upgrade ${k}` : 'Upgrade all',
+          cls: 'good small grow',
+          id: 'btn-upgrade-all',
+          onClick: () => {
+            const done = upgradeAll(this.game, d.id);
+            this.confirmAll = false;
+            if (done > 0) {
+              this.ctx.toast(`${done} ${done === 1 ? d.name : plural(d.name)} upgraded!`, 'success', '⏫');
+              this.ctx.haptic('success');
+              this.flash();
+            } else this.ctx.toast("Couldn't upgrade those right now", 'info', '⏫');
+            this.rerender();
+          },
+        }),
+        btn({
+          label: 'Not now',
+          cls: 'ghost small grow',
+          onClick: () => {
+            this.confirmAll = false;
+            this.rerender();
+          },
+        }),
+      ),
+    );
   }
 
   private mass(ids: number[], tier: number, what: string): void {

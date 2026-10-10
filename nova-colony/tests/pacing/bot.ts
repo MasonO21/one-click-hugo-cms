@@ -26,6 +26,7 @@ import type { BuildingInstance, Colonist } from '../../src/core/state';
 import { CELL, cellOf, rotatedSize } from '../../src/core/constants';
 import { buyNovaItem } from '../../src/sim/novaShop';
 import { betterItem } from '../../src/sim/meta/missionRules';
+import { upgradeAll, upgradeAllPlan } from '../../src/sim/build/upgradeAll';
 import { Mover, Nav, type Pt } from './nav';
 
 export type NovaPolicy = 'save' | 'spend';
@@ -141,7 +142,11 @@ export class PacingBot {
   /** Human menu time per action kind (seconds of play the player spends tapping instead of walking). */
   static readonly MENU = { build: 12, level: 6, research: 8, mastery: 3, craft: 6, recruit: 8, claim: 2.5, wish: 5, expedition: 10, nova: 6 };
 
+  /** The runner counts menu actions (taps) per tier. */
+  onAct: ((what: string) => void) | null = null;
+
   private acted(what: string, menu = 0): void {
+    this.onAct?.(what);
     this.actedAt = this.now();
     // a person also glances around for a couple of seconds before the next thing
     this.busy = Math.max(this.busy, this.opts.pace === 'fast' ? menu * 0.4 : menu + 2);
@@ -1157,6 +1162,16 @@ export class PacingBot {
     for (const b of list) {
       const cost = B.levelUpCost(b.id);
       if (!cost || !this.canSpare(cost, 0.25)) continue;
+      // several of a kind: "Upgrade all" levels them in one go when the whole bill is spare too
+      const all = upgradeAllPlan(g, b.def);
+      if (all.ids.length > 1 && all.affordable.length === all.ids.length && this.canSpare(all.total, 0.25)) {
+        const n = upgradeAll(g, b.def);
+        if (n > 0) {
+          this.stats.upgrades += n;
+          this.acted(`upgrade all ${b.def} x${n}`, PacingBot.MENU.level + 2);
+          return true;
+        }
+      }
       if (B.levelUp(b.id)) {
         this.stats.upgrades++;
         this.acted(`level up ${b.def} -> ${b.level}`, PacingBot.MENU.level);

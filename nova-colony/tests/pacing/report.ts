@@ -210,6 +210,14 @@ export function exploreTable(r: RunResult): string {
   return rows.join('\n');
 }
 
+function tapTable(r: RunResult): string {
+  const rows = ['| Tier | menu actions | level-ups (single) | upgrade-all | cards as they come | cards after merging | crates opened | crate / cache scenes |', '|---|---|---|---|---|---|---|---|'];
+  for (const [tier, t] of Object.entries(r.taps ?? {}).sort((a, b) => Number(a[0]) - Number(b[0]))) {
+    rows.push(`| ${tier} | ${t.actions} | ${t.levelUps} | ${t.upgradeAll} | ${t.cardsRaw} | ${t.cardsMerged} | ${t.crateOpens} | ${t.crateScenes} |`);
+  }
+  return rows.join('\n');
+}
+
 export function fullReport(r: RunResult, title: string): string {
   const o = r.opts;
   return [
@@ -243,6 +251,9 @@ export function fullReport(r: RunResult, title: string): string {
     '',
     '### Raids',
     raidTable(r),
+    '',
+    '### Taps and cards',
+    tapTable(r),
     '',
     o.mode === 'sessions' ? `### Sessions\n${sessionTable(r)}\n` : '',
   ].join('\n');

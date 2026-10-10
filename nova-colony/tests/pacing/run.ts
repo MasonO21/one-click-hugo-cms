@@ -148,10 +148,27 @@ export interface RunResult {
   income: Record<number, Record<string, number>>;
   /** Reward resources per tier: value announced (crates, missions, chests, medals...) vs value that fit in storage. */
   rewards: Record<number, { announced: number; received: number }>;
+  /**
+   * Taps and cards per tier: menu actions the bot took (level-ups and "upgrade all" among them), full-screen cards a
+   * player would tap through (celebrations, tier-ups, victories, crate / cache scenes) as they come and once plain
+   * celebrations within 10 s merge (ui/logic/modalMerge), and fixed-content crates opened from the backpack (with the
+   * crate scene, or with a toast when small).
+   */
+  taps: Record<number, TapRow>;
   botStats: PacingBot['stats'];
   botLog: string[];
   final: { t: number; h: number; tier: number; colonists: number; buildings: number; research: number; explored: number; nova: number; novaEarned: number };
   wallMs: number;
+}
+
+export interface TapRow {
+  actions: number;
+  levelUps: number;
+  upgradeAll: number;
+  cardsRaw: number;
+  cardsMerged: number;
+  crateOpens: number;
+  crateScenes: number;
 }
 
 // a festival and a claimed survey milestone count; Mastery levels are reported on their own (several quick taps per
@@ -182,6 +199,7 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     binding: {},
     income: {},
     rewards: {},
+    taps: {},
     botStats: bot.stats,
     botLog: bot.log,
     final: { t: 0, h: 0, tier: 0, colonists: 0, buildings: 0, research: 0, explored: 0, nova: 0, novaEarned: 0 },
@@ -193,8 +211,38 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
   let novaEarned = 0;
   let raid: RaidRec | null = null;
 
+  const tapRow = (): TapRow => (res.taps[game.state.colony.tier] ??= { actions: 0, levelUps: 0, upgradeAll: 0, cardsRaw: 0, cardsMerged: 0, crateOpens: 0, crateScenes: 0 });
+  bot.onAct = (what) => {
+    const row = tapRow();
+    row.actions++;
+    if (what.startsWith('level up')) row.levelUps++;
+    if (what.startsWith('upgrade all')) row.upgradeAll++;
+  };
+  /** A plain celebration card shown at this playTime (another one within 10 s merges into it). */
+  let plainCardAt = -1e9;
+  const card = (plain: boolean) => {
+    const row = tapRow();
+    row.cardsRaw++;
+    if (plain && T() - plainCardAt <= 10) return;
+    if (plain) plainCardAt = T();
+    row.cardsMerged++;
+  };
   const listen = (g: Game) => {
     const bus = g.bus;
+    bus.on('ui:celebrate', (e) => {
+      if (/\btier\b/i.test(`${e.title} ${e.text ?? ''}`)) return; // the tier-up card (counted below)
+      card(!/discovered!$|awakened!$|joined/i.test(e.title)); // postcards, events and new faces keep their card
+    });
+    bus.on('colony:tierUp', () => card(false));
+    bus.on('combat:ended', () => card(false));
+    bus.on('chest:opened', (e) => {
+      if (e.variant === 'crate') tapRow().crateScenes++;
+      card(false);
+    });
+    bus.on('reward:granted', (e) => {
+      // fixed-content crates from the backpack (Nova caches grant card by card and always get their scene)
+      if (e.source === 'crate' && e.item && g.data.item(e.item)?.category === 'crate') tapRow().crateOpens++;
+    });
     const val = g.data.expeditionRules.value;
     const inc = (src: string, v: number) => {
       const row = (res.income[g.state.colony.tier] ??= {});
