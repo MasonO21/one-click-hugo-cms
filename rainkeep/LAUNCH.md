@@ -20,6 +20,20 @@ on players once the numbers say it will come back.
 4. Read the **Playtest** sheet (Menu → Playtest, visible only to you): retention, the first-session funnel, devices
    and frame rates, errors and feedback. **Copy summary** gives a text version to paste to Claude for analysis.
 
+**An invitation to paste** (edit the dates):
+
+```
+You're invited to the Rainkeep closed test: a desert survival strategy game where you raise the last water
+dragon. It runs in the browser on your phone or computer: open the link, tap "Open the keep".
+
+For the next two weeks:
+1. Play a few minutes every day, even on busy days. Coming back is what we're measuring.
+2. Anything confusing, slow or broken: Menu → Feedback. One line is plenty.
+3. Caravan tab → Online: found a Caravan or join one, and help each other's builds.
+
+Android players can also install the app build: [link to Rainkeep-debug.apk]. Thank you!
+```
+
 **What to look for:**
 
 | Signal | Healthy | Act on it if |
