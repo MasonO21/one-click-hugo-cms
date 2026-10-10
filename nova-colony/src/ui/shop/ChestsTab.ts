@@ -111,7 +111,8 @@ function chestCard(ctx: UiCtx, host: ChestsTabHost, def: ChestDef): HTMLElement 
     h('div', { class: 'h3', text: def.name }),
     h('div', { class: 'cc-line' }, h('span', { class: 'cc-tag', text: findsLabel(def.cards) }), h('span', { class: 'cc-tag guar', text: guaranteeLine(def) })),
     h('div', { class: 'mute cc-desc', text: def.description }),
-    h('div', { class: 'cc-buttons' }, odds, buy),
+    // where paid random items are restricted, caches are earned only: no buy button, the odds stay visible
+    chests.forSale(def.id) ? h('div', { class: 'cc-buttons' }, odds, buy) : h('div', { class: 'cc-buttons' }, odds, h('div', { class: 'mute small cc-region', text: 'Not sold in your region. Earn caches from the login calendar, raids and the season pass.' })),
   );
   if (owned > 0) {
     info.appendChild(
@@ -125,7 +126,7 @@ function chestCard(ctx: UiCtx, host: ChestsTabHost, def: ChestDef): HTMLElement 
         },
       }),
     );
-  } else if (afford) {
+  } else if (afford && chests.forSale(def.id)) {
     const keep = h('button', { class: 'cc-keep', type: 'button', text: 'Buy now, open later' });
     keep.addEventListener('click', () => {
       if (chests.buy(def.id, false)) ctx.toast(`${def.name} stored in your Inventory`, 'success', itemArt(def.id) ?? def.icon);

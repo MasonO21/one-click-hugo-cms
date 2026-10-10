@@ -41,6 +41,12 @@ describe('paid random items by region', () => {
       expect(lo.paidRandomAllowed()).toBe(!be);
       expect(lo.canBuy('bundle_cache_hunter')).toBe(!be);
       expect(lo.canBuy('nova_crystals_small')).toBe(true);
+      game.state.liveops.nova = 5000;
+      expect(game.sys.chests.forSale('chest_supply')).toBe(!be);
+      expect(game.sys.chests.canAfford('chest_supply')).toBe(!be);
+      const nova = game.state.liveops.nova;
+      expect(game.sys.chests.buy('chest_supply', false) !== null).toBe(!be);
+      expect(game.state.liveops.nova).toBe(be ? nova : nova - 60);
       game.state.liveops.season.premium = true;
       lo.addXp(seasonTrackXp(data.season) + 400);
       const items = () => Object.entries(game.state.player.items).filter(([id, n]) => (n ?? 0) > 0 && data.item(id)?.use?.chest).length;

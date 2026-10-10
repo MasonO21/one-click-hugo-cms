@@ -508,7 +508,13 @@ export class ChestSystem extends System {
 
   canAfford(id: string): boolean {
     const def = this.def(id);
-    return !!def && def.nova > 0 && this.game.state.liveops.nova >= def.nova;
+    return !!def && this.forSale(id) && this.game.state.liveops.nova >= def.nova;
+  }
+
+  /** Sold for Nova here? Not where paid random items are restricted (sim/meta/lootRegion.ts); earned ones still open. */
+  forSale(id: string): boolean {
+    const def = this.def(id);
+    return !!def && def.nova > 0 && this.game.sys.liveops.paidRandomAllowed();
   }
 
   /** Chests until the pity timer guarantees a cosmetic (1 = the next Explorer-or-better cache). */
@@ -528,7 +534,7 @@ export class ChestSystem extends System {
   buy(id: string, open = true): ChestCard[] | null {
     const g = this.game;
     const def = this.def(id);
-    if (!def || def.nova <= 0) return null;
+    if (!def || !this.forSale(id)) return null;
     if (!g.sys.liveops.spendNova(def.nova, `chest:${id}`)) return null;
     g.bus.emit('chest:bought', { chest: id, nova: def.nova, open });
     if (!open) {

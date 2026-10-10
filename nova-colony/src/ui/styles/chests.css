@@ -1832,3 +1832,10 @@
 .nv-root .chest-odds .co-buy {
   margin-top: 0.8em;
 }
+
+/* restricted region: caches can't be bought for Nova; a short note stands where the buy button would be */
+.nv-root .cc-region {
+  flex: 1;
+  align-self: center;
+  line-height: 1.25;
+}
