@@ -182,7 +182,7 @@ const LINES: AchievementDef[] = [
   }),
 
   ...line({
-    id: 'good_neighbour', category: 'community', name: 'Good Neighbour', icon: '💗', art: 'hud:wish', source: counter('wish'),
+    id: 'good_neighbour', category: 'community', name: 'Good Neighbour', icon: '🤝', art: 'hud:wish', source: counter('wish'),
     desc: (n, raw) => (raw === 1 ? 'Grant a colonist’s wish' : `Grant ${n} colonists’ wishes`),
     steps: [
       [3, { xp: 40, resources: { food: 80, water: 60 } }],

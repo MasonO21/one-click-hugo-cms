@@ -188,7 +188,7 @@ export class SeasonPanel extends Panel {
     return h(
       'div',
       { class: 'card sp-bonus', data: { bonusCard: '1' } },
-      artOrEmoji(chestArt(chestId), chest?.icon ?? '🎁', 'sp-bchest', chest?.name ?? 'Bonus chest'),
+      artOrEmoji(chestArt(chestId), chest?.icon ?? '🎁', 'sp-bchest', chest?.name ?? 'Bonus cache'),
       h(
         'div',
         { class: 'grow stack-v tight' },

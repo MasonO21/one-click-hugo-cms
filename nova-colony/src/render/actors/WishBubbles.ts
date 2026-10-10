@@ -187,7 +187,7 @@ export class WishBubbles {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     if (this.bubbleReady && this.bubble) {
-      // the painted bubble (it carries its own heart) with the wish's icon as a little badge
+      // the painted bubble (it carries its own lantern) with the wish's icon as a little badge
       g.drawImage(this.bubble, 0, 0, S, S);
       const bx = S * 0.76;
       const by = S * 0.26;
@@ -233,9 +233,9 @@ export class WishBubbles {
     g.stroke();
     g.font = `${Math.round(S * 0.42)}px ${EMOJI_FONT}`;
     g.fillText(icon, S * 0.5, y + h * 0.53);
-    // a tiny heart in the corner: it is a wish
+    // a small brass star in the corner: it is a wish
     g.font = `${Math.round(S * 0.17)}px ${EMOJI_FONT}`;
-    g.fillText('💗', x + w - S * 0.07, y + S * 0.08);
+    g.fillText('✨', x + w - S * 0.07, y + S * 0.08);
   }
 
   /** Forget cached textures (the painted bubble arrived): slots redraw on their next update. */

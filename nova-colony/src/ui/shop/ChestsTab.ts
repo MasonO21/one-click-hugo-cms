@@ -126,8 +126,10 @@ function chestCard(ctx: UiCtx, host: ChestsTabHost, def: ChestDef): HTMLElement 
         },
       }),
     );
-  } else if (afford && chests.forSale(def.id)) {
-    const keep = h('button', { class: 'cc-keep', type: 'button', text: 'Buy now, open later' });
+  }
+  // stock one for later (another one too, when some are already waiting)
+  if (afford && chests.forSale(def.id)) {
+    const keep = h('button', { class: 'cc-keep', type: 'button', text: owned > 0 ? 'Buy another for later' : 'Buy now, open later' });
     keep.addEventListener('click', () => {
       if (chests.buy(def.id, false)) ctx.toast(`${def.name} stored in your Inventory`, 'success', itemArt(def.id) ?? def.icon);
       host.rerender();
