@@ -25,10 +25,22 @@ const gzipModels = {
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
 
+// The fonts ship with the game (src/ui/fonts.css). The artifact's sandbox allows fonts only from Google Fonts, so that
+// build links them from there instead.
+const googleFonts = {
+  name: 'google-fonts',
+  transformIndexHtml: {
+    order: 'pre',
+    handler: (html) => html.replace('<link rel="stylesheet" href="/src/ui/fonts.css" />',
+      '<link rel="preconnect" href="https://fonts.googleapis.com" />\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n'
+      + '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Oxanium:wght@500;600;700;800&display=swap" />'),
+  },
+};
+
 export default defineConfig({
   base: './',
   define: { __APP_VERSION__: JSON.stringify(pkg.version) }, // ui/meta/about.js
-  plugins: single ? [gzipModels, viteSingleFile()] : [],
+  plugins: single ? [gzipModels, viteSingleFile()] : artifact ? [googleFonts] : [],
   build: {
     target: 'es2020',
     outDir: single ? 'dist-single' : artifact ? 'dist-artifact' : 'dist',

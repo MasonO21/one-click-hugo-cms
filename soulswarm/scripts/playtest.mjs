@@ -3060,10 +3060,10 @@ errs = await session(async (page) => {
     const q = (sel) => document.querySelector(sel), wait = (ms) => new Promise((res) => setTimeout(res, ms));
     r.t += 1; const names0 = [...document.querySelectorAll('.lvl-back .card h3')].map((n) => n.firstChild.textContent.trim());
     const ui = { bans: document.querySelectorAll('.lvl-back .card .ban').length, note: q('.lvl-ban').textContent };
-    q('.lvl-back .card .ban').click(); await wait(80); r.t += 1;
+    q('.lvl-back .card .ban').click(); for (let i = 0; i < 40 && q('.lvl-ban').textContent === ui.note; i++) await wait(50); r.t += 1; // (the first ✕ loads its module)
     const names1 = [...document.querySelectorAll('.lvl-back .card h3')].map((n) => n.firstChild.textContent.trim());
     ui.replaced = names1.length === 3 && names1[0] !== names0[0] && names1[1] === names0[1]; ui.note2 = q('.lvl-ban').textContent;
-    q('.lvl-back .card .ban').click(); await wait(80);
+    q('.lvl-back .card .ban').click(); for (let i = 0; i < 40 && r.banishLeft > 0; i++) await wait(50); await wait(50);
     ui.none = document.querySelectorAll('.lvl-back .card .ban').length; ui.left = r.banishLeft;
     document.querySelectorAll('.lvl-back').forEach((n) => n.remove()); r.levelPending = false;
     out.banUi = ui;

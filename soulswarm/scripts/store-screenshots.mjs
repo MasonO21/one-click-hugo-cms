@@ -31,7 +31,8 @@ const SHOTS = [
     const rb = r.boss.render.bind(r.boss); r.boss.render = (dt) => { rb(dt); r.boss.mat.uniforms.uFlash.value = 0; };
     r.camPos.copy(r.desiredCam()); sim(0.25, 0, 0);` },
   { name: '05-heroes', caption: 'COLLECT <em>LEGENDARY SHEPHERDS</em>', menu: 'heroes', stage: `
-    const p = app.profile; for (const id of ['nyx', 'seraphine', 'liora', 'mordrake']) { p.heroes[id].owned = true; p.heroes[id].stars = 1 + (id === 'mordrake' ? 2 : 1); }
+    const p = app.profile; const st = { nyx: 2, seraphine: 2, liora: 2, grimsby: 3, mordrake: 3, osric: 2, isolde: 1 }; // the full roster of eight
+    for (const id in st) { p.heroes[id].owned = true; p.heroes[id].stars = st[id]; }
     p.heroes.vael.stars = 3; p.gold = 48200; p.gems = 2350; E.manual = false; app.meta.show('heroes'); app.meta.refresh();` },
   // Act V's finale: Kaelthar, the Storm Herald, turning his Tempest's lightning beams around the Shepherd (Chapter 25)
   { name: '06-chapters', caption: '30 CHAPTERS, <em>TEN BOSSES</em>', stage: `

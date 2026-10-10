@@ -1156,7 +1156,7 @@
 .rd-cost svg { width: 14px; height: 14px; }
 
 /* Update 13: the chapter label opens the campaign map (chapters.js); its dots are the five chapters of the current act */
-button.chap-no { margin: 0 auto; padding: 2px 8px; border: 0; background: none; cursor: pointer; font: inherit; letter-spacing: inherit; text-transform: inherit; }
+button.chap-no { margin: -7px auto; padding: 9px 10px; border: 0; /* a 36 px tap target; the negative margin keeps the card's layout */ background: none; cursor: pointer; font: inherit; letter-spacing: inherit; text-transform: inherit; }
 button.chap-no > svg { width: 13px; height: 13px; stroke-width: 2.4; margin-right: -3px; opacity: .9; }
 button.chap-no:active { transform: scale(.96); }
 .mm-chapters { max-width: 420px; }
@@ -1203,10 +1203,10 @@ button.chap-no:active { transform: scale(.96); }
 .pv-opt b { font-size: 14px; }
 .pv-opt small { font-size: 11.5px; line-height: 1.4; color: var(--ink-dim); }
 .mm-consent .modal-actions, .mm-gate .modal-actions { gap: 8px; }
-.pv-id { margin-left: auto; padding: 4px 8px; font: 600 12px ui-monospace, monospace; letter-spacing: .04em; color: #dfe9ff; background: rgba(255,255,255,.06); border-radius: 4px; cursor: pointer; user-select: all; -webkit-user-select: all; }
+.pv-id { margin: -7px 0 -7px auto; padding: 11px 9px; /* a 36 px tap target in the same row height */ font: 600 12px ui-monospace, monospace; letter-spacing: .04em; color: #dfe9ff; background: rgba(255,255,255,.06); border-radius: 4px; cursor: pointer; user-select: all; -webkit-user-select: all; }
 .pv-state small { font-size: 11.5px; line-height: 1.45; }
 .pv-row { display: flex; gap: 8px; }
-.pv-row > * { flex: 1; text-align: center; text-decoration: none; }
+.pv-row > * { flex: 1; text-align: center; text-decoration: none; padding-left: 6px; padding-right: 6px; font-size: 12px; letter-spacing: .05em; white-space: nowrap; } /* one line each on a 360 px phone */
 .pv-json { width: 100%; min-height: 220px; resize: vertical; padding: 8px; font: 11px/1.35 ui-monospace, monospace; color: #cfe0ff; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); border-radius: 6px; }
 .mm-export { max-width: 420px; }
 .shop-locked { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px 12px; font-size: 12.5px; font-weight: 700; color: #ffd9a0; background: rgba(255,170,60,.1); clip-path: var(--bevel-sm); }

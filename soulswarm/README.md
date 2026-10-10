@@ -72,6 +72,8 @@ Before submitting, you will need:
 2. **Real payments.** `src/meta/store.js` simulates purchases and rewarded ads. Replace `purchase()` with RevenueCat or StoreKit 2 / Play Billing, validate receipts on a server, and replace `rewardedAd()` with AppLovin MAX (or similar). Never grant items before validation.
 3. Cloud save and anti-cheat. Progress lives in `localStorage` (`src/meta/save.js`), which is fine for soft launch, but move it server-side before any leaderboards.
 4. An analytics SDK behind `analytics.setTransport()` (the event taxonomy, consent and queue are in the build: `src/meta/analytics.js`), the hosted privacy policy URL in `PRIVACY.policyUrl`, the ATT prompt (iOS) before any personalised ad, and the age rating questionnaires. The age gate, the GDPR consent screen, restricted mode for children, teen spending limits and odds disclosure for the Soul Altar are already in-game.
+5. **Native bridges the build already calls** (`src/engine/platform.js`; each is a no-op on the web): `setFeatBridge` for Game Center / Play Games achievements (create the 63 Feat tiers as `<family>_<tier>`, GDD §20), `setScoreBridge` for the `endless_time`, `rush_hollow` and `rush_fallen` leaderboards, `setReviewBridge` for the store's in-app review sheet (the game decides when), and `setNotifyBridge` for the opt-in reminders (e.g. `@capacitor/local-notifications`; Settings shows the switch once it is registered).
+6. The fonts are bundled (`src/ui/fonts.css`), so nothing else needs the network to look right.
 
 See `docs/PRODUCTION_ROADMAP.md` for the full checklist, team plan and budget.
 

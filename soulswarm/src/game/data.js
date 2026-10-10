@@ -1176,6 +1176,7 @@ export const SKINS = {
 // `version` is the privacy policy's: raising it shows the consent sheet again. `policyUrl` is the studio's hosted policy
 // (docs/PRIVACY_POLICY.md; a placeholder until the studio publishes it).
 export const PRIVACY = { version: 1, minAge: 13, euConsentAge: 16, adultAge: 18, oldest: 100, policyUrl: 'https://example.com/soulswarm/privacy',
+  termsUrl: 'https://example.com/soulswarm/terms', // docs/TERMS_OF_USE.md, hosted by the studio (a placeholder until then)
   // monthly spending limits for teens (MONETIZATION.md §11), in USD of list prices this calendar month: [under this age, cap]
   spendCaps: [[16, 50], [18, 100]] };
 

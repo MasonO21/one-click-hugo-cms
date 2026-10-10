@@ -28,7 +28,7 @@ export function openAbout(app) {
     <div class="ab-ver"><span class="t-label">Version</span> <b class="tnum">${APP_VERSION}</b></div>
     <p class="ab-tx t-dim">Need help? Write to support with your Player ID, so we can find your save.</p>
     <button class="btn btn-ghost btn-block ab-id" data-act="copy">${icon('helm')} <code>${p.privacy.id}</code></button>
-    <a class="btn btn-ghost btn-block" href="${PRIVACY.policyUrl}" target="_blank" rel="noopener">Privacy policy</a>
+    <div class="row"><a class="btn btn-ghost" href="${PRIVACY.policyUrl}" target="_blank" rel="noopener">Privacy policy</a><a class="btn btn-ghost" href="${PRIVACY.termsUrl}" target="_blank" rel="noopener">Terms of use</a></div>
     <div class="st-sep"></div>
     <div class="t-label">Open-source notices</div>
     <ul class="ab-list">${NOTICES.map(([name, c, l]) => `<li><b>${name}</b><small>${c} · ${l === 'MIT' ? 'MIT License' : 'SIL Open Font License 1.1'}</small></li>`).join('')}</ul>
