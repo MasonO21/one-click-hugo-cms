@@ -22,10 +22,13 @@
   const unlocked = () => !!S && S.lv.wyrm >= L.unlock;
   const V = () => S.lev;
   const clsOf = (n) => CLS[n % CLS.length];
+  // a foe trait each hunt (none on the first), turning through the five on a different beat from the class
+  const traitOf = (n) => (n > 1 && DATA.traits ? DATA.traits.order[(n * 2 + 1) % DATA.traits.order.length] : null);
   // the Leviathan as it surfaces this hunt: the current expedition foe's strength, far more health, and a class
   function foe() {
     const e = KH.enemyFor(S.stage);
-    return { n: S.stage, name: 'The Sand Leviathan', cls: clsOf(V().hunt), boss: true, chapter: 'The Dunes', act: e.act, atk: e.atk * L.atk, def: e.def, hp: e.hp * L.hp, base: e.hp };
+    const tr = traitOf(V().hunt), T = DATA.traits;
+    return { n: S.stage, name: 'The Sand Leviathan', cls: clsOf(V().hunt), boss: true, chapter: 'The Dunes', act: e.act, atk: e.atk * L.atk, def: e.def * (tr === 'armored' ? T.list.armored.def : 1), hp: e.hp * L.hp, base: e.hp, traits: tr ? [tr] : [] };
   }
   const damageOf = (f, result) => Math.round(f.hp - (result.rounds.length ? result.rounds[result.rounds.length - 1].eh : f.hp));
   // par: the squad on auto-battle, a few times over, when the hunt begins
@@ -124,6 +127,7 @@
       title: 'The Sand Leviathan', lvl: `Hunt ${v.hunt}`,
       body: `${KH.art && KH.art.banner ? KH.art.banner('event', 'leviathan', 'Too big to kill, too dangerous to leave alone.') : ''}
         <div class="card stack"><div class="row"><span class="grow">It fights as a <b>${esc(DATA.classes[f.cls].name)}</b> this hunt: ${esc(DATA.classes[counterOf(f.cls)].name)} counter it.</span><span class="chip">${icon('i-clock')}${fmtTime(Math.max(0, L.hunt - (S.time - v.start)))}</span></div>
+          ${f.traits.length && KH.traitRows ? `<div class="traits">${KH.traitRows(f, KH.squadHome())}</div>` : ''}
           <div class="row"><span class="lv-pips">${Array.from({ length: L.attacks }, (_, i) => `<i class="${i < v.left ? 'on' : ''}"></i>`).join('')}</span><span class="grow muted small">${v.left} attack${v.left === 1 ? '' : 's'} left · best ${fmt(v.best)}</span>
           <button class="btn gold ${v.left ? '' : 'off'}" data-act="levattack">${icon('i-sword')}Attack</button></div></div>
         <div class="card stack"><div class="section-label">Marks this hunt · par ${fmt(v.par)}</div>${marks}<p class="muted small">Par is what your squad does on auto-battle. Breathe into its wind-ups and time the skills to beat it.</p></div>

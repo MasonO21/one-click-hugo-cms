@@ -530,7 +530,7 @@
     if (st.th > 0) st.th = Math.min(st.team.hp, st.th + st.team.fx.heal * st.team.hp);
     // foe traits at the end of the round
     if (st.traits.length) {
-      if (st.traits.includes('regen') && !rec.struck && st.eh > 0) { rec.regen = Math.min(st.foe.hp - st.eh, st.foe.hp * TL.regen.heal); st.eh += rec.regen; }
+      if (st.traits.includes('regen') && !rec.struck && st.eh > 0) { rec.regen = Math.min(st.foe.hp - st.eh, (st.opts.breathHp || st.foe.hp) * TL.regen.heal); st.eh += rec.regen; }
       if (st.traits.includes('venom') && st.th > 0) { if (st.ward > 0) st.ward--; else { rec.venom = st.team.hp * TL.venom.dot; st.th = Math.max(0, st.th - rec.venom); } }
       if (st.shell > 0) st.shell--;
       if (st.traits.includes('frenzy')) st.rage++;
