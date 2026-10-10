@@ -4149,11 +4149,14 @@ errs = await session(async (page) => {
     let r = start(12), P = r.player, C = D.ENEMIES.thornback.charge;
     let e = near(r, 'thornback', 0, -6); e.moveCd = 0; step(r, 0.1);
     const m = r.legion.raise(P.x + 4, P.z, { fx: false }); m.maxHp = m.hp = 1e4;
-    const hit = () => { m.x = e.x; m.z = e.z; r.enemies.trample(e, C, P, 99); return Math.round(m.hp); };
-    const c1 = e.charge, h1 = hit(), h1b = hit();
+    const hit = (t = e) => { m.x = t.x; m.z = t.z; r.enemies.trample(t, C, P, 99); return Math.round(m.hp); };
+    const h1 = hit(), h1b = hit();
     e.state = 3; e.stateT = 99; step(r, 1 / 30); e.moveCd = 0; e.x = P.x; e.z = P.z - 6; step(r, 0.1);
-    const c2 = e.charge, h2 = hit();
-    out.thorn = { c1, c2, h: [1e4, h1, h1b, h2], fresh: r.legion.raise(P.x, P.z + 2, { fx: false }).trampled };
+    const h2 = hit();
+    // a second Thornback charging through the same minion at once: each tramples it once, never every frame
+    const e2 = near(r, 'thornback', 0, 6); e2.moveCd = 0; step(r, 0.1);
+    const h3 = [hit(e2), hit(e), hit(e2), hit(e)];
+    out.thorn = { charging: [e.state, e2.state], h: [1e4, h1, h1b, h2], h3 };
     // a Fallen Court rush: Morwenna under Chapter 10's tides, Gorrath under Chapter 15's brambles
     app.exitRun(); p.flags.rushCourt = 'fallen'; p.rush.tries = 0; p.flags.bossRush = 'on';
     app.startRun(1, { rush: true }); r = app.run; r.player.hurt = () => {};
@@ -4183,8 +4186,9 @@ errs = await session(async (page) => {
     out.court = { a, b: b2, c, cal: eco.rushCourt(p) };
     return out;
   });
-  check('review: a Thornback tramples a minion once per charge, and again on its next charge; a raised minion starts untrampled',
-    s.thorn.c2 > s.thorn.c1 && s.thorn.h[1] < s.thorn.h[0] && s.thorn.h[2] === s.thorn.h[1] && s.thorn.h[3] < s.thorn.h[2] && s.thorn.fresh === 0, JSON.stringify(s.thorn));
+  check('review: a Thornback tramples a minion once per charge and again on its next; two charging at once each trample it once',
+    s.thorn.h[1] < s.thorn.h[0] && s.thorn.h[2] === s.thorn.h[1] && s.thorn.h[3] < s.thorn.h[2]
+    && s.thorn.h3[0] < s.thorn.h[3] && s.thorn.h3[1] === s.thorn.h3[0] && s.thorn.h3[2] === s.thorn.h3[0] && s.thorn.h3[3] === s.thorn.h3[0], JSON.stringify(s.thorn));
   check('review: each Fallen Court fight takes its own chapter\'s hazards (Chapter 10, then 15)',
     s.rush.m0 === s.rush.want0 && s.rush.ch === 15 && s.rush.m1 === s.rush.want1 && s.rush.m1 !== s.rush.m0 && s.rush.live, JSON.stringify(s.rush));
   check('review: Nihl\'s pull cancelled by a roar takes its mark with it and waits a full delay',
@@ -4232,16 +4236,20 @@ errs = await session(async (page) => {
     out.junk = JSON.stringify(F.sanitizeFeats({ claimed: { reaper: 99, bogus: 3, campaign: -1, legion: '2' } }));
     // the review sheet: a first Normal clear of Chapter 3 (not 4), a full Boss Rush; never a child; 60 days apart; never on the web build
     const asks = []; PL.setReviewBridge(null);
-    out.review = { web: R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, 0) };
+    out.review = { web: R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, { delay: 0 }) };
     PL.setReviewBridge(() => { asks.push(1); });
     delete p.flags.review;
     out.review.ch4 = R.reviewMoment(p, { victory: true, chapter: 4 }, { firstClear: true, difficulty: 'normal' });
     out.review.hard = R.reviewMoment(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'nightmare' });
     out.review.rush = R.reviewMoment(p, { victory: true, chapter: 1 }, { rush: true, cleared: true });
     const band = p.privacy.band; p.privacy.band = 'child'; out.review.child = R.reviewMoment(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }); p.privacy.band = band;
-    out.review.ask = R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, 0);
-    out.review.again = R.maybeAskReview(p, { victory: true, chapter: 10 }, { firstClear: true, difficulty: 'normal' }, 0);
+    out.review.ask = R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, { delay: 0 });
+    out.review.again = R.maybeAskReview(p, { victory: true, chapter: 10 }, { firstClear: true, difficulty: 'normal' }, { delay: 0 });
     await wait(50); out.review.asked = asks.length; out.review.flag = JSON.stringify(p.flags.review && { n: p.flags.review.n });
+    out.review.later = R.maybeAskReview(p, { victory: true, chapter: 10 }, { firstClear: true, difficulty: 'normal' }, { delay: 0 }); // 60 days apart
+    delete p.flags.review; out.review.skipped = R.maybeAskReview(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }, { delay: 0, ok: () => false });
+    await wait(50); out.review.after = asks.length + ':' + JSON.stringify(p.flags.review || null);
+    const band0 = p.privacy.band; p.privacy.band = ''; out.review.ungated = R.reviewMoment(p, { victory: true, chapter: 3 }, { firstClear: true, difficulty: 'normal' }); p.privacy.band = band0;
     PL.setReviewBridge(null); PL.setFeatBridge(null); delete p.flags.review;
     // a run that crosses a tier names it on the results; Endless sends its time to the leaderboard bridge
     const scores = []; PL.setScoreBridge((b, v) => { scores.push(b + ':' + v); });
@@ -4269,7 +4277,8 @@ errs = await session(async (page) => {
     JSON.stringify({ dot: s.dot, p: s.panel, after: s.dotAfter }));
   check('feats: a loaded save keeps claimed tiers within range and drops junk', s.junk === '{"claimed":{"reaper":4,"legion":2}}', s.junk);
   check('review: asked only after a high point (Chapter 3 first clear, a full Boss Rush), never to a child, 60 days apart, never on the web build',
-    s.review.web === false && s.review.ch4 === false && s.review.hard === false && s.review.rush === true && s.review.child === false && s.review.ask === true && s.review.again === false && s.review.asked === 1, JSON.stringify(s.review));
+    s.review.web === false && s.review.ch4 === false && s.review.hard === false && s.review.rush === true && s.review.child === false && s.review.ask === true && s.review.again === false && s.review.asked === 1
+    && s.review.later === false && s.review.skipped === true && s.review.after === '1:null' && s.review.ungated === false, JSON.stringify(s.review));
   check('feats: a run that reaches a tier names it on the results (Reaper I); the Endless time goes to the leaderboard bridge',
     /Feat earned: Reaper I\b/.test(s.result.feat) && s.result.scores === 'endless_time:321', JSON.stringify(s.result));
   check('about: Settings → About shows the version, the player ID and the open-source notices',
@@ -4312,10 +4321,10 @@ errs = await session(async (page) => {
   });
   check('reminders: no setting on the web build; with a plugin the switch asks permission first (refused: stays off)',
     s.web === false && s.row && s.denied === false && s.allowed === true, JSON.stringify(s));
-  check('reminders: never in the quiet hours (23:30 → 9:00 next day, 03:00 → 9:00); energy full, the next day at 19:00, the Rush when it opens',
-    s.quiet === '15 9:00, 14 9:00, 14 15:00' && /^energy@14 1\d:\d\d, daily@15 19:00$/.test(s.list) && s.saturday.includes('rush'), JSON.stringify({ q: s.quiet, l: s.list, sat: s.saturday }));
+  check('reminders: never in the quiet hours (23:30 → 9:00 next day, 03:00 → 9:00); energy full, the next day at 19:00, the Rush\'s next opening (even while one is on)',
+    s.quiet === '15 9:00, 14 9:00, 14 15:00' && /^energy@14 1\d:\d\d, daily@15 19:00, rush@\d+ \d+:\d\d$/.test(s.list) && s.saturday.includes('rush'), JSON.stringify({ q: s.quiet, l: s.list, sat: s.saturday }));
   check('reminders: scheduled only while switched on; turning them off clears what is scheduled',
-    s.count >= 2 && s.off === false && s.offCount === 0 && /permit, permit, schedule:energy\+daily(\+rush)?, cancel/.test(s.log), s.log);
+    s.count >= 2 && s.off === false && s.offCount === 0 && /^permit, permit, cancel, schedule:energy\+daily\+rush, cancel$/.test(s.log), s.log);
 });
 check('update 14 reminders: no runtime errors', !errs.length, errs[0] || '');
 

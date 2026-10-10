@@ -8,7 +8,7 @@
 //   RUN=17 replays run #17 of the same matrix (same arguments and filters, so the same seeds and steps; RUN=0-44 plays a
 //   slice); STOP=frame halts the replay there and prints the run state. A violation's line names its run, segment and frame:
 //   that is the repro. LEAK=30 starts and exits 30 runs in one page and reports renderer, DOM and heap growth; PERF=1 times
-//   engine.step with a full horde, the legion, a Rite, a Nova and an event at once. OUT=file.json writes every run's result.
+//   engine.step with a full horde, the legion, a Rite, a Nova and an event at once (CH=29: in a late realm, with its foe). OUT=file.json writes every run's result.
 // Invariants: no page errors or console.error; finite positions, HP, XP, Nova, timers, gold and counters; the enemy pool
 // (count, duplicates, pooled-and-active); 0 <= legion <= 400; run time advances unless legitimately blocked, every block
 // resolves once the bot acts, the time scale recovers; Gravemaw rises at 6:00 and dies in bounded time in god mode, and the
@@ -190,7 +190,7 @@ function installSoak() {
       if (e.active) { n++; if (e.pooled) V('pool', `active ${e.type} is also pooled`); }
       else if (compacted) V('pool', `inactive ${e.type} left in the active list after compact()`);
     }
-    const c = E.counts, sum = c.husk + c.ghoul + c.brute + c.witch + c.bloater + c.boss;
+    const c = E.counts, sum = Object.values(c).reduce((a, v) => a + v, 0); // every type (the act foes, Wraiths, Priests, events)
     if (sum !== n) V('pool', `enemy counts sum to ${sum} but ${n} are active`);
     for (const t in c) if (c[t] < 0) V('pool', `enemy count ${t} is ${c[t]}`);
     if (compacted && E.count !== n) V('pool', `enemies.count ${E.count} != ${n} active after compact()`);
@@ -532,14 +532,15 @@ function installSoak() {
   }
 
   // ---------------------------------------------------------------- performance smoke
-  function perf(hero) {
-    start({ idx: 9000, seed: 7, kind: 'campaign', hero, ch: 3, diff: 'normal', god: true, prog: 5, chaos: 0, render: 1 });
+  function perf(hero, ch = 3) {
+    start({ idx: 9000, seed: 7, kind: 'campaign', hero, ch, diff: 'normal', god: true, prog: 5, chaos: 0, render: 1 });
     const r = S.run, P = r.player, E = app.engine, gl = E.renderer.getContext(), q = E.qName, px = new Uint8Array(4);
     const sync = () => gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); // WebGL is async (finish() may not block): a pixel read waits for the frame
     r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.time = 200; r.events.nextAt = 1e9;
     r.stats.cap = 400;
-    const types = ['husk', 'husk', 'ghoul', 'brute', 'witch', 'bloater'];
-    const horde = () => { for (let i = 0; r.enemies.count < 280 && i < 600; i++) { const a = i * 2.39996, d = 4 + (i % 40) * 0.35; r.spawnEnemy(types[i % 6], { at: { x: P.x + Math.cos(a) * d, z: P.z + Math.sin(a) * d } }); } };
+    const actFoe = [null, null, 'siren', 'thornback', 'rat', 'caller', 'stalker'][Math.ceil(ch / 5)]; // a later act's own foe joins the horde
+    const types = ['husk', 'husk', 'ghoul', 'brute', 'witch', 'bloater'].concat(actFoe ? [actFoe, actFoe] : []);
+    const horde = () => { for (let i = 0; r.enemies.count < 280 && i < 600; i++) { const a = i * 2.39996, d = 4 + (i % 40) * 0.35; r.spawnEnemy(types[i % types.length], { at: { x: P.x + Math.cos(a) * d, z: P.z + Math.sin(a) * d } }); } };
     horde(); r.legion.addMany(300, P.x, P.z);
     let simT = 0; const u0 = r.update.bind(r);
     r.update = (dt) => { const a = realNow(); u0(dt); simT = realNow() - a; }; // the simulation alone, inside engine.step
@@ -692,7 +693,7 @@ async function leak(n) {
 async function perfSmoke() {
   const page = await newPage(), out = [];
   for (const hero of list('HERO', ['vael', 'nyx', 'seraphine', 'liora', 'mordrake'])) {
-    const r = await page.evaluate((h) => window.__soak.perf(h), hero);
+    const r = await page.evaluate(([h, ch]) => window.__soak.perf(h, ch), [hero, +env.CH || 3]); // CH=29: a late realm (its hazards and foe)
     out.push(r);
     const f = (x) => `median ${x.median} ms, p95 ${x.p95} ms, max ${x.max} ms, >10x median: ${x.spikes.length ? JSON.stringify(x.spikes) : 'none'}`;
     console.log(`perf ${hero} (${r.quality}; at the combo ${r.at.enemies} enemies, ${r.at.legion} minions; ${r.compiled} shaders compiled after it)\n  frame (step + sync): ${f(r.frame)}\n  simulation (update):  ${f(r.sim)}`);

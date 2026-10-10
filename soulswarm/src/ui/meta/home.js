@@ -130,7 +130,7 @@ export function createHome(ctx) {
           ${ftue ? '<span class="ftue-ring"></span><span class="ftue-ring r2"></span>' : ''}
         </div>
       </div>`;
-    requestAnimationFrame(fitSides);
+    fitSides(); requestAnimationFrame(fitSides); // now (no frame over the card), and again once fonts and images settle
   }
 
   /** The side buttons must stay above the chapter card: on a short screen (or with every offer and event showing) they

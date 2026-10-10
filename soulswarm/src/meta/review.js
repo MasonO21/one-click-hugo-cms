@@ -8,18 +8,27 @@ import { canAskReview, askReview } from '../engine/platform.js';
 
 /** Is this run's end a moment to ask? (A pure check: no state changes.) */
 export function reviewMoment(p, result, outcome) {
-  if (!outcome || !result || !result.victory || (p.privacy && p.privacy.band === 'child')) return false;
+  const band = p.privacy && p.privacy.band;
+  if (!outcome || !result || !result.victory || (band !== 'adult' && band !== 'teen')) return false; // never a child, nor before the age gate
   const R = p.flags.review || { n: 0, at: 0 };
   if (R.n >= REVIEW.max || clockNow() - R.at < REVIEW.gapDays * 864e5) return false;
   if (outcome.rush) return !!outcome.cleared;
   return !!outcome.firstClear && outcome.difficulty === 'normal' && REVIEW.chapters.includes(+result.chapter);
 }
 
-/** Asks (after `delay` ms, once the results have shown) when the moment is right and the platform can. */
-export function maybeAskReview(p, result, outcome, delay = REVIEW.delayMs) {
-  if (!canAskReview() || !reviewMoment(p, result, outcome)) return false;
-  const R = p.flags.review || (p.flags.review = { n: 0, at: 0 });
-  R.n++; R.at = clockNow();
-  setTimeout(() => askReview(), delay);
+/** Asks after `delay` ms (once the results have shown) when the moment is right and the platform can. `ok()` is checked
+ *  again then (not over a new run); only a real ask counts, and `onAsk` saves it. Returns whether one is on its way. */
+let pending = false;
+export function maybeAskReview(p, result, outcome, { delay = REVIEW.delayMs, ok = () => true, onAsk } = {}) {
+  if (pending || !canAskReview() || !reviewMoment(p, result, outcome)) return false;
+  pending = true;
+  setTimeout(() => {
+    pending = false;
+    if (!ok() || !reviewMoment(p, result, outcome)) return;
+    const R = p.flags.review || (p.flags.review = { n: 0, at: 0 });
+    R.n++; R.at = clockNow();
+    askReview();
+    if (onAsk) onAsk();
+  }, delay);
   return true;
 }

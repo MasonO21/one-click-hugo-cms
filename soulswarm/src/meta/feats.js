@@ -62,12 +62,13 @@ export function newFeats(p, before) {
   return out;
 }
 
-/** Reports every reached tier to the platform (Game Center / Play Games in store builds), once per session each. */
+/** Reports every reached tier to the platform (Game Center / Play Games in store builds), once per session each (a
+ *  bridge registered late, after a slow sign-in, gets them all at the next call). */
 const reported = new Set();
 export function reportFeats(p) {
   for (const id of FEATS.order) {
     const F = FEATS.families[id], v = featValue(p, id);
-    F.goals.forEach((g, i) => { const key = `${id}_${i + 1}`; if (v >= g && !reported.has(key)) { reported.add(key); reportFeat(key); } });
+    F.goals.forEach((g, i) => { const key = `${id}_${i + 1}`; if (v >= g && !reported.has(key) && reportFeat(key)) reported.add(key); });
   }
 }
 

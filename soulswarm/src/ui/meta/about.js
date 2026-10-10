@@ -36,7 +36,7 @@ export function openAbout(app) {
     <details class="ab-lic"><summary>SIL Open Font License 1.1</summary><pre>${OFL}</pre></details>
   </div>`);
   $(body, '[data-act="copy"]').addEventListener('click', () => {
-    navigator.clipboard.writeText(p.privacy.id).then(() => toast('Player ID copied'), () => {});
+    Promise.resolve().then(() => navigator.clipboard.writeText(p.privacy.id)).then(() => toast('Player ID copied'), () => toast(`Player ID: ${p.privacy.id}`)); // no clipboard (an older WebView): show it
   });
   return modal({ title: 'About SOULSWARM', body, cls: 'mm-about scroll', actions: [{ label: 'Close', cls: 'btn-ghost btn-block' }] });
 }

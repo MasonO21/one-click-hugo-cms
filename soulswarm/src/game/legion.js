@@ -141,7 +141,7 @@ export class Legion {
     m.radius = RADIUS[key] * (elite ? C.scale : 1);
     m.target = null; m.tuid = 0; m.retarget = Math.random() * 0.3; m.atkCd = 0.2;
     m.born = 0; m.phase = Math.random() * 6.28; m.slot = this.slotSeq++;
-    m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1; m.fade = 0; m.charmT = 0; m.trampled = 0;
+    m.rot = Math.random() * TAU; m.flash = 0; m.fuse = -1; m.idle = 0; m.gone = false; m.trailT = Math.random() * 0.1; m.fade = 0; m.charmT = 0;
     this.list.push(m);
     if (key === 'bulwark') this.taunters.push(m);
     if (this.list.length > this.peak) this.peak = this.list.length;

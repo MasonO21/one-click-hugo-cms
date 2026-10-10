@@ -245,10 +245,15 @@ export function openSettings(ctx) {
     r.addEventListener('input', () => { st[r.dataset.k] = Number(r.value); sync(); app.applySettings(); });
     r.addEventListener('change', () => { if (r.dataset.k === 'sfx') app.audio.sfx('click'); else if (r.dataset.k === 'voice') app.audio.voice(`${p.selectedHero}_greet`); commit(p); });
   });
+  let asking = false; // the permission prompt is up: a second tap waits
   $$(body, '.tgl').forEach((t) => t.addEventListener('click', async () => {
     const k = t.dataset.t;
+    if (asking) return;
     // reminders need the system's permission first; turning them off clears what is scheduled
-    if (k === 'reminders' && !st.reminders && !(await notifyPermit())) { toast('Notifications are off for SOULSWARM in your device settings.'); return; }
+    if (k === 'reminders' && !st.reminders) {
+      asking = true; const ok = await notifyPermit(); asking = false;
+      if (!ok) { toast('Notifications are off for SOULSWARM in your device settings.'); return; }
+    }
     st[k] = !st[k]; sync(); app.applySettings(); commit(p); tap(app);
     if (k === 'reminders' && !st.reminders) cancelReminders();
   }));

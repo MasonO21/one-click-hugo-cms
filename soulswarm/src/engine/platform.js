@@ -23,9 +23,10 @@ export function haptic(kind = 'light') {
 // each reached tier is reported as `${family}_${tier}` (the console's achievement ids). The web build has no bridge.
 let featBridge = null;
 export const setFeatBridge = (fn) => { featBridge = typeof fn === 'function' ? fn : null; };
+/** Returns whether a bridge took it (with none, the tier is reported again once one is registered). */
 export function reportFeat(id) {
-  if (!featBridge) return;
-  try { Promise.resolve(featBridge(id)).catch(() => {}); } catch (e) { /* offline or signed out: the next session reports again */ }
+  if (!featBridge) return false;
+  try { Promise.resolve(featBridge(id)).catch(() => {}); return true; } catch (e) { return false; } // offline or signed out: the next session reports again
 }
 
 // The store's own review prompt (meta/review.js decides when): the store build registers its in-app review plugin with

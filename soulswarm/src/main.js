@@ -135,7 +135,7 @@ function beginRun(chapter, opts) {
     reportFeats(profile); // Feat tiers reached in this run (Game Center / Play Games in the store build)
     if (result.endless) submitScore('endless_time', result.time); // leaderboards (the store build's bridge)
     else if (run.rush && outcome && outcome.cleared) submitScore(`rush_${run.courtId}`, result.time);
-    if (mode !== 'tutorial' && maybeAskReview(profile, result, outcome)) commit(profile);
+    if (mode !== 'tutorial') maybeAskReview(profile, result, outcome, { ok: () => !app.run || app.run === run, onAsk: () => commit(profile) }); // not over a new run
   };
   return true;
 }
@@ -170,6 +170,7 @@ function boot() {
   // measured before. Automated test browsers (navigator.webdriver) answer as an adult who chose "Necessary only".
   analytics.init(profile);
   reportFeats(profile);
+  cancelReminders(); // a killed app never saw 'visible': whatever it scheduled is stale now
   const sessionStart = () => analytics.track('session_start', { returning: profile.stats.runs > 0, days: Math.floor((clock.now() - profile.createdAt) / 864e5), level: profile.level, chapter: profile.chapter.unlocked });
   if (navigator.webdriver && needsGate(profile)) { answerGate(profile, new Date(clock.now()).getFullYear() - 30, false); setConsent(profile, { analytics: false, ads: false }); commit(profile); }
   if (needsGate(profile)) openAgeGate(app, sessionStart);

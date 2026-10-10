@@ -1,10 +1,10 @@
 // Reminders (Update 14): local notifications the player opts into (Settings → Reminders; off by default, and only where
 // the store build registered a notification plugin, engine/platform.js setNotifyBridge). Scheduled when the app goes to
-// the background and cleared when it comes back: energy full, the next day's free chest and quests, and the Boss Rush
+// the background and cleared when it comes back (and at every launch, since a killed app never comes back): energy full, the next day's free chest and quests, and the Boss Rush
 // opening. None lands in the quiet hours (REMINDERS.quiet, local time): it moves to the morning.
 import { REMINDERS, ENERGY_MAX, ENERGY_REGEN_SEC, BOSS_RUSH } from '../game/data.js';
 import { now as clockNow } from './clock.js';
-import { energyNextIn, rushTimes, rushOpen } from './economy.js';
+import { energyNextIn, rushTimes } from './economy.js';
 import { canNotify, notifySchedule, notifyCancel } from '../engine/platform.js';
 
 /** `t` moved out of the quiet hours (local time) to the morning they end. */
@@ -26,7 +26,7 @@ export function reminderList(p, t = clockNow()) {
   }
   const d = new Date(t), daily = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, REMINDERS.dailyHour, 0, 0, 0).getTime();
   out.push({ id: 'daily', at: daily, ...T.daily });
-  if (p.chapter.unlocked >= BOSS_RUSH.unlockAt && !rushOpen(p, t)) out.push({ id: 'rush', at: outOfQuiet(rushTimes(t).starts), ...T.rush });
+  if (p.chapter.unlocked >= BOSS_RUSH.unlockAt && p.flags.bossRush !== 'off') out.push({ id: 'rush', at: outOfQuiet(rushTimes(t).starts), ...T.rush }); // the next opening (next week's while one is on)
   return out.filter((r) => r.at > t + 60e3).sort((a, b) => a.at - b.at);
 }
 
@@ -34,6 +34,7 @@ export function reminderList(p, t = clockNow()) {
 export function scheduleReminders(p) {
   if (!p.settings.reminders || !canNotify()) return 0;
   const list = reminderList(p);
+  notifyCancel(); // replace, never add to, what an earlier backgrounding scheduled
   notifySchedule(list);
   return list.length;
 }
