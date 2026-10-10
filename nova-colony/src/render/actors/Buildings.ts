@@ -24,6 +24,7 @@ import { mergeCopies } from '../core/GeoBuilder';
 import { tierStyle, themedStyle, skinnedStyle, type LookTint, type TierStyle } from '../core/palette';
 import { buildModel, modelCached, retainModel, releaseModel, pruneModels, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey, WALL_H, ROOF_Y, type PieceGeoKey } from '../models/pieces';
+import { acrossOnly, wallEdgeShift } from '../models/wallSnap';
 import type { BuildingInstance, Id } from '../../core/state';
 import type { BuildingDef } from '../../data/schema';
 import { CELL, WORLD_CELLS, cellIndex, cellMin, cellCenter, footprintCenter, rotatedSize, inWorld } from '../../core/constants';
@@ -63,6 +64,8 @@ interface Slot {
   y: number;
   z: number;
   yaw: number;
+  /** Stretch along the piece's own X (a wall arm reaching past a post moved to the floor's edge). */
+  sx: number;
 }
 
 interface FacilityBatch {
@@ -98,6 +101,8 @@ interface Roof {
 
 const WALL_LIKE = new Set(['wall', 'door', 'window', 'gate', 'pillar']);
 const FENCE_LIKE = new Set(['fence', 'gate']);
+/** A wall arm's length along its own X (pieces.ts: 0.3 .. 1.0). */
+const ARM_LEN = 0.7;
 const DIRS = [
   [1, 0, 0],
   [-1, 0, Math.PI],
@@ -206,6 +211,9 @@ export class Buildings {
   /** Model build budget per rebuild (ms); see MODEL_BUDGET_MS. */
   modelBudgetMs = MODEL_BUDGET_MS;
   private wallMap = new Map<number, string>();
+  /** Cells with a floor or platform under them (walls on a floor's edge snap to it). */
+  private floorCells = new Set<number>();
+  private readonly shift = [0, 0];
   private readonly unsub: (() => void)[] = [];
   /** Per-frame construction dust accumulator. */
   private dustAcc = 0;
@@ -345,9 +353,11 @@ export class Buildings {
 
     // wall-like occupancy for connections
     this.wallMap.clear();
+    this.floorCells.clear();
     for (const b of list) {
       const def = game.data.building(b.def);
       if (def?.piece && (WALL_LIKE.has(def.piece) || FENCE_LIKE.has(def.piece))) this.wallMap.set(cellIndex(b.x, b.z), def.piece);
+      else if (def?.piece === 'floor' || def?.piece === 'platform') this.floorCells.add(cellIndex(b.x, b.z));
     }
 
     for (const b of list) {
@@ -459,7 +469,7 @@ export class Buildings {
     composeYaw(_m, x, y, z, yaw, sx, sy, sz);
     const index = batch.count;
     batch.push(_m, color, entry.fade);
-    entry.slots.push({ batch, index, x, y, z, yaw });
+    entry.slots.push({ batch, index, x, y, z, yaw, sx });
   }
 
   /**
@@ -548,6 +558,20 @@ export class Buildings {
     return this.wallMap.get(cellIndex(cx, cz));
   }
 
+  /** A floor, a platform or a wall-like piece stands on the cell (the inside of a floored room, seen from its walls). */
+  private builtUp(cx: number, cz: number): boolean {
+    if (!inWorld(cx, cz)) return false;
+    const i = cellIndex(cx, cz);
+    if (this.floorCells.has(i)) return true;
+    const k = this.wallMap.get(i);
+    return !!k && WALL_LIKE.has(k);
+  }
+
+  /** Where a wall-like piece on the cell is drawn, as (x, z) offsets from its centre (models/wallSnap). */
+  private edgeShift(cx: number, cz: number): number[] {
+    return wallEdgeShift(this.floorCells.has(cellIndex(cx, cz)), (dx, dz) => this.builtUp(cx + dx, cz + dz), this.shift);
+  }
+
   private buildPiece(entry: Entry, piece: string, style: TierStyle, color: THREE.Color): void {
     const b = entry.b;
     const x = cellCenter(b.x);
@@ -568,15 +592,27 @@ export class Buildings {
         }
       }
       if (!isFence) this.pushSlot(entry, this.pieceBatch('floor', style), x, y, z, 0, color);
+      // on a floor's edge the wall moves out to it (the floor tile stays put)
+      const sh = this.edgeShift(b.x, b.z);
+      if (isFence) sh[0] = sh[1] = 0;
+      const [ox, oz] = sh;
       if (arms === 0) {
-        this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_full' : 'wall_full', style), x, y, z, yaw, color);
+        const [ax, az] = acrossOnly(sh, yaw);
+        this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_full' : 'wall_full', style), x + ax, y, z + az, yaw, color);
       } else {
-        // centre post + one arm per connected neighbour (arms meet flush at the cell edges)
+        // post + one arm per connected neighbour (arms meet flush at the cell edges); with the post moved to the
+        // floor's edge, an arm reaching back across the cell stretches from the post to the edge
         void axisX;
         void axisZ;
-        this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_core' : 'wall_core', style), x, y, z, 0, color);
+        this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_core' : 'wall_core', style), x + ox, y, z + oz, 0, color);
         for (const [dx, dz, ang] of DIRS) {
-          if (connects(this.neighbourKind(b.x + dx, b.z + dz), isFence)) this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_arm' : 'wall_arm', style), x, y, z, ang, color);
+          if (!connects(this.neighbourKind(b.x + dx, b.z + dz), isFence)) continue;
+          const along = ox * dx + oz * dz; // how far the post moved toward this neighbour
+          const stretch = Math.max(0.1, (ARM_LEN - along) / ARM_LEN);
+          const t = 1 - stretch; // keeps the arm's far end on the cell edge
+          const px = x + ox - dx * along + dx * t;
+          const pz = z + oz - dz * along + dz * t;
+          this.pushSlot(entry, this.pieceBatch(isFence ? 'fence_arm' : 'wall_arm', style), px, y, pz, ang, color, stretch);
         }
       }
       entry.height = isFence ? 1.4 : WALL_H;
@@ -587,7 +623,9 @@ export class Buildings {
       const nz = connects(this.neighbourKind(b.x, b.z + 1), true) || connects(this.neighbourKind(b.x, b.z - 1), true);
       const along = nx && !nz ? 0 : nz && !nx ? Math.PI / 2 : b.rot % 2 === 0 ? 0 : Math.PI / 2;
       if (piece !== 'gate') this.pushSlot(entry, this.pieceBatch('floor', style), x, y, z, 0, color);
-      this.pushSlot(entry, this.pieceBatch(piece as PieceGeoKey, style), x, y, z, along, color);
+      // in a wall line on a floor's edge: moves out with it, across its own length only
+      const [ox, oz] = acrossOnly(this.edgeShift(b.x, b.z), along);
+      this.pushSlot(entry, this.pieceBatch(piece as PieceGeoKey, style), x + ox, y, z + oz, along, color);
       entry.height = piece === 'gate' ? WALL_H + 0.6 : WALL_H;
       return;
     }
@@ -782,7 +820,7 @@ export class Buildings {
       const bounce = Math.sin(Math.min(1, frac * 1.6) * Math.PI) * 0.06;
       const sy = Math.max(0.06, q + frac / steps + bounce);
       for (const s of en.slots) {
-        composeYaw(_m, s.x, s.y, s.z, s.yaw, 1, sy, 1);
+        composeYaw(_m, s.x, s.y, s.z, s.yaw, s.sx, sy, 1);
         s.batch.setMatrix(s.index, _m);
       }
       if (p < 0.97) {

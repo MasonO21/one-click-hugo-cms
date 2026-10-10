@@ -8,6 +8,7 @@ import type { RenderContext } from '../core/context';
 import { Batch, composeYaw } from '../core/Batch';
 import { buildModel, retainModel, releaseModel, type ModelSpec } from '../models/spec';
 import { pieceGeometry, pieceFullKey } from '../models/pieces';
+import { acrossOnly, wallEdgeShift } from '../models/wallSnap';
 import { tierStyle } from '../core/palette';
 import { CELL, cellCenter, cellMin, CENTER_CELL, footprintCenter, WORLD_CELLS } from '../../core/constants';
 import { clamp } from '../../core/math';
@@ -43,6 +44,7 @@ const GRID_FRAG = /* glsl */ `
 `;
 
 const _m = new THREE.Matrix4();
+const NO_SHIFT: [number, number] = [0, 0];
 
 export interface SelectionInfo {
   x: number;
@@ -73,6 +75,9 @@ export class BuildOverlay {
   private ring: THREE.Mesh;
   private ringMat: THREE.MeshBasicMaterial;
   private selection: SelectionInfo | null = null;
+  /** Ghost wall cells (snap) and a reused offset pair. */
+  private readonly ghostSet = new Set<number>();
+  private readonly shiftTmp = [0, 0];
 
   constructor(private readonly ctx: RenderContext) {
     ctx.scene.add(this.group);
@@ -218,11 +223,15 @@ export class BuildOverlay {
       const cells = b.valid ? this.cellsOk : this.cellsBad;
       const yaw = -(b.rot | 0) * (Math.PI / 2);
       const m = _m;
+      // a wall piece over a floor's edge previews where it will stand: on the edge (models/wallSnap)
+      const snap = def?.piece === 'wall' || def?.piece === 'door' || def?.piece === 'window';
+      if (snap) this.ghostCells(b.cells.length ? b.cells : [{ x: b.x, z: b.z }]);
       if (def?.piece && b.cells.length > 1) {
         for (const c of b.cells) {
+          const [ox, oz] = snap ? this.ghostShift(c.x, c.z, yaw) : NO_SHIFT;
           const x = cellCenter(c.x);
           const z = cellCenter(c.z);
-          composeYaw(m, x, ctx.heightAt(x, z) + 0.02, z, yaw);
+          composeYaw(m, x + ox, ctx.heightAt(x, z) + 0.02, z + oz, yaw);
           ghost.push(m);
           composeYaw(m, x, ctx.heightAt(x, z) + 0.1, z, 0);
           cells.push(m);
@@ -232,7 +241,8 @@ export class BuildOverlay {
         const c = footprintCenter(b.x, b.z, size, b.rot);
         const y = ctx.heightAt(c.x, c.z);
         const bob = Math.sin(env.t * 4) * 0.05 + 0.05;
-        composeYaw(m, c.x, y + bob, c.z, yaw);
+        const [ox, oz] = snap ? this.ghostShift(b.x, b.z, yaw) : NO_SHIFT;
+        composeYaw(m, c.x + ox, y + bob, c.z + oz, yaw);
         ghost.push(m);
         xray.push(m);
         const list = b.cells.length ? b.cells : [{ x: b.x, z: b.z }];
@@ -264,6 +274,27 @@ export class BuildOverlay {
       this.ring.visible = true;
       this.ringMat.opacity = 0.7 + Math.sin(env.t * 4) * 0.2;
     } else this.ring.visible = false;
+  }
+
+  /** The cells of the wall line being placed (they count as walls for each other's snap). */
+  private ghostCells(cells: { x: number; z: number }[]): void {
+    this.ghostSet.clear();
+    for (const c of cells) this.ghostSet.add(c.z * WORLD_CELLS + c.x);
+  }
+
+  /** Where a ghost wall piece on (cx, cz) stands: on the floor's edge when it is over one, else the cell centre. */
+  private ghostShift(cx: number, cz: number, yaw: number): [number, number] {
+    const B = this.ctx.game.sys.buildings;
+    const data = this.ctx.game.data;
+    const builtUp = (dx: number, dz: number): boolean => {
+      const x = cx + dx;
+      const z = cz + dz;
+      if (this.ghostSet.has(z * WORLD_CELLS + x) || B.floorAt(x, z)) return true;
+      const o = B.objectAt(x, z);
+      const p = o ? data.building(o.def)?.piece : undefined;
+      return p === 'wall' || p === 'door' || p === 'window' || p === 'gate' || p === 'pillar';
+    };
+    return acrossOnly(wallEdgeShift(!!B.floorAt(cx, cz), builtUp, this.shiftTmp), yaw);
   }
 
   dispose(): void {
