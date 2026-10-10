@@ -22,6 +22,11 @@ import '../styles/mastery.css';
 /** The Mastery tab's id (not a ResearchCategory). */
 const MASTERY = 'mastery';
 
+/** Update a disabled button's tap-to-explain reason (only when it changed). */
+function setWhy(el: HTMLElement, why: string): void {
+  if (el.getAttribute('data-why') !== why) el.setAttribute('data-why', why);
+}
+
 export class ResearchPanel extends Panel {
   readonly name = 'research';
   private cat = '';
@@ -31,6 +36,7 @@ export class ResearchPanel extends Panel {
   private readonly mIcons = new Map<string, HTMLElement>();
   /** The line a level was just bought for (its level chip pops once). */
   private bumped = '';
+  private whyAcc = 0;
 
   title(): PanelTitle {
     return { icon: '🔬', art: hudArt('tech'), text: 'Research' };
@@ -84,16 +90,46 @@ export class ResearchPanel extends Panel {
     return this.game.sys.research.status(id);
   }
 
+  /**
+   * What the panel shows, not the raw RP: the bank as displayed (fmt), what is affordable, and the selected node's
+   * price chip. RP accrue several points a second, and keying on the exact count rebuilt the whole tree (DOM, style,
+   * layout) that often while the panel was open. The exact "Need N more" reasons are kept fresh by live().
+   */
   override signature(): string {
     const g = this.game;
     const rs = g.sys.research;
+    const bank = fmt(Math.floor(g.state.research.points));
     if (this.cat === MASTERY) {
       const lv = rs.masteryInfo().map((m) => `${m.level}${m.ready ? '!' : ''}${m.open ? '' : 'x'}`).join(',');
-      return `${this.cat}|${Math.floor(g.state.research.points)}|${g.state.colony.tier}|${lv}|${g.state.research.completed.length}`;
+      return `${this.cat}|${bank}|${g.state.colony.tier}|${lv}|${g.state.research.completed.length}`;
     }
     const inCat = this.data.research.filter((r) => r.category === this.cat);
     const mask = inCat.map((r) => rs.status(r.id)[0] + (rs.canResearch(r.id) ? '!' : '')).join('');
-    return `${this.cat}|${this.sel}|${Math.floor(g.state.research.points)}|${g.state.research.completed.length}|${g.state.colony.tier}|${mask}`;
+    const sel = this.sel ? this.data.researchDef(this.sel) : undefined;
+    const selAfford = sel && g.state.research.points >= sel.cost ? 1 : 0;
+    return `${this.cat}|${this.sel}|${bank}|${g.state.research.completed.length}|${g.state.colony.tier}|${mask}|${selAfford}`;
+  }
+
+  /** Keep the "Need N more research points" reasons of the shown buttons exact between re-renders (a few times a second). */
+  override live(dt: number): void {
+    this.whyAcc += dt;
+    if (this.whyAcc < 0.25 || !this.body) return;
+    this.whyAcc = 0;
+    const g = this.game;
+    const rs = g.sys.research;
+    const pts = g.state.research.points;
+    const buttons = this.body.querySelectorAll<HTMLElement>('[data-action="master"][data-why]');
+    const info = buttons.length ? rs.masteryInfo() : [];
+    for (const el of buttons) {
+      const m = info.find((x) => x.line.id === el.dataset.line);
+      if (m && !m.ready) setWhy(el, `Need ${fmt(Math.max(0, Math.ceil(m.cost - pts)))} more research points`);
+    }
+    const act = this.body.querySelector<HTMLElement>('[data-action="research"][data-why]');
+    const d = this.sel ? this.data.researchDef(this.sel) : undefined;
+    if (act && d && act.dataset.why?.startsWith('Need ')) {
+      const need = Math.max(0, Math.ceil(d.cost - pts));
+      if (need > 0) setWhy(act, `Need ${need} more research points`);
+    }
   }
 
   override extras() {
