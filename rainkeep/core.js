@@ -429,7 +429,7 @@
     const isBoss = !!boss;
     const name = depth > 0 && !far ? `${foe[0]} · depth ${depth}` : foe[0];
     const traits = traitsFor(n, isBoss), st = foeStats(stageLevel(n), isBoss ? DATA.enemy.boss : 1);
-    if (traits.length) { const T = DATA.traits; for (const k of ['atk', 'def', 'hp']) st[k] *= T.ease; if (traits.includes('armored')) st.def *= T.list.armored.def; }
+    if (traits.length) { const T = DATA.traits, e = traits.reduce((m, t) => m * (T.list[t].ease != null ? T.list[t].ease : T.ease), 1); for (const k of ['atk', 'def', 'hp']) st[k] *= e; if (traits.includes('armored')) st.def *= T.list.armored.def; }
     return { n, name, cls: foe[1], boss: isBoss, chapter: ch.name, act: ch.act || (n > DATA.finalStage ? 4 : 1), traits, ...st };
   }
   // foe traits (DATA.traits): none before stage 16, then one each (two for a boss), turning through the five so

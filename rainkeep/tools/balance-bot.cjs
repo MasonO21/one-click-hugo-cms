@@ -275,7 +275,7 @@ const HOURS = Number(process.argv[3] || 8);
           if (S.lev.last && S.lev.last.hunt !== lvh.seen) { lvh.seen = S.lev.last.hunt; lvh.ranks.push(S.lev.last.rank); }
         }
         // power, hour by hour, to redraw the Hall of Wardens' curve from
-        if (Math.floor(S.time / 3600) !== pwH) { pwH = Math.floor(S.time / 3600); pw.push([+(S.time / 3600).toFixed(1), Math.round(KH.power())]); }
+        if (Math.floor(S.time / 3600) !== pwH) { pwH = Math.floor(S.time / 3600); pw.push([+(S.time / 3600).toFixed(1), Math.round(KH.power()), KH.hall && KH.hall.unlocked() ? KH.hall.table().find((r) => r.you).power : 0]); }
         // the Founding Week: collect every mission as it is met and open each chest on the track
         if (KH.founding && KH.founding.active() && !NO.includes('founding')) {
           if (DOLPHIN) buy('foundkit');

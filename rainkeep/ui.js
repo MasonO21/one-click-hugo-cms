@@ -300,7 +300,8 @@
   }
   function traitRows(foe, heroes) {
     const TL = DATA.traits.list;
-    return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span></div>
+    const need = { armored: 'Sunder', regen: 'Volley or Charge', venom: 'Mend' };
+    return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span>${!traitAnswered(t, heroes) && need[t] ? `<div class="small tr-need">No hero in the squad has ${need[t]}.</div>` : ''}</div>
       ${traitAnswered(t, heroes) ? `<span class="chip tr-ok" title="Your squad can answer it">${icon('i-check')}</span>` : `<span class="chip tr-no" title="No hero in the squad can answer it">!</span>`}</div>`).join('');
   }
   KH.traitRows = traitRows;

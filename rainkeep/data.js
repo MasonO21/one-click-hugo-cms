@@ -514,15 +514,17 @@ const DATA = {
   maxRounds: 12,
   // Foe traits: from stage 16 every expedition foe has one (a boss two), each with a counter the squad can play:
   // Sunder against armor, a skill strike against regeneration, Mend against venom, the Torrent against frenzy and
-  // against a sand-shell. A foe with a trait is a little weaker otherwise (ease), so a counter played well comes out ahead.
+  // against a sand-shell. A foe whose trait a hero's skill answers is a little weaker otherwise (ease), so a squad that
+  // brings the counter comes out ahead and one that doesn't falls behind; the Torrent's traits cost no ease, since every
+  // squad has the breath and the question is only when to spend it.
   traits: {
     from: 16, ease: 0.94,
     list: {
       armored: { name: 'Armored', icon: 'i-tr-armored', def: 1.5, text: 'Half again as hard to hurt. Sunder cuts twice as deep.' },
-      regen: { name: 'Regenerating', icon: 'i-tr-regen', heal: 0.06, text: 'Heals 6% a round, unless a skill strikes it that round.' },
+      regen: { name: 'Regenerating', icon: 'i-tr-regen', heal: 0.05, text: 'Heals 5% a round, unless a skill strikes it that round.' },
       venom: { name: 'Venomous', icon: 'i-tr-venom', dot: 0.04, ward: 2, text: 'Poisons the squad for 4% a round. Mend cures it and wards for two rounds.' },
-      frenzy: { name: 'Frenzied', icon: 'i-tr-frenzy', ramp: 0.08, text: 'Hits 8% harder every round. The Torrent calms it.' },
-      shell: { name: 'Sand-shelled', icon: 'i-tr-shell', rounds: 3, cut: 0.5, text: 'Takes half damage for its first three rounds. The Torrent cracks the shell.' },
+      frenzy: { name: 'Frenzied', icon: 'i-tr-frenzy', ramp: 0.1, ease: 1, text: 'Hits 10% harder every round. The Torrent calms it.' },
+      shell: { name: 'Sand-shelled', icon: 'i-tr-shell', rounds: 3, cut: 0.5, ease: 1, text: 'Takes half damage for its first three rounds. The Torrent cracks the shell.' },
     },
     order: ['armored', 'regen', 'venom', 'frenzy', 'shell'],
   },
