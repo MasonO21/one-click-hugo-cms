@@ -1231,7 +1231,8 @@
   // ======================================================================
   // UI actions
   // ======================================================================
-  const TAB_ALIAS = { recruit: ['heroes', 'beacon'], roster: ['heroes', 'roster'], gear: ['heroes', 'gear'], expedition: ['world', 'expedition'], map: ['world', 'map'], spire: ['world', 'spire'], duels: ['world', 'duels'] };
+  // (simcaravan: the simulated Caravan, the Caravan tab's own side when online play is on, mp.js)
+  const TAB_ALIAS = { simcaravan: ['caravan', 'sim'], recruit: ['heroes', 'beacon'], roster: ['heroes', 'roster'], gear: ['heroes', 'gear'], expedition: ['world', 'expedition'], map: ['world', 'map'], spire: ['world', 'spire'], duels: ['world', 'duels'] };
   ACT.tab = (tab) => {
     let sub = null;
     if (TAB_ALIAS[tab]) [tab, sub] = TAB_ALIAS[tab];
@@ -1368,7 +1369,9 @@
     if (kind === 'sheet') { mark(`#side [data-arg="${arg}"]`) || mark(`#side [data-members~="${arg}"]`) || mark('#hud [data-act="menu"]'); return; }
     const [tab, sub] = TAB_ALIAS[arg] || [arg, null];
     if (UI.tab !== tab) { mark(`#tabs [data-arg="${tab}"]`); return; }
-    if (sub && UI.sub[tab] !== sub) { mark(`.subtabs [data-arg="${tab}:${sub}"]`); return; }
+    // the Caravan tab's sides exist only with online play; offline it is the simulated Caravan alone
+    if (tab === 'caravan') { if (sub && KH.net && KH.net.online() && UI.sub.caravan !== sub) { mark(`[data-act="mpmode"][data-arg="${sub}"]`); return; } }
+    else if (sub && UI.sub[tab] !== sub) { mark(`.subtabs [data-arg="${tab}:${sub}"]`); return; }
     if (tab === 'heroes' && UI.sub.heroes === 'roster') { mark('.hcard:not(.missing)'); return; }
     mark('#panel [data-primary]') || mark('#world [data-primary]');
   }
