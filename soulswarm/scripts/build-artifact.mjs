@@ -23,6 +23,7 @@ const script = src.slice(scriptStart, scriptEnd);
 const body = between(src, '<body>', '</body>').inner.replace(/<script[\s\S]*?<\/script>/g, '').trim();
 
 const out = [
+  '<meta charset="utf-8">', // the artifact host's skeleton declares UTF-8 too; this keeps ★ and · right when the file is opened on its own
   `<title>${title}</title>`,
   fonts,
   ...styles,
