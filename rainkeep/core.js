@@ -462,7 +462,8 @@
       // opts.startHp: a squad already worn down (the Crossing carries its losses from fight to fight)
       team, foe, opts, th: opts.startHp != null ? clamp(opts.startHp, 1, team.hp) : team.hp, eh: foe.hp, r: 0, rounds: [], over: false, win: false, timeout: false,
       fdef: foe.def * (1 - team.fx.pierce),
-      breath: !S.dormant && !opts.noBreath ? foe.hp * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0) + (team.fx.torrent || 0)) : 0,
+      // opts.breathHp: size the breath from a different foe's health (the Leviathan's is far too big to measure by)
+      breath: !S.dormant && !opts.noBreath ? (opts.breathHp || foe.hp) * DATA.wyrm.breath(S.lv.wyrm) * (1 + KH.bonus('breath') + (opts.breathBonus || 0) + (team.fx.torrent || 0)) : 0,
       breathUsed: false,
       skills: (team.heroes || []).filter((id) => S.heroes[id]).map((id) => ({ id, kind: skillKind(id), charge: DATA.battle.startCharge + (KH.talentBoost ? KH.talentBoost(id, 'charge') : 0), k: 0.85 + 0.15 * skillScale(id) })),
       guard: 0, sunder: 0,

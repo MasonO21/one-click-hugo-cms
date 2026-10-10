@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.33.0',
+  version: '4.34.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -968,6 +968,7 @@ const DATA = {
     { id: 'derby', text: 'Run a Camel Derby race', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 8 },
     { id: 'journey', text: 'Send heroes on a Far Journey', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'cook', text: 'Cook a dish at the Cookfire', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 4 },
+    { id: 'leviathan', text: 'Attack the Sand Leviathan', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 9 },
     { id: 'dig', text: 'Dig 10 tiles in the Buried City', n: 10, pts: 10, show: (S) => S.lv.wyrm >= 11 },
     { id: 'decree', text: 'Give a Warden\'s Decree', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
@@ -1289,6 +1290,21 @@ const DATA = {
       { id: 'banquet', name: 'Rain Koi Banquet', icon: 'i-ck-banquet', fish: { koi: 1, barb: 2 }, food: 2, hours: 4, fx: { prod: 0.06, teamAtk: 0.08, breath: 0.1 }, text: 'Production +6%, squads 8% harder, the Torrent +10%' },
     ],
     warPts: 10,
+  },
+
+  // ---------- The Sand Leviathan ----------
+  // From Rainwyrm Lv 9 the Leviathan surfaces on the Dunes for a hunt of one day of keep time, then dives and surfaces
+  // again. It cannot be killed: each of three attacks a hunt is a full battle of 12 rounds against it, scored by the
+  // damage done, and the best attack ranks you among the Hall's fifty wardens. Each hunt it fights as one class, so
+  // the squad that counters it does most. Par is what the squad would do on auto-battle when the hunt begins;
+  // marks for beating par reward playing the fight well, the rank rewards strength.
+  leviathan: {
+    unlock: 9, hunt: 86400, attacks: 3,
+    hp: 12, atk: 0.85, // its health and blows as multiples of the current expedition foe's: far more than 12 rounds can take
+    luck: [0.8, 1.3], // each warden's form on the day, against their share of your par by power
+    marks: [[0.6, { journals: 2 }], [1, { speed60: 1 }], [1.25, { whetstone: 4 }], [1.5, { beacons: 1, starglass: 60 }]],
+    rank: [[1, { starglass: 300, whetstone: 8, beacons: 2 }], [3, { starglass: 200, whetstone: 6, beacons: 1 }], [10, { starglass: 120, whetstone: 4 }], [25, { starglass: 70, whetstone: 2 }], [50, { starglass: 40 }]],
+    warPts: 30, // Oasis Wars points per attack
   },
 
   // ---------- Hero Kinships ----------
@@ -1791,6 +1807,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.34', items: [
+      { icon: 'i-lev', name: 'The Sand Leviathan', text: 'A leviathan too big to kill surfaces in the deep dunes every day. Attack it three times a hunt: each attack is scored by the damage done, and the best one ranks you among the fifty wardens of the Hall.', act: 'leviathan', open: (S) => S.lv.wyrm >= 9, needs: 'Rainwyrm Lv 9' },
+    ] },
     { v: '4.33', items: [
       { icon: 'i-heart', name: 'Hero Kinships', text: 'Twelve pairs of heroes whose stories are tied now fight better side by side: put both in the squad for a bonus to the whole squad, growing with the stars between them. See them on the Heroes tab.', act: 'kinships', open: (S) => Object.keys(S.heroes).length > 0, needs: 'a hero' },
     ] },
@@ -2133,6 +2152,9 @@ const DATA = {
     { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
+    { id: 'lev1', text: 'Attack the Sand Leviathan', stat: 'levAttacks', n: 1, reward: { whetstone: 3 } },
+    { id: 'levtop3', text: 'Finish a Leviathan hunt in the top 3', stat: 'levTop3', n: 1, reward: { starglass: 200, beacons: 2 } },
+    { id: 'lev20', text: 'See 20 Leviathan hunts through', stat: 'levHunts', n: 20, reward: { shard_legendary: 1 } },
     { id: 'kin1', text: 'Form a hero kinship', stat: 'kinTop', n: 1, reward: { beacons: 2 } },
     { id: 'kin5', text: 'Raise a hero kinship to Lv 5', stat: 'kinTop', n: 5, reward: { shard_legendary: 1 } },
     { id: 'kinfight', text: 'Fight 50 battles with a kinship in the squad', stat: 'kinFought', n: 50, reward: { starglass: 200 } },

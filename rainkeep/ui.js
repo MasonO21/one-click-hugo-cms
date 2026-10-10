@@ -171,7 +171,7 @@
   // the side rail's hubs: tiles that open each member's own sheet (with a way back)
   const HUBS = {
     rewards: { icon: 'i-chest', label: 'Rewards', ids: ['duties', 'login', 'hall', 'mail', 'trophies'], blurb: 'Daily duties, gifts, letters and trophies. Anything waiting for you glows.' },
-    play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'clash', 'derby', 'fishing', 'cookfire', 'buriedcity', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
+    play: { icon: 'i-kite', label: 'Play', ids: ['crossing', 'siegehall', 'clash', 'leviathan', 'derby', 'fishing', 'cookfire', 'buriedcity', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
     ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade', 'journeys'], blurb: "The keep's business out on the sand: outposts on the Dunes, trade caravans to the markets beyond, and heroes on far journeys." },
   };
   const MENU_IDS = ['bag', 'news'];
@@ -1124,7 +1124,7 @@
     $('#b-thb').style.width = `${(last.th / B.team.hp) * 100}%`;
     $('#b-th').textContent = fmt(last.th);
     const win = B.result.win;
-    $('#b-log').textContent = win ? `${B.foe.name} defeated${rounds.length ? ` in ${rounds.length} round${rounds.length > 1 ? 's' : ''}` : ' by the torrent alone'}.` : B.result.timeout ? 'The squad could not break through in time.' : B.loseLine || 'The squad falls back to the keep.';
+    $('#b-log').textContent = win ? `${B.foe.name} defeated${rounds.length ? ` in ${rounds.length} round${rounds.length > 1 ? 's' : ''}` : ' by the torrent alone'}.` : B.result.timeout ? B.timeoutLine || 'The squad could not break through in time.' : B.loseLine || 'The squad falls back to the keep.';
     const counter = Object.keys(DATA.counters).find((c) => DATA.counters[c] === B.foe.cls);
     const tips = win || B.noTips ? '' : `<p class="muted small">Level your heroes, train more troops, or bring a ${DATA.classes[counter].name} hero: they hit ${esc(B.foe.name)} 20% harder.</p>`;
     $('#b-foot').innerHTML = `<div class="b-result">
