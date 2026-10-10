@@ -3848,6 +3848,7 @@ errs = await session(async (page) => {
     e = near(r, 'stalker', 0, -9); e.shootCd = 0; step(r, 0.1); out.stalker = { marked: e.state === 1 && !!e.tele, d0: +Math.hypot(e.x - P.x, e.z - P.z).toFixed(1) };
     step(r, D.ENEMIES.stalker.blink.tele + 0.05); out.stalker.d1 = +Math.hypot(e.x - P.x, e.z - P.z).toFixed(1);
     app.exitRun();
+    out.hints = ['tide', 'brambles', 'miasma', 'lightning', 'gravity'].filter((k) => p.flags.hints[k]).join(); // each realm's first-encounter tip, once
     return out;
   });
   check('realms: tide pools slow the Shepherd (Act II); brambles slow and cut him (Act III)',
@@ -3855,6 +3856,7 @@ errs = await session(async (page) => {
   check('realms: miasma clouds drift through the fens and poison (Act IV); lightning marks where he goes, then strikes (Act V)',
     s.miasma.clouds >= 2 && s.miasma.poison > 0 && s.lightning.marked === 1 && s.lightning.at < 4 && s.lightning.struck === 1 && s.lightning.left === 0, JSON.stringify({ m: s.miasma, l: s.lightning }));
   check('realms: a gravity well pulls the Shepherd toward its core (Act VI)', s.well && s.well.d1 < s.well.d0 - 0.1, JSON.stringify(s.well));
+  check('realms: each hazard gives its first-encounter tip once (tide, brambles, miasma, lightning, gravity)', s.hints === 'tide,brambles,miasma,lightning,gravity', s.hints);
   check('act foes: the Siren sings a marked circle that holds the minions inside, then lets them go',
     s.siren.marked && s.siren.held >= 6 && s.siren.free === 0, JSON.stringify(s.siren));
   check('act foes: the Thornback marks a lane, charges, throws the Shepherd once and leaves brambles; Plague Rats come as a pack',

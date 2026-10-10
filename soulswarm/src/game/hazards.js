@@ -314,9 +314,10 @@ export class Hazards {
     if (P.dead) return;
     // brambles cut and miasma poisons, in quiet ticks (they never stack with each other's tick: the worse one counts)
     let dps = 0;
-    if (this.brambleAt(P.x, P.z)) dps = Math.max(dps, HAZARDS.brambles.dps);
+    if (this.brambleAt(P.x, P.z)) { dps = Math.max(dps, HAZARDS.brambles.dps); run.hint('brambles', 'Brambles slow and cut you. Step around them!'); }
     if (M.miasma) this.updateClouds(dt);
-    if (this.miasmaAt(P.x, P.z)) dps = Math.max(dps, HAZARDS.miasma.dps);
+    if (this.miasmaAt(P.x, P.z)) { dps = Math.max(dps, HAZARDS.miasma.dps); run.hint('miasma', 'Miasma poisons whoever stands in it. Walk out of the green cloud!'); }
+    if (M.tide && this.tideAt(P.x, P.z)) run.hint('tide', 'Tide pools drag at your feet. Keep to dry stone!'); // (first encounters, once per account)
     if (dps > 0) P.burn(dps * run.dmgMul(), dt);
     if (M.lightning || this.thunder) this.updateLightning(dt);
     else this.bolts.length = 0;
@@ -351,6 +352,7 @@ export class Hazards {
     this.boltT = ev[0] + Math.random() * (ev[1] - ev[0]);
     const a = Math.random() * 6.283, j = Math.random() * L.jitter;
     this.bolt(P.x + P.vx * L.lead + Math.cos(a) * j, P.z + P.vz * L.lead + Math.sin(a) * j);
+    run.hint('lightning', 'Lightning strikes where the blue rings mark, just ahead of you. Change course!');
   }
   /** Marks a strike at (x, z) that lands after the warning. */
   bolt(x, z) {
@@ -388,6 +390,7 @@ export class Hazards {
         W.x = x; W.z = z;
         W.warn = u >= warnAt && u < pullAt ? (u - warnAt) / G.warn : u >= pullAt ? 1 : 0;
         W.pull = u >= pullAt ? 1 : 0;
+        if (W.warn > 0 && (x - P.x) ** 2 + (z - P.z) ** 2 < G.radius * G.radius) run.hint('gravity', 'A gravity well is gathering. Walk away from its core before it pulls you in!');
         const crossed = prev <= u ? prev < pullAt && pullAt <= u : prev < pullAt || pullAt <= u;
         const dx = x - P.x, dz = z - P.z, d = Math.hypot(dx, dz);
         if (crossed && d < G.coreR + P.radius * 0.5) P.hurt(G.dmg * run.dmgMul());

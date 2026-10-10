@@ -823,7 +823,7 @@ Its other four chapters bring an earlier boss back **stronger** (`tier`), under 
 - **Miasma** (Act IV): 3 clouds 2.6–3.8 m across drift in 6–16 m ahead of the Shepherd and live 14–22 s, fading in and out over 1.5 s; inside, 6 damage a second (brambles and miasma never stack: the worse one counts).
 - **Lightning** (Act V): every 3.5–5.5 s a 1.5 m strike is marked where the Shepherd is going (0.5 s ahead, up to 2.2 m off) and lands 1.1 s later: 14 damage to him, and 1.6 × a Husk's HP to every foe inside, so a strike can thin the horde.
 - **Gravity wells** (Act VI): 16 m grid, 40% of cells. Each pulses every 7–9.5 s: a 1.2 s gathering mark, then for 1.6 s it pulls the Shepherd (and the horde) toward its core, up to 5 m/s at the core, 0 at 6 m. The pulse hurts for 12 inside its 1.3 m core.
-All hazard damage scales like enemy damage. No hazard hurts the legion; the lightning burns the horde but never a minion.
+All hazard damage scales like enemy damage. No hazard hurts the legion; the lightning burns the horde but never a minion. The first time a player meets each hazard, a one-time tip names it and its counter ("Tide pools drag at your feet. Keep to dry stone!"), as the new foes' tips do.
 
 **The act foes** (`ENEMIES` in `data.js`, behaviour in `enemies.js`; their risen forms in §4.2).
 
