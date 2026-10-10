@@ -861,11 +861,20 @@
   });
   cv.addEventListener('pointermove', (e) => {
     if (!drag || !fingers.has(e.pointerId)) return;
+    const prev = fingers.get(e.pointerId);
     fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (fingers.size >= 2) { const d = spread(); if (w3() && drag.pinch) w3().zoom(d / drag.pinch); drag.pinch = d; return; }
+    // two fingers: pinch to zoom, and the pair moving together pans by half each finger's move
+    if (fingers.size >= 2) {
+      const d = spread();
+      if (w3()) { if (drag.pinch) w3().zoom(d / drag.pinch); w3().pan((e.clientX - prev.x) / 2, (e.clientY - prev.y) / 2); }
+      drag.pinch = d;
+      return;
+    }
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (Math.hypot(dx, dy) > 6) drag.moved = true;
-    if (w3()) { if (drag.moved) w3().pan(e.clientX - drag.lx, e.clientY - drag.ly); }
+    // each finger pans from its own last position: when one finger of a pinch lifts, the other carries on from
+    // where it is (measuring it from the first finger's old spot threw the view across the map)
+    if (w3()) { if (drag.moved) w3().pan(e.clientX - prev.x, e.clientY - prev.y); }
     else {
       const lim = C * TS;
       view.ox = clamp(drag.ox + dx, -lim, lim);
@@ -875,6 +884,8 @@
   });
   cv.addEventListener('pointerup', (e) => {
     fingers.delete(e.pointerId);
+    // one finger of a pinch lifted: the other carries on from where it is (the flat map pans from it too)
+    if (drag && fingers.size) { const [r] = [...fingers.values()]; Object.assign(drag, { x: r.x, y: r.y, lx: r.x, ly: r.y, ox: view.ox, oy: view.oy, pinch: 0 }); return; }
     if (!drag || fingers.size) return;
     const moved = drag.moved;
     drag = null;

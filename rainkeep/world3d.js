@@ -599,6 +599,8 @@
   };
   W3.zoom = (f) => { view.zoom = clamp(view.zoom * f, 0.7, 2.2); };
   W3.center = () => { view.tx = 0; view.tz = 0; };
+  // where the camera looks and how close (tests and tools)
+  W3.look = () => ({ tx: view.tx, tz: view.tz, zoom: view.zoom });
   W3.focus = (x, y) => { view.tx = wx(x); view.tz = wz(y) - 4; };
   const ray = new THREE.Raycaster(), ground = new THREE.Plane(new V3(0, 1, 0), 0);
   W3.pick = (px, py) => {

@@ -1790,17 +1790,30 @@
     view.tz += dx * wpp * sa - ca * fwd;
     clampTarget();
   };
+  // zoom toward a point on screen: the view's centre moves toward (or, zooming out, away from) the ground under the
+  // fingers by the share the zoom changed. A point near the horizon is held to a short reach, so a pinch high on
+  // the screen can't fling the camera to the far edge of the keep (zooming also lowers the camera, and the old way,
+  // matching the ground under the fingers before and after, threw the view across the canyon when it did)
+  const REACH = 7;
   T3.zoomAt = (f, px, py) => {
     if (!cam) return;
     view.tween = null;
     camNow();
-    const before = px == null ? null : groundHit(px, py);
+    const z0 = view.zoom;
     view.zoom = clamp(view.zoom * f, ZMIN, ZMAX);
-    camNow();
-    const after = px == null ? null : groundHit(px, py);
-    if (before && after) { view.tx += before.x - after.x; view.tz += before.z - after.z; clampTarget(); }
+    const k = 1 - z0 / view.zoom;
+    const hit = px == null || !k ? null : groundHit(px, py);
+    if (hit) {
+      let dx = hit.x - view.tx, dz = hit.z - view.tz;
+      const r = Math.hypot(dx, dz);
+      if (r > REACH) { dx *= REACH / r; dz *= REACH / r; }
+      view.tx += dx * k; view.tz += dz * k;
+      clampTarget();
+    }
   };
   T3.zoom = (f) => T3.zoomAt(f, VW / 2, VH / 2);
+  // where the camera looks and how close (tests and tools)
+  T3.look = () => ({ tx: view.tx, tz: view.tz, zoom: view.zoom });
   T3.rotate = (dAz, dEl = 0) => {
     view.tween = null;
     view.az += dAz;
