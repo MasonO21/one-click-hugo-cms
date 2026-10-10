@@ -4328,6 +4328,37 @@ errs = await session(async (page) => {
 });
 check('update 14 reminders: no runtime errors', !errs.length, errs[0] || '');
 
+// 57. Update 14: the gate preview (Settings → Accessibility, off by default): under each Soul Gate's label, the legion it
+//     would leave, kept current as the legion changes, and cleaned up with the gates.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const app = window.__soulswarm, p = app.profile, out = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 }; p.flags.bloodMoon = 'off';
+    const start = () => { if (app.run) app.exitRun(); p.energy = 30; app.startRun(1); const r = app.run; r.player.hurt = () => {}; r.nextGate = r.nextSwarm = 1e9; r.spawnAcc = -1e9; return r; };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    out.default = p.settings.gatePreview;
+    let r = start(); r.legion.addMany(37, r.player.x, r.player.z); step(r, 0.2);
+    r.gates.spawnPair([{ type: 'add', n: 15 }, { type: 'mul', n: 2 }]); step(r, 0.7);
+    out.off = r.gates.pair.gates.map((g) => !!g.pv).join();
+    p.settings.gatePreview = true; r = start(); r.legion.addMany(37, r.player.x, r.player.z); step(r, 0.2);
+    const L0 = r.legion.count;
+    r.gates.spawnPair([{ type: 'add', n: 15 }, { type: 'mul', n: 2 }]); step(r, 0.7);
+    const G = r.gates.pair.gates;
+    out.on = { L: L0, pv: G.map((g) => g.pv && g.pv.userData.n).join() };
+    r.legion.addMany(3, r.player.x, r.player.z); step(r, 0.1);
+    out.on.after3 = G.map((g) => g.pv.userData.n).join();
+    const pv = G[0].pv; r.gates.despawn(); out.on.gone = !r.scene.children.includes(pv);
+    r.gates.spawnPair([{ type: 'sub', n: 25 }, { type: 'div', n: 2 }]); step(r, 0.7);
+    out.bad = { L: r.legion.count, pv: r.gates.pair.gates.map((g) => g.pv.userData.n).join() };
+    p.settings.gatePreview = false; app.exitRun();
+    return out;
+  });
+  check('gate preview: off by default; switched on, each gate shows the legion it would leave and keeps it current',
+    s.default === false && s.off === 'false,false' && s.on.pv === `${s.on.L + 15},${s.on.L * 2}` && s.on.after3 === `${s.on.L + 18},${(s.on.L + 3) * 2}` && s.on.gone
+    && s.bad.pv === `${Math.max(0, s.bad.L - 25)},${s.bad.L - Math.floor(s.bad.L / 2)}`, JSON.stringify(s));
+});
+check('update 14 gate preview: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

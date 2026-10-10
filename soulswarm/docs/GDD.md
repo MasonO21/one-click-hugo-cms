@@ -1264,7 +1264,7 @@ The beats below are the original plan; the tutorial above builds most of them (m
 | Photosensitivity | **Reduce flashes**: Nova and boss flashes capped at 3 Hz with luminance limits, bloom reduced. Screen shake slider (0–100%). A separate hit-stop toggle (in the build, hit-stop follows the shake slider). |
 | Motor | One-thumb by design. Left-handed mode mirrors the NOVA button. Adjustable joystick size and dead zone. **Auto-Nova** option (fires at 100% when legion ≥ 50). Pause anywhere. No timing-critical taps outside movement. |
 | Hearing | Every audio cue has a visual twin. Every voice line plays with a banner or effect of the same moment (the streak tier, the elite's name, "SOUL THIEF", the boss warning, the Rite itself), so the build needs no separate subtitles. Separate volume sliders for music, SFX and voice (in the build). |
-| Cognitive | Gate maths preview toggle ("shows result: 37 → 74"). Telegraphs are never under 1.0 s (the build's Bloater fuse and enraged slam sit exactly at 1.0 s). A tutorial replay and a short skills glossary in pause. |
+| Cognitive | **Gate preview** (in the build, Update 14: Settings → Accessibility, off by default; each gate shows the legion it would leave, "→ 74", kept current as the legion changes). Telegraphs are never under 1.0 s (the build's Bloater fuse and enraged slam sit exactly at 1.0 s). A tutorial replay and a short skills glossary in pause. |
 | Performance comfort | 30 / 60 fps choice, battery saver mode, reduced-particles mode. |
 
 ---

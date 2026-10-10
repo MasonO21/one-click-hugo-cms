@@ -52,7 +52,7 @@ export function newProfile() {
     mastery: {}, // meta/mastery.js: per hero { xp: lifetime mastery XP, paid: the highest rank whose reward was paid }
     feats: { claimed: {} }, // meta/feats.js: tiers claimed per Feat family (Update 14)
     bestiary: { kills: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])), claimed: Object.fromEntries(BESTIARY.order.map((id) => [id, 0])) }, // meta/bestiary.js
-    settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false, reminders: false },
+    settings: { music: 0.5, sfx: 0.8, voice: 0.9, quality: 'auto', haptics: true, muted: false, shake: 1, reduceFlash: false, autoNova: false, lefty: false, fps30: false, reminders: false, gatePreview: false },
     privacy: blankPrivacy(), // meta/privacy.js: the age gate's band, consent and the player ID (Update 14)
     flags: { tutorialDone: false, tutorialPaid: false, hints: {}, coach: '' }, // tutorialPaid: its reward paid once; coach: the post-tutorial pointer ('talent' → 'battle' → '')
     freeChestDate: null,

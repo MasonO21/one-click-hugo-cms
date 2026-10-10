@@ -24,6 +24,31 @@ const isGood = (op) => op.type === 'add' || op.type === 'mul';
 /** Legion change if the gate were taken now (before the 400 ceiling). */
 const gain = (op, L) => ({ add: op.n, mul: L * (op.n - 1), sub: -Math.min(L, op.n), div: -Math.floor(L / op.n) }[op.type]);
 
+/** The legion after taking `op` now (the 400 ceiling and 0 included). */
+const after = (op, L) => Math.max(0, Math.min(BASE.hardLegionMax, L + gain(op, L)));
+
+// Gate preview (Settings → Accessibility, GDD §17): under each label, the legion that gate would leave ("→ 74"), redrawn
+// only when the legion's size changes. Off by default: doing the maths is part of the choice.
+function previewMesh() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
+  m.renderOrder = 21;
+  m.userData = { c, n: -1 };
+  return m;
+}
+function drawPreview(m, n, up) {
+  const ctx = m.userData.c.getContext('2d'), t = `→ ${n}`;
+  ctx.clearRect(0, 0, 256, 64);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '800 50px Oxanium, "Segoe UI", sans-serif';
+  ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(t, 128, 34);
+  ctx.fillStyle = up ? '#bff9ff' : '#ffc2cc'; ctx.fillText(t, 128, 34);
+  m.material.map.needsUpdate = true; m.userData.n = n;
+}
+
 // From 2:00 the better gate is often guarded: risk for the bigger reward (GDD §4.3).
 const GUARD = { fromMinute: 2, chance: 0.6, dist: 3.4 };
 
@@ -62,7 +87,9 @@ export class Gates {
       const lab = g.userData.label;
       g.remove(lab);
       run.scene.add(lab);
-      return { g, op, x, z, lab, prev: null, born: 0, lesson };
+      const pv = run.app.profile.settings.gatePreview ? previewMesh() : null;
+      if (pv) run.scene.add(pv);
+      return { g, op, x, z, lab, pv, prev: null, born: 0, lesson };
     });
     this.pair = { gates, nx: dx, nz: dz, rx, rz, t: 0, life: 15, done: false };
     if (!forcedOps && run.time / 60 >= GUARD.fromMinute && Math.random() < GUARD.chance) this.guard(gates, dx, dz);
@@ -99,6 +126,13 @@ export class Gates {
       G.lab.position.set(G.x, G.g.position.y + 4.3 + Math.sin(p.t * 3) * 0.1, G.z);
       G.lab.quaternion.copy(run.camera.quaternion);
       G.lab.material.opacity = fade;
+      if (G.pv) {
+        const L = run.legion.count, n = after(G.op, L);
+        if (n !== G.pv.userData.n && !p.done) drawPreview(G.pv, n, n >= L);
+        G.pv.position.set(G.x, G.lab.position.y - 0.95, G.z);
+        G.pv.quaternion.copy(run.camera.quaternion);
+        G.pv.material.opacity = fade;
+      }
       const s = 1 + (p.done && G.chosen ? (p.t - p.doneT) * 2 : 0);
       G.g.scale.setScalar(s);
       // crossing test in the gate's frame
@@ -142,6 +176,7 @@ export class Gates {
       this.run.scene.remove(G.g); this.run.scene.remove(G.lab);
       disposeGroup(G.g);
       G.lab.geometry.dispose(); if (G.lab.material.map) G.lab.material.map.dispose(); G.lab.material.dispose();
+      if (G.pv) { this.run.scene.remove(G.pv); G.pv.geometry.dispose(); G.pv.material.map.dispose(); G.pv.material.dispose(); }
     }
     this.pair = null;
   }
