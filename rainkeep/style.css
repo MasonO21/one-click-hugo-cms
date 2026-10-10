@@ -1356,11 +1356,13 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .fw-chest.done .ic { filter: none; opacity: 0.45; }
 .fw-chest.final .ic { width: 36px; height: 36px; }
 @keyframes fw-bob { 50% { transform: translateY(-4px) scale(1.08); } }
-.fw-tabs { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0 8px; scrollbar-width: none; }
-.fw-tab { position: relative; flex: none; display: inline-flex; align-items: center; gap: 3px; padding: 7px 11px; border-radius: 12px; border: 1px solid #ffffff22; background: #ffffff0a; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+.fw-tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 4px 0 8px; }
+.fw-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-height: 44px; padding: 4px 0; border-radius: 12px; border: 1px solid #ffffff22; background: #ffffff0a; color: inherit; font: inherit; line-height: 1.1; cursor: pointer; }
+.fw-tab small { font-size: 10px; opacity: 0.8; }
+.fw-tab b { font-size: 17px; }
 .fw-tab.on { background: linear-gradient(#f3c55a, #c98a2a); color: #2a1608; border-color: transparent; font-weight: 700; }
 .fw-tab.locked { opacity: 0.55; }
-.fw-tab .ic { width: 12px; height: 12px; }
+.fw-tab .ic { width: 11px; height: 11px; }
 .fw-tab .dot { position: absolute; top: -2px; right: -2px; width: 9px; height: 9px; border-radius: 50%; background: var(--bad); }
 .fw-mission { gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #ffffff12; }
 .fw-mission:last-of-type { border-bottom: 0; }
@@ -1381,7 +1383,7 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .kin-face.sq svg, .kin-face.sq img { border-color: var(--gold); box-shadow: 0 0 8px #ffd06a88; }
 .kin-face small { font-size: 11px; }
 .kin-link .ic { width: 18px; height: 18px; color: #e0603a; }
-.kin-on { background: linear-gradient(#f3c55a, #c98a2a); color: #2a1608; }
+.kin-on { background: linear-gradient(#f3c55a, #c98a2a); color: #2a1608; border-radius: 999px; padding: 2px 10px; font-weight: 700; border: 0; }
 
 /* The Sand Leviathan */
 .lv-pips { display: inline-flex; gap: 5px; }

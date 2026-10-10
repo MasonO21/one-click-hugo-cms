@@ -84,6 +84,7 @@ window.RK_ART = {
     cookfire: 'art/events/cookfire.webp',
     buriedcity: 'art/events/buriedcity.webp',
     founding: 'art/events/founding.webp',
+    leviathan: 'art/events/leviathan.webp',
     rainfest: 'art/events/rainfest.webp',
     hunt: 'art/events/hunt.webp',
     builder: 'art/events/builder.webp',

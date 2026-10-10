@@ -33,7 +33,7 @@ const SHELL = [
   ...'raider beast scorpion serpent drake spirit construct crystal sun void'.split(' ').map((n) => `art/foes/${n}.webp`),
   'art/scenes/act1.webp', 'art/scenes/act2.webp', 'art/scenes/act3.webp', 'art/title.webp',
   ...'shelter quarry grove well mine infirmary barracks watchtower archive hall storehouse forge deepspring companions'.split(' ').map((n) => `art/buildings/${n}.webp`),
-  ...'rainfest hunt builder forgefest spirerush oasis crossing road road-board rivals siege intel clash derby dry journeys cookfire buriedcity founding'.split(' ').map((n) => `art/events/${n}.webp`),
+  ...'rainfest hunt builder forgefest spirerush oasis crossing road road-board rivals siege intel clash derby dry journeys cookfire buriedcity founding leviathan'.split(' ').map((n) => `art/events/${n}.webp`),
   'art/derby/camel.webp', 'art/derby/track.webp',
   ...'founder stipend ledger growth stormkit warchest forgekit foundkit tidekit lvpack lvpack2 sg1 sg2 sg3 sg4 sg5 sg6'.split(' ').map((n) => `art/offers/${n}.webp`),
   ...'cart wagons observatory bunker chapel airship den pool forge shrine scouts mine'.split(' ').map((n) => `art/ruins/${n}.webp`),

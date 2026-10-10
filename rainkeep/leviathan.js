@@ -106,8 +106,9 @@
         KH.emit('levAttack', { dmg, best: v.best > was });
         KH.emit('battle', { kind: 'leviathan', win: false, foe: f });
         KH.save();
-        const line = `${fmt(dmg)} damage${v.best > was && was ? ', a new best this hunt' : ''}. Rank ${rankNow()} of ${board().length}.`;
-        return { rewards: Object.keys(got).length ? got : null, loseLine: line, timeoutLine: line };
+        const line = result.timeout ? 'The Leviathan dives back under the sand.' : 'The squad falls back from the Leviathan.';
+        return { rewards: Object.keys(got).length ? got : null, loseLine: line, timeoutLine: line, noTips: true, resultTitle: `${fmt(dmg)} damage`,
+          extra: `${v.best > was && was ? 'A new best this hunt. ' : ''}Rank ${rankNow()} of ${board().length} · ${v.left} attack${v.left === 1 ? '' : 's'} left${Object.keys(got).length ? ' · a mark beaten' : ''}` };
       },
     });
   };

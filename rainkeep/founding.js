@@ -87,7 +87,7 @@
     const w = W(), d = dayNow(), sel = UI.fwDay || clamp(d, 1, F.days), pts = points();
     const tabs = F.missions.map((day, k) => {
       const n = k + 1, locked = n > d, dot = !locked && day.some((m) => ready({ ...m, day: n }));
-      return `<button class="fw-tab ${n === sel ? 'on' : ''} ${locked ? 'locked' : ''}" data-act="fwday" data-arg="${n}">${locked ? icon('i-lock') : ''}Day ${n}${dot ? '<i class="dot"></i>' : ''}</button>`;
+      return `<button class="fw-tab ${n === sel ? 'on' : ''} ${locked ? 'locked' : ''}" data-act="fwday" data-arg="${n}" aria-label="Day ${n}"><small>${locked ? icon('i-lock') : 'Day'}</small><b>${n}</b>${dot ? '<i class="dot"></i>' : ''}</button>`;
     }).join('');
     const opensIn = (n) => {
       const keepLeft = (n - 1) * 86400 - (S.time - w.start), realLeft = ((n - 1) * 864e5 - (Date.now() - w.startReal)) / 1000;
