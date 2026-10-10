@@ -25,7 +25,7 @@ import { analytics } from '../meta/analytics.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, ENDLESS_BOSSES, CAMPAIGN_LENGTH, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
 import { ENDLESS, ACTS, chapterLevel, foeDmgScale, sideScale } from './data.js';
 import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH, rushStart } from './data.js';
-import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS, GRIMOIRE } from './data.js';
+import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS, GRIMOIRE, easedDifficulty } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
 const ELITE_TIMES = [75, 150, 225, 290];
@@ -69,7 +69,7 @@ export class Run {
     this.scene = new THREE.Scene();
     this.bloodMoon = !!bloodMoon; // weekend event: 8 elites, double rewards, a blood-red sky
     // Nightmare / Torment: always defined, Normal is the identity. Endless and the Daily Trial play Normal.
-    this.diff = { ...(!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal };
+    this.diff = easedDifficulty((!chapter.endless && !(mutators && mutators.length) && DIFFICULTY[difficulty]) || DIFFICULTY.normal, chapter.id); // eased in the later acts
     this.rush = !!rush; // Boss Rush: the five chapter bosses back to back in the Abyss (BOSS_RUSH)
     this.court = BOSS_RUSH.courts[court] || BOSS_RUSH.courts.hollow; this.courtId = BOSS_RUSH.courts[court] ? court : 'hollow'; // the Hollow or the Fallen Court
     let look = this.rush ? ENDLESS : this.bloodMoon ? { ...chapter, ground: BLOOD_MOON.ground, groundB: BLOOD_MOON.groundB, fog: BLOOD_MOON.fog, rune: BLOOD_MOON.rune, rim: BLOOD_MOON.rim, recolor: 0.6 } : chapter;

@@ -1092,6 +1092,18 @@ export const DIFFICULTY = {
   torment:   { id: 'torment', name: 'Torment', hp: 3.5, ramp: 2.5, xp: 2.8, bossHp: 1.5, bossDmg: 1.6, dmg: 2.8, spawn: 1.4, extraElites: 4, eliteAffixes: 2, gold: 2.5, passXp: 2, firstClearGems: 120,
     hoard: { legendary: 0.02, epic: 0.98 }, tint: { mix: 0.85, ground: 0x2c0a0e, groundB: 0x0b0204, fog: 0x040001, rune: 0xff1a2e, rim: 0xff5a5a }, css: '#ff3b4e' },
 };
+// Nightmare and Torment ease off through the later acts, where the chapters' own scaling already compounds with them:
+// their extra foe HP, damage and spawn rate, and the boss's extra HP and damage, slide from the full amount at Chapter
+// `from` to `end` of it at Chapter `to`. Rewards keep their full multipliers. (scripts/balance.mjs DIFF=… PROG=30: at full
+// strength even a maxed Shepherd never cleared Chapter 30; at 0.7 one clears Nightmare 3 runs in 6, Torment 2 in 6.)
+export const DIFFICULTY_EASE = { from: 10, to: 30, end: 0.7, keys: ['hp', 'dmg', 'bossHp', 'bossDmg', 'spawn'] };
+/** A run's difficulty for a chapter: D with the later acts' easing applied (Normal and Chapters 1–10 unchanged). */
+export function easedDifficulty(D, chapterId) {
+  const E = DIFFICULTY_EASE, k = chapterId > E.from ? 1 - (1 - E.end) * Math.min(1, (chapterId - E.from) / (E.to - E.from)) : 1;
+  const out = { ...D };
+  if (k < 1 && D.id !== 'normal') for (const key of E.keys) out[key] = 1 + (D[key] - 1) * k;
+  return out;
+}
 export const DIFFICULTY_ELITES = [190, 320, 115, 260]; // extra elite times (s), taken in this order
 const mixHex = (a, b, t) => { let o = 0; for (let s = 0; s <= 16; s += 8) { const x = (a >> s) & 255; o |= Math.round(x + (((b >> s) & 255) - x) * t) << s; } return o; };
 /** A run's world palette pulled toward the difficulty tint (environment keys only: allies and enemies keep their colours). */

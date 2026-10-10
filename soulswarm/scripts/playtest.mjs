@@ -4370,6 +4370,25 @@ errs = await session(async (page) => {
 });
 check('update 14 gate preview: no runtime errors', !errs.length, errs[0] || '');
 
+// 58. Update 14: Nightmare and Torment ease off through the later acts (DIFFICULTY_EASE): the extra foe and boss strength
+//     slides to 70% between Chapters 10 and 30; Act I–II and every reward are unchanged.
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), app = window.__soulswarm, p = app.profile, out = {};
+    const f = (d, c) => { const e = D.easedDifficulty(D.DIFFICULTY[d], c); return [e.hp, e.dmg, e.bossHp, e.spawn, e.gold, e.extraElites].map((v) => +v.toFixed(3)).join('/'); };
+    out.table = { n5: f('nightmare', 5), n10: f('nightmare', 10), n30: f('nightmare', 30), t30: f('torment', 30), norm30: f('normal', 30) };
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1, tide: 1, brambles: 1, miasma: 1, lightning: 1, gravity: 1 }; p.flags.bloodMoon = 'off';
+    p.chapter.unlocked = 30; for (const c of [3, 30]) { p.chapter.best[c] = { time: 400, cleared: true, kills: 1 }; p.diff.best[c] = { nightmare: { cleared: true, time: 400 } }; }
+    p.energy = 30; app.startRun(30, { difficulty: 'torment' }); out.run30 = app.run && [app.run.diff.id, +app.run.diff.hp.toFixed(3), app.run.diff.gold].join('/'); app.exitRun();
+    p.energy = 30; app.startRun(3, { difficulty: 'torment' }); out.run3 = app.run && [app.run.diff.id, +app.run.diff.hp.toFixed(3), app.run.diff.gold].join('/'); app.exitRun();
+    return out;
+  });
+  check('difficulty easing: Chapters 1–10 at full strength; at Chapter 30 Nightmare ×1.84 HP and Torment ×2.75, rewards and elites unchanged',
+    s.table.n5 === '2.2/2/1.4/1.25/1.75/2' && s.table.n10 === s.table.n5 && s.table.n30 === '1.84/1.7/1.28/1.175/1.75/2' && s.table.t30 === '2.75/2.26/1.35/1.28/2.5/4'
+    && s.table.norm30 === '1/1/1/1/1/0' && s.run30 === 'torment/2.75/2.5' && s.run3 === 'torment/3.5/2.5', JSON.stringify(s));
+});
+check('update 14 difficulty easing: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);
