@@ -229,7 +229,7 @@ export class TutorialSystem extends System {
         break;
       }
       case 'node':
-        base.world = this.pick(ref, this.nodeCandidates(ref));
+        base.world = this.pickNode(ref);
         break;
       case 'building':
         base.world = this.pick(ref, this.buildingCandidates(ref)) ?? this.coreCenter();
@@ -320,13 +320,39 @@ export class TutorialSystem extends System {
     return core && d ? footprintCenter(core.x, core.z, d.size, core.rot) : { x: 0, z: 0 };
   }
 
-  private nodeCandidates(ref: string): Candidate[] {
-    const out: Candidate[] = [];
+  /**
+   * `pick` over the live nodes of def `ref` without building a candidate list: a forest holds thousands of them and the
+   * guide refreshes at 4 Hz. Same choice as pick (nearest, in node order on ties; the sticky node kept while it stays
+   * within 1.4× + 2 of the nearest); only the result's key string is built.
+   */
+  private pickNode(ref: string): { x: number; z: number } | null {
     const nodes = this.game.sys.world.gen?.nodes;
-    if (!nodes) return out;
     const depleted = this.game.state.world.depleted;
-    for (const n of nodes) if (n.def === ref && depleted[n.i] === undefined) out.push({ key: `node:${n.i}`, x: n.x, z: n.z });
-    return out;
+    const p = this.game.state.player;
+    const stickyI = this.sticky && this.sticky.ref === ref && this.sticky.key.startsWith('node:') ? Number(this.sticky.key.slice(5)) : NaN;
+    let best = -1;
+    let bestD = Infinity;
+    let cur = -1;
+    if (nodes) {
+      for (let k = 0; k < nodes.length; k++) {
+        const n = nodes[k];
+        if (n.def !== ref || depleted[n.i] !== undefined) continue;
+        const d = dist(p.x, p.z, n.x, n.z);
+        if (d < bestD) {
+          best = k;
+          bestD = d;
+        }
+        if (cur < 0 && n.i === stickyI) cur = k;
+      }
+    }
+    if (best < 0) {
+      if (this.sticky?.ref === ref) this.sticky = null;
+      return null;
+    }
+    if (cur >= 0 && dist(p.x, p.z, nodes![cur].x, nodes![cur].z) <= bestD * 1.4 + 2) best = cur;
+    const b = nodes![best];
+    this.sticky = { ref, key: `node:${b.i}` };
+    return { x: b.x, z: b.z };
   }
 
   private buildingCandidates(ref: string): Candidate[] {

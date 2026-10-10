@@ -117,6 +117,20 @@ export function lodRadii(viewRadius: number, quality: string): { near: number; m
   return { near, mid };
 }
 
+/** Batch keys of one model (see Nature.batches). */
+interface ModelKeys {
+  n: string;
+  tn: string;
+  f: string;
+  tf: string;
+  p: string;
+}
+/** Which geometry a batch draws. */
+type GeoKind = 0 | 1 | 2;
+const GEO_NEAR = 0;
+const GEO_FAR = 1;
+const GEO_PROP = 2;
+
 /** LOD classes: near geometry only · cross-fade band (near + far geometry) · far geometry only. */
 export const LOD_NEAR = 0;
 export const LOD_BAND_CLASS = 1;
@@ -156,6 +170,7 @@ export class Nature {
   private chunks: Chunk[] = [];
   /** key: 'n:<model>' near nodes, 'tn:' / 'tf:' near and far geometry of band nodes, 'f:<model>' far-only nodes, 'p:<model>' props. */
   private batches = new Map<string, Batch>();
+  private keys = new Map<string, ModelKeys>();
   /** node index -> instance index within its batch (-1 = not drawn); slot2/batch2 = far partner in the band. */
   private nodeSlot = new Int32Array(0);
   private nodeBatch: (Batch | null)[] = [];
@@ -312,10 +327,21 @@ export class Nature {
     if (b2 && this.nodeSlot2[i] >= 0) b2.setMatrix(this.nodeSlot2[i], m);
   }
 
-  private batch(key: string, geo: () => THREE.BufferGeometry, material: THREE.Material, opts: BatchOpts): Batch {
+  /** Batch keys of a model, built once (a rebuild walks hundreds of nodes: no key string or closure per node). */
+  private keysOf(model: string): ModelKeys {
+    let k = this.keys.get(model);
+    if (!k) {
+      k = { n: 'n:' + model, tn: 'tn:' + model, f: 'f:' + model, tf: 'tf:' + model, p: 'p:' + model };
+      this.keys.set(model, k);
+    }
+    return k;
+  }
+
+  private batch(key: string, model: string, kind: GeoKind, material: THREE.Material, opts: BatchOpts): Batch {
     let b = this.batches.get(key);
     if (!b) {
-      b = new Batch(this.group, geo(), material, 32, { ...opts, name: 'nature ' + key });
+      const geo = kind === GEO_NEAR ? nodeGeometry(model) : kind === GEO_FAR ? nodeGeometryFar(model) : propGeometry(model);
+      b = new Batch(this.group, geo, material, 32, { ...opts, name: 'nature ' + key });
       this.batches.set(key, b);
     }
     return b;
@@ -372,19 +398,20 @@ export class Nature {
           this.lodCls[i] = cls;
           this.nodeMatrix(n, _m, w, this.fades.get(i) ?? 0);
           const tint = natureTint(i);
+          const keys = this.keysOf(model);
           if (cls !== LOD_FAR) {
-            const batch = cls === LOD_NEAR ? this.batch('n:' + model, () => nodeGeometry(model), mats.nature, NODE_OPTS) : this.batch('tn:' + model, () => nodeGeometry(model), mats.lodNear, this.nearBandOpts);
+            const batch = cls === LOD_NEAR ? this.batch(keys.n, model, GEO_NEAR, mats.nature, NODE_OPTS) : this.batch(keys.tn, model, GEO_NEAR, mats.lodNear, this.nearBandOpts);
             this.nodeSlot[i] = batch.count;
             this.nodeBatch[i] = batch;
             batch.push(_m, tint);
           }
           if (cls === LOD_FAR) {
-            const far = this.batch('f:' + model, () => nodeGeometryFar(model), mats.lodShrinkMid, this.farOpts);
+            const far = this.batch(keys.f, model, GEO_FAR, mats.lodShrinkMid, this.farOpts);
             this.nodeSlot[i] = far.count;
             this.nodeBatch[i] = far;
             far.push(_m, tint);
           } else if (cls === LOD_BAND_CLASS) {
-            const far = this.batch('tf:' + model, () => nodeGeometryFar(model), mats.lodFar, this.farBandOpts);
+            const far = this.batch(keys.tf, model, GEO_FAR, mats.lodFar, this.farBandOpts);
             this.nodeSlot2[i] = far.count;
             this.nodeBatch2[i] = far;
             far.push(_m, tint);
@@ -401,7 +428,7 @@ export class Nature {
           const s = p.scale || 1;
           const y = ctx.heightAt(p.x, p.z);
           if (!cull.sphere(p.x, y + s, p.z, 1.8 * s)) continue;
-          const batch = this.batch('p:' + p.model, () => propGeometry(p.model), mats.lodShrinkNear, PROP_OPTS);
+          const batch = this.batch(this.keysOf(p.model).p, p.model, GEO_PROP, mats.lodShrinkNear, PROP_OPTS);
           composeEuler(_m, p.x, y - 0.03, p.z, 0, p.rot || 0, 0, s, s, s);
           batch.push(_m, natureTint(plist[k] + 31));
         }
