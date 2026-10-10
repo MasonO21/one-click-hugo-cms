@@ -518,7 +518,7 @@ const DATA = {
   // brings the counter comes out ahead and one that doesn't falls behind; the Torrent's traits cost no ease, since every
   // squad has the breath and the question is only when to spend it.
   traits: {
-    from: 16, ease: 0.94,
+    from: 16, ease: 0.96,
     list: {
       armored: { name: 'Armored', icon: 'i-tr-armored', def: 1.5, text: 'Half again as hard to hurt. Sunder cuts twice as deep.' },
       regen: { name: 'Regenerating', icon: 'i-tr-regen', heal: 0.05, text: 'Heals 5% a round, unless a skill strikes it that round.' },
@@ -1688,11 +1688,13 @@ const DATA = {
   // curve (from the balance bot), each at its own share of it and its own pace. The Hall pays out daily by rank.
   hall: {
     unlock: 4, size: 50, // Rainwyrm level; wardens in the Hall, you included
-    // [hours of keep time, power] for a typical free player (balance bot, free runs)
-    curve: [[0, 2300], [0.5, 18000], [1, 26800], [2, 34700], [3, 41000], [4, 55000], [6, 85000], [8, 100000], [10, 113000], [12, 128000], [15, 142000], [18, 186000], [21, 218000], [24, 228000], [27, 256000], [30, 287000]],
+    // [hours of keep time, power] for a typical free player, as the Hall counts it (troops out marching and holding
+    // outposts included): the free balance bots of 4.36, redrawn when outposts and the features since had left the
+    // first curve (4.19) about 1.7 times too low
+    curve: [[0, 2300], [0.5, 22000], [1, 35000], [2, 55000], [3, 67000], [4, 82000], [6, 119000], [8, 162000], [10, 186000], [12, 230000], [15, 269000], [18, 329000], [21, 366000], [24, 403000], [27, 470000], [30, 490000]],
     tail: 0.004, // past the curve, power still grows this much an hour
     spread: [0.3, 2.2], skew: 1.5, // the weakest and strongest warden as a share of the curve; skew packs them low
-    // (a free player who plays well sits near rank 15; the spending bot, at about 1.6 times the curve, near 6)
+    // (a free player who plays well sits near rank 15)
     pace: [0.8, 1.25], // how fast each warden runs along the curve
     daily: 86400, check: 30, // a payout every day of keep time; rank checked every 30 seconds
     rewards: [[1, { starglass: 400, beacons: 2 }], [3, { starglass: 300, beacons: 1 }], [10, { starglass: 200 }], [25, { starglass: 120 }], [50, { starglass: 60 }]],
