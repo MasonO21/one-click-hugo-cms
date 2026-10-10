@@ -34,18 +34,19 @@ function previewMesh() {
   c.width = 256; c.height = 64;
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false; tex.minFilter = THREE.LinearFilter; // redrawn often: no mipmap rebuild per upload
   const m = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, toneMapped: false }));
   m.renderOrder = 21;
-  m.userData = { c, n: -1 };
+  m.userData = { c, n: -1, at: -1 };
   return m;
 }
-function drawPreview(m, n, up) {
+function drawPreview(m, n, good) {
   const ctx = m.userData.c.getContext('2d'), t = `→ ${n}`;
   ctx.clearRect(0, 0, 256, 64);
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.font = '800 50px Oxanium, "Segoe UI", sans-serif';
   ctx.lineWidth = 8; ctx.strokeStyle = 'rgba(0,0,0,.85)'; ctx.strokeText(t, 128, 34);
-  ctx.fillStyle = up ? '#bff9ff' : '#ffc2cc'; ctx.fillText(t, 128, 34);
+  ctx.fillStyle = good ? '#bff9ff' : '#ffc2cc'; ctx.fillText(t, 128, 34);
   m.material.map.needsUpdate = true; m.userData.n = n;
 }
 
@@ -127,8 +128,8 @@ export class Gates {
       G.lab.quaternion.copy(run.camera.quaternion);
       G.lab.material.opacity = fade;
       if (G.pv) {
-        const L = run.legion.count, n = after(G.op, L);
-        if (n !== G.pv.userData.n && !p.done) drawPreview(G.pv, n, n >= L);
+        const n = after(G.op, run.legion.count), U = G.pv.userData;
+        if (n !== U.n && !p.done && p.t - U.at >= 0.1) { drawPreview(G.pv, n, isGood(G.op)); U.at = p.t; } // at most 10 redraws a second
         G.pv.position.set(G.x, G.lab.position.y - 0.95, G.z);
         G.pv.quaternion.copy(run.camera.quaternion);
         G.pv.material.opacity = fade;

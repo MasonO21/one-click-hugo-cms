@@ -109,6 +109,8 @@ function migrate(p) {
   { const T = out.trial; for (const k of ['ads', 'failPaid', 'clears']) T[k] = int(T[k], 0); T.won = !!T.won; T.done = !!T.done; }
   { const R = out.rush; for (const k of ['tries', 'ads', 'best', 'allBest', 'clears']) R[k] = int(R[k], 0); R.claimed = int(R.claimed, 0, 0, 5); R.bestKills = int(R.bestKills, 0, 0, 5); R.court = R.court === 'hollow' || R.court === 'fallen' ? R.court : ''; }
   if (!(p && p.flags && 'tutorialPaid' in p.flags)) out.flags.tutorialPaid = !!out.flags.tutorialDone; // saves from before the tutorial: their first run was it
+  { const S = out.settings, cl = (v, lo, hi, d) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : d); // sliders within their ranges
+    for (const [k, d] of [['music', 0.5], ['sfx', 0.8], ['voice', 0.9], ['shake', 1]]) S[k] = cl(S[k], 0, 1, d); S.stick = cl(S.stick, 0.75, 1.5, 1); }
   { const R = out.flags.review; if (R !== undefined) out.flags.review = { n: int(R && R.n, 0, 0, 99), at: Math.max(0, +(R && R.at) || 0) }; } // meta/review.js
   { const G = out.grimoire; if (!GRIMOIRE.pages[G.selected]) G.selected = ''; G.seen = [...new Set(G.seen.filter((id) => GRIMOIRE.pages[id]))]; }
   out.mastery = sanitizeMastery(out.mastery);

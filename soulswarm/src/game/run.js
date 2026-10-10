@@ -24,7 +24,7 @@ import { Tutorial } from './tutorial.js';
 import { analytics } from '../meta/analytics.js';
 import { ENEMIES, BASE, RUN_LENGTH, ENDLESS_BOSS_EVERY, ENDLESS_BOSSES, CAMPAIGN_LENGTH, xpForLevel, SKINS, CHAPTERS, chapterMods, MUTATORS, mergeMutators, BLOOD_MOON, BOSSES, BOSS_ORDER, bossFor, BESTIARY } from './data.js';
 import { ENDLESS, ACTS, chapterLevel, foeDmgScale, sideScale } from './data.js';
-import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH } from './data.js';
+import { HITSTOP, NOVA, LEVEL_PULSE, VOICE, TUTORIAL, BOSS_RUSH, rushStart } from './data.js';
 import { DIFFICULTY, DIFFICULTY_ELITES, difficultyLook, EVOLUTIONS, GRIMOIRE } from './data.js';
 
 const PITCH = THREE.MathUtils.degToRad(57);
@@ -167,7 +167,8 @@ export class Run {
     // Boss Rush: a seasoned start, as a campaign player stands at the boss: the level, a veteran build (the first card of
     // `auto` draws), a deep legion, then the player's own opening draft; the first boss a moment after it
     if (this.rush) {
-      const R = BOSS_RUSH;
+      const R = rushStart(this.courtId); // the court's start (the Fallen Court's is stronger)
+      this.rushDraft = R.draft;
       this.mut.stats.cap = (this.mut.stats.cap || 0) + R.cap;
       this.level = R.level; this.xpNeed = xpForLevel(this.level);
       for (let i = 0; i < R.auto; i++) applyChoice(this, rollChoices(this, 3)[0]);
@@ -511,7 +512,7 @@ export class Run {
     }
     this.input.reset();
     const choices = rollChoices(this, 3);
-    const draft = chest && this.draftPicks > 0 ? [BOSS_RUSH.draft - this.draftPicks + 1, BOSS_RUSH.draft] : null; // Boss Rush: the opening picks
+    const draft = chest && this.draftPicks > 0 ? [this.rushDraft - this.draftPicks + 1, this.rushDraft] : null; // Boss Rush: the opening picks
     this.ui.showLevelUp(choices, this.level, (c) => {
       applyChoice(this, c);
       analytics.track('card_pick', { id: c.id, level: this.level, kind: c.kind }); // pick rates (LIVEOPS.md §5)

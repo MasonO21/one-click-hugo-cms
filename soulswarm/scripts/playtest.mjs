@@ -1726,12 +1726,12 @@ errs = await session(async (page, errors) => {
     const hits = (el) => { const b = el.getBoundingClientRect(), x = b.left + b.width / 2, y = b.top + b.height / 2; return [y - 16, y + 16].every((yy) => { const h = document.elementFromPoint(x, yy); return h === el || el.contains(h); }); };
     out.chips = [...document.querySelectorAll('.mt-cur'), document.querySelector('.hm-chip')].map(hits);
     document.querySelector('[data-act="settings"]').click(); await wait(400);
-    out.toggles = [...document.querySelectorAll('.st .tgl')].map(hits);
+    out.toggles = [...document.querySelectorAll('.st .tgl')].map((t) => { t.scrollIntoView({ block: 'center' }); return hits(t); }); // (the sheet scrolls)
     document.querySelectorAll('#ui > .modal-back').forEach((m) => m.remove());
     return out;
   });
   check('bug-test: the results "Double rewards" and "Continue" are on screen at 375×667', res.double === true && res.cont === true, JSON.stringify(res));
-  check('bug-test: top-bar chips, the hero chip and the settings toggles take taps within 16 px of their centre', res.chips.length === 4 && res.chips.every(Boolean) && res.toggles.length === 6 && res.toggles.every(Boolean), JSON.stringify(res));
+  check('bug-test: top-bar chips, the hero chip and the settings toggles take taps within 16 px of their centre', res.chips.length === 4 && res.chips.every(Boolean) && res.toggles.length === 7 && res.toggles.every(Boolean), JSON.stringify(res));
 
   // double taps: a dialog button clicked again after it closed, the energy refill, the reroll while its ad loads, and the
   // second tap of a double tap on the results' Continue (it lands on BATTLE at 375×667)

@@ -250,11 +250,20 @@ export const BOSS_RUSH = {
   milestones: [{ gold: 1000 }, { gems: 20 }, { gold: 1500 }, { gems: 30 }, { sigils: 1, gems: 40 }],
   // Update 14: two courts. The Hollow Court (Act I's bosses, at their chapters' scaling) every week; once a player has
   // cleared Chapter 10, every other week (odd weeks since 1970) brings the Fallen Court instead: the act finales, at
-  // Chapters 10, 15, 20, 25 and 30. Same tries, start, milestones and rewards. profile.flags.rushCourt overrides (QA).
+  // Chapters 10, 15, 20, 25 and 30, from a stronger start. Same tries, milestones and rewards. profile.flags.rushCourt
+  // overrides (QA).
   courts: {
     hollow: { name: 'The Hollow Court', bosses: ['gravemaw', 'pyrexa', 'vaulkar', 'azrathel', 'vesperine'], chapters: [1, 2, 3, 4, 5], unlockAt: 2 },
-    fallen: { name: 'The Fallen Court', bosses: ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'], chapters: [10, 15, 20, 25, 30], unlockAt: 11 },
+    // a stronger seasoned start for bosses at Chapters 10-30 (balance.mjs RUSH=1 COURT=fallen: with the shared start no
+    // player cleared it; with this, a player at Chapter 20-30 progression clears about half the time, one at 11 beats one)
+    fallen: { name: 'The Fallen Court', bosses: ['morwenna', 'gorrath', 'mire', 'kaelthar', 'nihl'], chapters: [10, 15, 20, 25, 30], unlockAt: 11,
+      start: { level: 30, auto: 22, legion: 110, draft: 5 } },
   },
+};
+/** A court's seasoned start: BOSS_RUSH's level, auto picks, legion, draft and cap, with the court's own `start` over them. */
+export const rushStart = (court) => {
+  const R = BOSS_RUSH, C = R.courts[court] || R.courts.hollow;
+  return { level: R.level, auto: R.auto, legion: R.legion, draft: R.draft, cap: R.cap, ...(C.start || {}) };
 };
 // ---------------------------------------------------------------- Chapter bosses (boss.js)
 // Each campaign chapter ends with its own boss; the Endless Abyss brings them back in turn (BOSS_ORDER, by depth). They
