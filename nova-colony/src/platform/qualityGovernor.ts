@@ -5,8 +5,11 @@
  *
  * Measurement: frames are binned into one-second buckets, each giving that second's FPS (frames / seconds). The last
  * `windowS` buckets sit in a fixed ring; once it is full the median is taken every second and the level steps down
- * when it is below `minFps`. A median over 8 s ignores short hitches (a GC pause, an autosave, a burst of particles):
- * more than half of the window has to be slow.
+ * when it is below `minFps`. A median over 6 s ignores short hitches (a GC pause, an autosave, a burst of particles):
+ * more than half of the window has to be slow. `minFps` sits just under the 30 fps the game must hold (and the 30 fps
+ * cap of Battery saver, menus and an idle colony, core/loopPolicy.ts, which a capable phone meets exactly). A phone
+ * that is far too slow does not wait for the window: `severeS` seconds in a row under `severeFps` step down at once.
+ * Typical first step on a phone that cannot keep up: 8 s boot grace + 6 s window = 14 s (a crawl: 8 + 4 = 12 s).
  *
  * Only normal play is measured. The caller marks a frame `excluded` while a panel / sheet is open (the renderer
  * halves its frame rate then), the tab is hidden or the game is paused: the partial second is dropped and the next
@@ -32,14 +35,19 @@ export interface GovernorConfig {
   windowS: number;
   /** Step down when the median FPS over the window is below this. */
   minFps: number;
+  /** Step down at once after this many one-second samples in a row under `severeFps`. */
+  severeS: number;
+  severeFps: number;
 }
 
 export const GOVERNOR_DEFAULTS: Readonly<GovernorConfig> = {
-  bootGraceS: 10,
+  bootGraceS: 8,
   settleS: 5,
   pauseGraceS: 1,
-  windowS: 8,
-  minFps: 24,
+  windowS: 6,
+  minFps: 27,
+  severeS: 4,
+  severeFps: 12,
 };
 
 /** One level lower, or null at the floor. */
@@ -70,6 +78,7 @@ export class QualityGovernor {
   constructor(cfg: Partial<GovernorConfig> = {}) {
     this.cfg = { ...GOVERNOR_DEFAULTS, ...cfg };
     this.cfg.windowS = Math.max(1, Math.round(this.cfg.windowS));
+    this.cfg.severeS = Math.max(1, Math.min(this.cfg.windowS, Math.round(this.cfg.severeS)));
     this.ring = new Float64Array(this.cfg.windowS);
     this.sorted = new Float64Array(this.cfg.windowS);
     this.wait = this.cfg.bootGraceS;
@@ -129,11 +138,16 @@ export class QualityGovernor {
     if (this.count < this.ring.length) this.count++;
     this.bucketT = 0;
     this.bucketN = 0;
-    if (this.count < this.ring.length) return null;
+    const severe = this.severe();
+    if (this.count < this.ring.length && !severe) return null;
 
-    const med = this.median();
-    this.lastMedian = med;
-    if (med >= this.cfg.minFps) return null;
+    if (severe) {
+      this.lastMedian = this.ring[(this.head - 1 + this.ring.length) % this.ring.length]; // the latest second (logging)
+    } else {
+      const med = this.median();
+      this.lastMedian = med;
+      if (med >= this.cfg.minFps) return null;
+    }
     const next = lowerQuality(quality);
     if (!next) return null;
     this.steps++;
@@ -143,7 +157,16 @@ export class QualityGovernor {
     return next;
   }
 
-  /** Median of the full ring (insertion sort into the scratch array: 8 numbers, once a second). */
+  /** The last `severeS` one-second samples are all under `severeFps` (a crawl: no need to wait for the window). */
+  private severe(): boolean {
+    const k = this.cfg.severeS;
+    if (this.count < k) return false;
+    const n = this.ring.length;
+    for (let i = 1; i <= k; i++) if (this.ring[(this.head - i + n) % n] >= this.cfg.severeFps) return false;
+    return true;
+  }
+
+  /** Median of the full ring (insertion sort into the scratch array: 6 numbers, once a second). */
   private median(): number {
     const n = this.ring.length;
     const a = this.sorted;

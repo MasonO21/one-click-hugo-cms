@@ -19,7 +19,7 @@
  *   5. anything else: mid-range families (Adreno 51x–63x, Mali-G6x/G5xx/G6xx, Intel HD/UHD…), an unknown
  *      or hidden GPU name                                                                    → medium
  *
- * Mistakes are cheap in only one direction: too high stutters for ~20 s until the runtime governor
+ * Mistakes are cheap in only one direction: too high stutters for ~14 s until the runtime governor
  * (qualityGovernor.ts) steps down, too low just looks plainer until the player raises it. So "high" needs a
  * positive match and "low" only catches what is clearly weak; everything in between starts at medium.
  *

@@ -159,8 +159,8 @@ describe('auto quality: runtime step down', () => {
 
   it('a tier-up rebuild resets the window', () => {
     const t = strongDevice();
-    play(t.aq, 10 + 7, 14); // 7 slow seconds: one short of a verdict
-    expect(t.aq.governor.samples).toBe(7);
+    play(t.aq, GOVERNOR_DEFAULTS.bootGraceS + GOVERNOR_DEFAULTS.windowS - 1, 14); // one slow second short of a verdict
+    expect(t.aq.governor.samples).toBe(GOVERNOR_DEFAULTS.windowS - 1);
     t.game.bus.emit('colony:tierUp', { tier: 1 });
     expect(t.aq.governor.samples).toBe(0);
     play(t.aq, 1.5, 14);
