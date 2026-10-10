@@ -59,6 +59,13 @@
       list.push({ c: inSector[Math.floor(Math.random() * inSector.length)] });
     }
     list.sort((a, b) => a.c.d - b.c.d);
+    // the two nearest (and weakest) always stand within sight, so the scouts' report never points at empty haze
+    for (let i = 0; i < Math.min(2, list.length); i++) {
+      if (W.visible(list[i].c.x, list[i].c.y)) continue;
+      const seen = cands.filter((c) => W.visible(c.x, c.y) && !list.some((r) => r.c.k === c.k));
+      if (seen.length) list[i] = { c: seen.sort((p, q) => Math.abs(p.a - list[i].c.a) - Math.abs(q.a - list[i].c.a))[0] };
+    }
+    list.sort((a, b) => a.c.d - b.c.d);
     S.rivals.list = list.map(({ c }, i) => ({
       k: c.k, x: c.x, y: c.y, name: names[i % names.length], warden: wardens[i % wardens.length], mult: R.ranks[Math.min(i, R.ranks.length - 1)],
       cls: pick(['guard', 'bow', 'lancer']), color: R.colors[i % R.colors.length],
