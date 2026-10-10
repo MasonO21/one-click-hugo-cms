@@ -3165,7 +3165,7 @@ errs = await session(async (page) => {
       r.corpses.push({ x: P.x + 9, z: P.z, t: r.time, claim: 0 });
       const n0 = r.legion.count; r.graveT = 0.05; for (let i = 0; i < 4; i++) r.update(1 / 30);
       const rose = r.legion.count - n0, far = r.corpses.find((k) => k.x === P.x + 9).claim;
-      r.graveT = 8; for (let i = 0; i < 30; i++) r.update(1 / 30);
+      r.graveT = 6; for (let i = 0; i < 30; i++) r.update(1 / 30);
       out.graves = { rose, far, early: r.legion.count - n0 - rose }; }
 
     // Ossuary Tithe: a fallen minion bursts on the foes around it; without the page it does not
@@ -3208,15 +3208,15 @@ errs = await session(async (page) => {
   check('grimoire: campaign and Endless runs carry the inscribed page (the intro card names it); the Daily Trial does not',
     s.carry.campaign === 'banner' && s.carry.intro && s.carry.endless === 'banner' && s.carry.trial === null && s.result === 'glass', JSON.stringify({ c: s.carry, r: s.result }));
   const F = s.fx;
-  check('grimoire pages: Banner +20 cap / ×0.8 minion HP; Furnace ×1.3 shards / ×1.15 foes; Glass ×1.35 damage dealt and taken; Midnight ×1.6 Nova / ×0.85 minions; Tithe −10 cap; Carrion ×0.8 HP; Restless −5 pp; Gate every 25 s',
-    F.banner.join() === '20,0.8' && F.furnace.join() === '2.6,1.15' && F.glass.join() === '1.35,27' && F.midnight.join() === '1.6,0.85' && F.tithe.join() === '-10'
-    && F.carrion.join() === '0.8' && F.restless.join() === '0.05' && F.gate.join() === '25,40', JSON.stringify(F));
+  check('grimoire pages: Banner +25 cap / ×0.85 minion HP; Furnace ×1.3 shards / ×1.15 foes; Glass ×1.35 damage dealt and taken; Midnight ×1.6 Nova / ×0.85 minions; Tithe −10 cap; Carrion ×0.75 HP; Restless −5 pp; Gate every 30 s',
+    F.banner.join() === '25,0.85' && F.furnace.join() === '2.6,1.15' && F.glass.join() === '1.35,27' && F.midnight.join() === '1.6,0.85' && F.tithe.join() === '-10'
+    && F.carrion.join() === '0.75' && F.restless.join() === '0.05' && F.gate.join() === '30,40', JSON.stringify(F));
   check('Gravecaller\'s Gate: +N gates give 25% more (15 → 20), −N gates take 25% more (20 → 25); a plain run is unchanged',
     s.gates.plain === 'add15,add5' && s.gates.page === 'add20,add5' && /sub20/.test(s.gates.cullPlain) && /sub25/.test(s.gates.cullPage), JSON.stringify(s.gates));
-  check('Restless Graves: 3 corpses within 7 m rise every 8 s (one 9 m off stays down; none before the next toll)',
+  check('Restless Graves: 3 corpses within 7 m rise every 6 s (one 9 m off stays down; none before the next toll)',
     s.graves.rose === 3 && s.graves.far === 0 && s.graves.early === 0, JSON.stringify(s.graves));
-  check('Ossuary Tithe: a fallen minion bursts on the foes around it (not without the page); Carrion Feast heals 5 HP a second from kills',
-    s.tithe.page > 0 && s.tithe.plain === 0 && s.feast > 4.5 && s.feast <= 5.01, JSON.stringify({ t: s.tithe, f: s.feast }));
+  check('Ossuary Tithe: a fallen minion bursts on the foes around it (not without the page); Carrion Feast heals 4 HP a second from kills',
+    s.tithe.page > 0 && s.tithe.plain === 0 && s.feast > 3.5 && s.feast <= 4.01, JSON.stringify({ t: s.tithe, f: s.feast }));
   const U = s.ui;
   check('grimoire UI: the chip shows the page (with a dot for new pages); 8 pages, locked ones refuse; inscribing updates the chip',
     /Grimoire/.test(U.chip) && U.dot && U.pages === 8 && U.locked === 6 && U.fresh === 2 && U.lockedPick === '' && U.pick === 'furnace' && U.on === 'furnace' && /Soul Furnace/.test(U.chip2) && !U.dot2, JSON.stringify(U));

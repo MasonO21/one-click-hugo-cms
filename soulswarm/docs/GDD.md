@@ -279,14 +279,14 @@ Before a campaign or Endless run the player may **inscribe one Grimoire page**: 
 
 | Page | Boon | Price | Unlocked by |
 |---|---|---|---|
-| **Banner of the Damned** | +20 legion cap | Minions have 20% less HP | Finishing 3 runs |
+| **Banner of the Damned** | +25 legion cap | Minions have 15% less HP | Finishing 3 runs |
 | **Soul Furnace** | Soul shards are worth 30% more | 15% more foes | Clearing Chapter 1 |
 | **Glass Shepherd** | Weapons deal 35% more damage | You take 35% more damage | Clearing Chapter 2 |
-| **Restless Graves** | Every 8 s, up to 3 of the horde's un-risen dead within 7 m rise as Shades (the newest first, under the cap) | −5 pp Raise Chance | Raising 2,000 minions |
+| **Restless Graves** | Every 6 s, up to 3 of the horde's un-risen dead within 7 m rise as Shades (the newest first, under the cap) | −5 pp Raise Chance | Raising 2,000 minions |
 | **Midnight Mass** | Soul Nova charges 60% faster | Minions deal 15% less damage | A 300 kill streak |
-| **Ossuary Tithe** | A fallen minion bursts for 3× minion damage within 2.2 m (it passes through Grave Wraiths, as a Soul Bomb does) | −10 legion cap | A legion of 150 at once |
-| **Carrion Feast** | Every kill heals 0.4 HP, at most 5 HP a second | 20% less max HP | Slaying 25,000 foes |
-| **Gravecaller's Gate** | Soul Gates every 25 s (not 40), and +N gates give 25% more | Culling gates (−N) take 25% more | Clearing Chapter 4 |
+| **Ossuary Tithe** | A fallen minion bursts for 4× minion damage within 2.2 m (it passes through Grave Wraiths, as a Soul Bomb does) | −10 legion cap | A legion of 150 at once |
+| **Carrion Feast** | Every kill heals 0.35 HP, at most 4 HP a second | 25% less max HP | Slaying 25,000 foes |
+| **Gravecaller's Gate** | Soul Gates every 30 s (not 40), and +N gates give 25% more | Culling gates (−N) take 25% more | Clearing Chapter 4 |
 
 - **How it applies:** the page folds into the run's modifiers exactly like a Daily Trial mutator (`mergeMutators`): legion cap and Raise Chance add, the rest multiply, and the page's own hooks (graves, tithe, feast, gate values) live in `run.js`, `legion.js` and `gates.js`. Restless Graves uses the same corpses as the Corpse Priests (§5): a corpse a Priest is chanting over is spared, and a raised one is used up.
 - **Home screen:** a **Grimoire chip** above the Battle button shows the inscribed page (its painting and name), "No page inscribed", or, before the first unlock, the first goal. A red dot marks pages unlocked since the Grimoire was last opened.
