@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.40.0',
+  version: '4.41.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1348,6 +1348,18 @@ const DATA = {
   // first clear takes one or two stars and all three want about a third more strength, or a well-played live battle.
   // Any cleared stage can be fought again for the stars it is missing. A chapter's thirty stars fill three chests
   // (resources and journals scale with the keep when claimed).
+  // ---------- Heroic Chapters ----------
+  // A chapter whose thirty stars are all won opens its Heroic version: the same ten stages in order, each foe as strong
+  // as a stage fifteen further on, with two traits (a boss three). Each Heroic chapter features one hero (Epics early,
+  // Legendaries from chapter 10): a first clear pays Starglass and that hero's shards (it brings the hero to the keep if
+  // they aren't there yet), and a won stage can be raided for more shards, three raids a day across every chapter.
+  heroic: {
+    ahead: 15, raids: 3,
+    heroes: ['bashir', 'amira', 'kofi', 'yara', 'rashid', 'samira', 'tomas', 'sefa', 'noor', 'leila', 'tariq', 'zahra', 'nadia', 'soraya', 'idris'],
+    first: { stage: { starglass: 20, shards: 3 }, boss: { starglass: 40, shards: 6 } },
+    raid: { stage: { shards: 2, journals: 2 }, boss: { shards: 3, journals: 3 } },
+  },
+
   stars: {
     unbroken: 0.5, swift: 5,
     chests: [[10, { journals: 3, crate_food: 1, speed15: 2 }], [20, { journals: 5, starglass: 30, whetstone: 1 }], [30, { starglass: 60, beacons: 1, whetstone: 2 }]],
@@ -1866,6 +1878,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.41', items: [
+      { icon: 'i-star', name: 'Heroic Chapters', text: "Win all thirty stars in a chapter and its Heroic version opens: the same stages, far harder, each foe with two traits. Every Heroic chapter features one hero whose shards it pays, and won stages can be raided three times a day for more.", act: 'heroic', open: (S) => !!(S.heroic && Object.keys(S.heroic.won).length) || (S.stats.stageStars || 0) >= 30, needs: 'All 30 stars in a chapter' },
+    ] },
     { v: '4.40', items: [
       { icon: 'i-veil', name: 'Breath Arts', text: "Your Rainwyrm's breath can now be more than a Torrent. From Rainwyrm Lv 6 it breathes a Mist Veil that heals the squad and draws out venom, and from Lv 11 a Riptide that holds the foe under for two rounds. Choose on the stage card, against the foe in front of you.", act: 'tab:expedition', open: (S) => S.lv.wyrm >= 6, needs: 'Rainwyrm Lv 6' },
     ] },
@@ -2231,6 +2246,8 @@ const DATA = {
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
     { id: 'spar4', text: 'Seat four heroes in the Sparring Ring', stat: 'sparSeated', n: 4, reward: { journals: 40 } },
     { id: 'arts3', text: 'Learn all three Breath Arts', stat: 'artsOpen', n: 3, reward: { starglass: 60 } },
+    { id: 'heroic10', text: 'Win 10 Heroic stages', stat: 'heroicWins', n: 10, reward: { starglass: 100 } },
+    { id: 'heroic150', text: 'Win every Heroic stage', stat: 'heroicWins', n: 150, reward: { starglass: 500, beacons: 3 } },
     { id: 'stars30', text: 'Win 30 stage stars', stat: 'stageStars', n: 30, reward: { journals: 40 } },
     { id: 'stars150', text: 'Win 150 stage stars', stat: 'stageStars', n: 150, reward: { starglass: 100 } },
     { id: 'stars300', text: 'Win 300 stage stars', stat: 'stageStars', n: 300, reward: { starglass: 200, beacons: 2 } },

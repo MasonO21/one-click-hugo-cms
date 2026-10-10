@@ -137,7 +137,7 @@
         <div class="section-label grow">${esc(sel.name)}<span class="st-total">${icon('i-star')}${chStars(sel)}/${chMax(sel)}</span></div>
         <button class="btn small alt st-nav ${sel === cur ? 'off' : ''}" data-act="starch" data-arg="1" aria-label="The next chapter">›</button></div>
       <div class="stage-list st-list">${cells.join('')}</div>
-      <div class="row st-chests"><span class="muted small grow">Tap a cleared stage to fight it again for its stars.</span>${chests(sel)}</div>`;
+      <div class="row st-chests"><span class="muted small grow">Tap a cleared stage to fight it again for its stars.</span>${chests(sel)}</div>${KH.heroicStrip ? KH.heroicStrip(sel) : ''}`;
   };
 
   KH.sheets.starstage = () => {

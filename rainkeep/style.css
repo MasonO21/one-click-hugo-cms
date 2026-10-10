@@ -1478,3 +1478,19 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .ba-seg button.locked { opacity: 0.5; }
 .ba-seg button.answer { box-shadow: inset 0 0 0 1.5px var(--good); }
 .ba-seg button.answer::after { content: ''; position: absolute; top: 3px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+
+/* Heroic Chapters */
+.hc-strip { margin-top: 10px; gap: 8px; display: flex; flex-direction: column; border-color: #c0502c88; background: linear-gradient(180deg, #3a1a1a55, #00000000); }
+.hc-head { gap: 10px; align-items: center; }
+.hc-face { width: 44px; height: 48px; flex: none; border-radius: 10px; overflow: hidden; }
+.hc-face svg, .hc-face img { width: 100%; height: 100%; }
+.hc-list .hc-cell { position: relative; aspect-ratio: 1; max-width: 100%; min-width: 0; border-radius: 5px; display: grid; place-items: center; font: inherit; font-size: 11px; padding: 0; border: 1px solid #5a3a3a; background: #1a0f14; color: var(--dim); font-style: normal; }
+.hc-list button.hc-cell { cursor: pointer; }
+.hc-list .hc-cell.won { background: #6a3a14; color: var(--gold); border-color: var(--gold); }
+.hc-list .hc-cell.cur { background: #c0502c; color: #2a1102; border-color: var(--gold); font-weight: 700; }
+.hc-list .hc-cell.boss { box-shadow: inset 0 0 0 1px #ff9a6a; }
+.hc-list .hc-cell.locked { opacity: 0.55; }
+.hc-hero { gap: 10px; align-items: center; }
+.hc-ch { gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #ffffff10; }
+.hc-ch:last-child { border-bottom: 0; }
+.hc-btns { gap: 6px; }
