@@ -48,7 +48,7 @@
   const HERO = (id) => esc(DATA.heroes.find((h) => h.id === id).name.split(' ')[0]);
   KH.sheets.charms = () => {
     const id = UI.sheet.id, mine = S.charms[id];
-    const rows = Object.keys(C.kinds).map((k) => {
+    const rows = Object.keys(C.kinds).sort((x, y) => level(y) - level(x) || valueOf(y, 1) - valueOf(x, 1)).map((k) => {
       const n = found(k), L = level(k), who = wornBy(k);
       if (!n) return `<div class="row ch-charm off">${icon(`i-dg-${k}`, 'ch-ic')}<div class="grow"><b>${esc(KIND[k].name)}</b><div class="muted small">Not dug up yet · ${NAMES[C.kinds[k].fx]}</div></div></div>`;
       return `<button class="row ch-charm ${mine === k ? 'on' : ''}" data-act="charmset" data-arg="${id}:${k}">${icon(`i-dg-${k}`, 'ch-ic')}<div class="grow"><b>${esc(KIND[k].name)}</b> <span class="muted small">Lv ${L}</span>
