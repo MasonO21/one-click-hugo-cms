@@ -29,6 +29,7 @@ import { centerX, centerZ, footH, footW, type ShieldEntry, type TurretEntry } fr
 import type { FlowField } from './combat/flowField';
 import { TUNE, type VictoryInfo } from './combat/types';
 import { installCombatHints } from './combat/hints';
+import { scoutReport, scoutToast } from './combat/raidShape';
 
 export type { VictoryInfo } from './combat/types';
 
@@ -359,6 +360,9 @@ export class CombatSystem extends System {
     this.setPhase('warning');
     this.game.bus.emit('combat:warning', { wave: c.wave + 1, seconds });
     this.game.toast(`ALIEN ACTIVITY DETECTED — ATTACK IN ${fmtClock(seconds)}`, 'warning', '👾');
+    // the first raid at a new tier: name the new alien types and what helps against them
+    const scouts = scoutToast(scoutReport(this.game));
+    if (scouts) this.game.toast(scouts, 'warning', '🔭');
     this.game.bus.emit('sfx', { id: 'alarm' });
   }
 
@@ -395,6 +399,7 @@ export class CombatSystem extends System {
     for (const it of plan.queue) c.spawnQueue.push(it);
     ctx.hpScale = plan.hpScale;
     c.waveTotal = plan.queue.length;
+    c.lastWaveSize = plan.queue.length;
     c.killsThisWave = 0;
     c.bonus = early ? 0.1 : 0;
     c.attackStartedAt = st.playTime;

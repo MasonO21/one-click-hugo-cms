@@ -86,13 +86,19 @@ export class AlienAI {
   /** Swarm queens periodically spawn minions (invasion or wild, like the queen). */
   private queen(a: Alien, def: AlienDef, dt: number): void {
     const sp = def.spawns!;
+    const ctx = this.ctx;
+    const c = ctx.game.state.combat;
+    // invasion queens: a few broods each, and none late in the attack (the raid must be able to end)
+    if (!a.wild) {
+      const late = ctx.game.state.playTime - (c.attackStartedAt ?? ctx.game.state.playTime) > TUNE.QUEEN_QUIET_AFTER;
+      if (late || (a.broods ?? 0) >= (def.boss ? TUNE.BOSS_BROODS : TUNE.QUEEN_BROODS)) return;
+    }
     a.spawnT += dt;
     if (a.spawnT < sp.every) return;
     a.spawnT = 0;
-    const ctx = this.ctx;
+    a.broods = (a.broods ?? 0) + 1;
     const minion = ctx.game.data.alien(sp.alien);
     if (!minion) return;
-    const c = ctx.game.state.combat;
     for (let k = 0; k < sp.count; k++) {
       const ang = ctx.game.rng.range(0, Math.PI * 2);
       const r = (a.rad ?? 1) + 0.8;

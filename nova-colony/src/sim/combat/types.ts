@@ -30,6 +30,8 @@ declare module '../../core/state' {
     air?: boolean;
     /** Body radius in world units (hits, separation). */
     rad?: number;
+    /** Swarm queens: broods summoned so far (invasion queens stop at TUNE.QUEEN_BROODS / BOSS_BROODS). */
+    broods?: number;
   }
   interface Projectile {
     /** Aim point (world units). Homing projectiles update it to the target's position each frame. */
@@ -135,7 +137,14 @@ export const TUNE = {
   /** Victory celebration before returning to peace (s). */
   VICTORY_LINGER: 8,
   /** Safety net: after this long (once all spawned) remaining aliens flee and the wave counts as won. */
-  ATTACK_TIMEOUT: 300,
+  ATTACK_TIMEOUT: 180,
+  /**
+   * An invasion Swarm Queen summons at most this many broods (a boss queen BOSS_BROODS), and no queen summons once the
+   * attack is QUEEN_QUIET_AFTER seconds old: a queen the turrets could not reach kept a raid going for five minutes.
+   */
+  QUEEN_BROODS: 4,
+  BOSS_BROODS: 6,
+  QUEEN_QUIET_AFTER: 100,
   /**
    * Stragglers: when only a few invaders remain (<= max(2, 25% of the wave)) and nothing was killed,
    * spawned or hurt for this long, they flee and the wave counts as won (no minutes-long nibbling at the core).

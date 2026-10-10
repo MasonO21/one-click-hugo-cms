@@ -36,7 +36,7 @@ export type KillCredit = 'turret' | 'player' | 'trap' | 'drone';
 function blankAlien(): Alien {
   return {
     id: 0, def: '', x: 0, z: 0, y: 0, rot: 0, hp: 1, maxHp: 1, state: 'spawning', target: null, cd: 0, slowT: 0, slow: 0, spawnT: 0, t: 0,
-    wild: false, homeX: 0, homeZ: 0, wx: 0, wz: 0, returning: false, vx: 0, vz: 0, retreat: false, think: 0, air: false, rad: 0.5,
+    wild: false, homeX: 0, homeZ: 0, wx: 0, wz: 0, returning: false, vx: 0, vz: 0, retreat: false, think: 0, air: false, rad: 0.5, broods: 0,
   };
 }
 
@@ -187,6 +187,7 @@ export class CombatContext {
     a.slowT = 0;
     a.slow = 0;
     a.spawnT = 0;
+    a.broods = 0;
     a.t = 0;
     a.wild = !!opts.wild;
     a.homeX = opts.homeX ?? x;

@@ -7,6 +7,7 @@ import type { Game } from '../../core/Game';
 import type { CombatState } from '../../core/state';
 import type { InvasionDef, Reward } from '../../data/schema';
 import { TUNE } from './types';
+import { shapeCounts } from './raidShape';
 
 export type SpawnItem = CombatState['spawnQueue'][number];
 
@@ -57,7 +58,8 @@ export function ringPoint(game: Game, cx: number, cz: number, radius: number, an
 
 /**
  * Compose the next invasion wave starting at playTime `startAt`, around the colony center (cx, cz).
- * Groups keep their direction so attacks read clearly; 1–3 directions (more at higher tiers).
+ * Groups keep their direction so attacks read clearly; 1–3 directions (more at higher tiers). Counts are shaped by
+ * ./raidShape (a tier's first raid previews new alien types; no raid outgrows the previous one by more than 25%).
  * `bias` (radians, same convention as `directions`) orients the first direction, e.g. toward the
  * player's turrets during the first waves so the tutorial attack walks into the defenses.
  * `minRingCells` pushes the spawn ring out to (at most) the flow-field edge, e.g. past the turrets' reach.
@@ -84,9 +86,17 @@ export function planWave(game: Game, startAt: number, cx: number, cz: number, bi
   const baseRing = st.colony.radius + TUNE.SPAWN_RING_EXTRA;
   const ring = Math.min(Math.max(baseRing, minRingCells), st.colony.radius + TUNE.FIELD_MARGIN - 1) * CELL;
   let lastDelay = 0;
+  const bossDue = !!inv.boss && !!data.alien(inv.boss.alien) && inv.boss.every > 0 && (c.waveAtTier + 1) % inv.boss.every === 0;
+  // a tier's first raid previews its new alien types, and no raid outgrows the last one by more than RAID_GROWTH
+  const counts = shapeCounts(
+    game,
+    inv,
+    inv.groups.map((g) => (data.alien(g.alien) ? Math.max(1, Math.round(g.count * scale)) : 0)),
+    bossDue ? 1 : 0,
+  );
   inv.groups.forEach((g, gi) => {
-    if (!data.alien(g.alien)) return;
-    const count = Math.max(1, Math.round(g.count * scale));
+    const count = counts[gi];
+    if (!data.alien(g.alien) || count <= 0) return;
     const dir = out.directions[gi % nDirs];
     // big late-game groups arrive as a swarm (within GROUP_WINDOW seconds) instead of a one-by-one trickle
     // that a fortified colony shreds before two aliens are ever on screen together
@@ -98,7 +108,7 @@ export function planWave(game: Game, startAt: number, cx: number, cz: number, bi
     }
   });
 
-  if (inv.boss && data.alien(inv.boss.alien) && inv.boss.every > 0 && (c.waveAtTier + 1) % inv.boss.every === 0) {
+  if (bossDue && inv.boss) {
     const p = ringPoint(game, cx, cz, ring, out.directions[0]);
     out.queue.push({ alien: inv.boss.alien, at: startAt + lastDelay + 6, x: p.x, z: p.z });
   }

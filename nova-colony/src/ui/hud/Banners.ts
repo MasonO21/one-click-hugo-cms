@@ -9,6 +9,7 @@ import { btn } from '../widgets';
 import { h, setClass, setHidden, setText } from '../dom';
 import { alienArt, artOrEmoji, rewardArt } from '../art';
 import { showGuideNow } from '../logic/raid';
+import { scoutLine, scoutReport } from '../../sim/combat/raidShape';
 
 export class Banners {
   readonly el: HTMLElement;
@@ -21,6 +22,11 @@ export class Banners {
   private readonly hint: HTMLElement;
   private readonly hintTxt: HTMLElement;
   private readonly knocked: HTMLElement;
+  /** The scouting report under the warning: "Razor Crawlers ahead: Machine-Gun Turrets help". */
+  private readonly scout: HTMLElement;
+  private readonly scoutTxt: HTMLElement;
+  private scoutKey = '';
+  private scoutAliens: string[] = [];
   private mode: 'none' | 'warning' | 'attack' | 'victory' = 'none';
   private icKey = '';
 
@@ -34,7 +40,9 @@ export class Banners {
     this.hintTxt = h('span');
     this.hint = h('div', { class: 'hint-bubble', hidden: true }, h('span', { class: 'ic', text: '💡' }), this.hintTxt);
     this.knocked = h('div', { class: 'knocked-banner', hidden: true });
-    this.el = h('div', { class: 'hud-banners' }, this.attack, this.knocked, this.hint);
+    this.scoutTxt = h('span');
+    this.scout = h('div', { class: 'scout-banner', hidden: true }, h('span', { class: 'ic', text: '🔭' }), this.scoutTxt);
+    this.el = h('div', { class: 'hud-banners' }, this.attack, this.scout, this.knocked, this.hint);
   }
 
   private onButton(): void {
@@ -76,6 +84,7 @@ export class Banners {
         this.abBtn.textContent = 'Open';
       }
     }
+    this.refreshScout(mode);
     this.refreshIcon(mode);
     if (mode === 'warning') {
       let sec = game.sys.combat.secondsToAttack();
@@ -122,6 +131,7 @@ export class Banners {
         items.push({ model: d.model, boss: !!d.boss });
       };
       if (mode === 'warning') {
+        for (const id of this.scoutAliens) add(id); // the new types the scouts spotted lead
         const inv = game.data.invasions.length ? game.data.invasion(game.state.colony.tier) : null;
         if (inv) {
           for (const g of inv.groups) add(g.alien);
@@ -149,6 +159,24 @@ export class Banners {
         return el;
       }),
     );
+  }
+
+  /**
+   * The first raid at a new tier: the new alien types and what helps against them, under the warning (sim/combat/raidShape).
+   * Recomputed only when the raid, the tier or the research changes.
+   */
+  private refreshScout(mode: Banners['mode']): void {
+    const { game } = this.ctx;
+    const st = game.state;
+    const key = mode === 'warning' ? `${st.colony.tier}:${st.combat.wave}:${st.combat.waveAtTier}:${st.research.completed.length}:${game.derived.buildingsVersion}` : '';
+    if (key === this.scoutKey) return;
+    this.scoutKey = key;
+    const rep = key ? scoutReport(game) : [];
+    this.scoutAliens = rep.map((e) => e.alien);
+    setHidden(this.scout, rep.length === 0);
+    if (!rep.length) return;
+    const more = rep.length > 1 ? ` · +${rep.length - 1} more` : '';
+    setText(this.scoutTxt, scoutLine(rep[0]) + more);
   }
 
   /** Height of the visible banner stack in px (portrait layout pushes the rail/mission card down). */
