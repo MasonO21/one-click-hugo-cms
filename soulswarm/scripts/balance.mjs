@@ -12,6 +12,7 @@
 //        RTUNE='{"nyx":{"dmg":80}}' ... trial Rite tunables (RITES in data.js)
 //        RUSH=1 ... plays the Boss Rush (the five bosses back to back) instead; the chapters list picks the progression
 //          (e.g. 2,5 = a player who just cleared Chapter 1 and one at Chapter 5) and the table reports bosses beaten
+//        COURT=fallen ... with RUSH=1, plays the Fallen Court (the act finales at Chapters 10–30, each under its realm's hazards)
 //        BRTUNE='{"hp":[1,0.8,0.6,0.5,0.45]}' ... trial BOSS_RUSH tunables
 //        PAGE=glass ... inscribes that Grimoire page (GRIMOIRE in data.js; its goals are met for the run)
 //        MASTERY=10 ... the hero's Hero Mastery rank (MASTERY in data.js; default 1 in Act I and the PROGRESSION rank after,
@@ -74,7 +75,7 @@ const BOT = `window.__balance = (ch, prog, god, hero, rite, diff, dtune, rush, p
   p.grimoire.selected = page || ''; // a Grimoire page (its goals met, so the run carries it)
   p.mastery = { [hero]: { xp: window.__mastXp || 0, paid: 10 } }; // Hero Mastery: reset every run (results add XP)
   if (page) { Object.assign(p.stats, { runs: 99, raised: 1e5, bestStreak: 999, bestLegion: 400, kills: 1e6 }); p.chapter.unlocked = Math.max(p.chapter.unlocked, 5); }
-  if (rush) { p.flags.bossRush = 'on'; p.rush.tries = 0; p.chapter.unlocked = Math.max(p.chapter.unlocked, 2); app.startRun(1, { rush: true }); } else app.startRun(ch, { difficulty: diff });
+  if (rush) { p.flags.bossRush = 'on'; p.rush.tries = 0; p.chapter.unlocked = Math.max(p.chapter.unlocked, 2); if (window.__court) p.flags.rushCourt = window.__court; app.startRun(1, { rush: true }); } else app.startRun(ch, { difficulty: diff });
   const r = app.run; if (dtune) Object.assign(r.diff, dtune);
   const splits = []; let kills0 = 0;
   let hurt = 0; const h0 = r.player.hurt.bind(r.player);
@@ -138,6 +139,7 @@ for (const ch of CHAPTERS) {
     if (process.env.BRTUNE) await page.evaluate(async (tune) => { const { BOSS_RUSH } = await import('/src/game/data.js'); Object.assign(BOSS_RUSH, tune); }, JSON.parse(process.env.BRTUNE));
     if (process.env.RTUNE) await page.evaluate(async (tune) => { const { RITES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) Object.assign(RITES[id], o); }, JSON.parse(process.env.RTUNE));
     const rank = +process.env.MASTERY || PROGRESSION[PROG || ch].mastery || 0;
+    if (process.env.COURT) await page.evaluate((c) => { window.__court = c; }, process.env.COURT);
     if (rank) await page.evaluate(async (rank) => { const { MASTERY } = await import('/src/game/data.js'); let xp = 0; for (let i = 1; i < rank; i++) xp += MASTERY.need[i]; window.__mastXp = xp; }, rank);
     if (process.env.TUNE) await page.evaluate(async (tune) => { const { HEROES } = await import('/src/game/data.js'); for (const [id, o] of Object.entries(tune)) { const { passive, ...rest } = o; Object.assign(HEROES[id], rest); if (passive) Object.assign(HEROES[id].passive, passive); } }, JSON.parse(process.env.TUNE));
     const res = await page.evaluate(([c, p, g, h, rt, d, dt, ru, pg]) => window.__balance(c, p, g, h, rt, d, dt, ru, pg), [ch, PROGRESSION[PROG || ch], GOD, HERO, RITE, DIFF, process.env.DTUNE ? JSON.parse(process.env.DTUNE) : null, RUSH, process.env.PAGE || '']);
