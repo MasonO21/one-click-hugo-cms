@@ -17,6 +17,9 @@
   const SRC = (window.RK_ART && window.RK_ART.model) || {};
   const MOD = {};
   const loader = new THREE.GLTFLoader();
+  // the models' geometry is meshopt-compressed (a third smaller to download); without the decoder they fail to
+  // load and the drawn stand-ins stay
+  if (window.MeshoptDecoder && loader.setMeshoptDecoder) loader.setMeshoptDecoder(window.MeshoptDecoder);
   let epoch = 0; // bumps whenever a model arrives, so the keep can swap its stand-ins
   const BIRDS = new Set(['p-falcon', 'p-hoopoe', 'b-vulture']);
 
@@ -33,10 +36,29 @@
       return /\.json$/.test(src) ? r.json().then((j) => unbase64(j.glb)) : r.arrayBuffer();
     });
   }
+  // Models load a couple at a time, the ones that matter most on screen first (the wyrm, then heroes and
+  // companions, then the camel, villagers and the Dunes), and only once the first screen is up: a phone that
+  // parses a dozen models at once stalls the title for seconds.
+  const PRI = { w: 0, h: 1, p: 2, a: 3, v: 4, s: 5, b: 6, r: 7 };
+  const queue = [];
+  let busy = 0, opened = false;
+  // on the Low graphics tier (gfx.js) the keep's people stay drawn figures: their models are neither loaded nor used
+  const drawnPeople = (id) => /^[vh]-/.test(id) && KH.gfx && !KH.gfx.tier().painted;
   function load(id) {
-    if (!SRC[id] || MOD[id]) return;
+    if (!SRC[id] || MOD[id] || drawnPeople(id)) return;
     if (local && !SRC[id].startsWith('data:')) { MOD[id] = { failed: true }; return; }
     MOD[id] = { ok: false };
+    queue.push(id);
+    queue.sort((x, y) => (PRI[x[0]] ?? 9) - (PRI[y[0]] ?? 9));
+    pump();
+  }
+  function pump() {
+    while (opened && busy < 2 && queue.length) fetchOne(queue.shift());
+  }
+  const open = () => { if (!opened) { opened = true; pump(); } };
+  KH.on('booted', () => setTimeout(open, 500));
+  function fetchOne(id) {
+    busy++;
     bytes(SRC[id])
       .then((buf) => new Promise((res, rej) => loader.parse(buf, '', res, rej)))
       .then((gltf) => {
@@ -48,9 +70,11 @@
         // the wyrm's portraits on open sheets were painted with the drawn wyrm: paint them again
         if (/^w-/.test(id) && KH.paintWyrms) setTimeout(() => KH.paintWyrms(document.body), 0);
       })
-      .catch((e) => { MOD[id] = { failed: true, err: String(e) }; });
+      .catch((e) => { MOD[id] = { failed: true, err: String(e) }; })
+      // a breath for the page between models
+      .then(() => { busy--; setTimeout(pump, 40); });
   }
-  const ready = (id) => !!(MOD[id] && MOD[id].ok);
+  const ready = (id) => !!(MOD[id] && MOD[id].ok) && !drawnPeople(id);
   const tidy = (m) => { if (m && m.isMaterial) { m.metalness = 0; m.roughness = 0.85; if (m.map) m.map.anisotropy = 4; } };
 
   // a rigged person: measured once (feet, height, centre) so every copy stands on the ground at its height

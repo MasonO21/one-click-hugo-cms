@@ -1432,7 +1432,12 @@
   });
   window.addEventListener('pagehide', save);
 
+  // how long the start takes on this device, for the playtest report (playtest.js): ms since the page began
+  KH.timing = {};
+  const mark = (k) => { if (window.performance) KH.timing[k] = Math.round(performance.now()); };
+  KH.mark = mark;
   function boot(hot) {
+    mark('boot');
     const fromHot = hot && hot.S ? mergeDefaults(newState(), hot.S) : null;
     S = fromHot || load() || newState();
     const fresh = S.time === 0;
@@ -1448,7 +1453,9 @@
     if (!S.seenIntro) UI.sheet = { kind: 'intro' };
     else if (offline) UI.sheet = { kind: 'offline', data: offline };
     KH.emit('booted');
+    mark('booted');
     KH.renderAll(true);
+    mark('ui');
     setInterval(loop, 250);
   }
 

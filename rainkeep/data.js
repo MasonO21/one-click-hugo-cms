@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.43.0',
+  version: '4.44.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -1282,6 +1282,14 @@ const DATA = {
   },
 
   // ---------- Rival Keeps (rivals.js): other keeps on the Dunes to scout, raid, and fear ----------
+  // playing with real people (mp.js, NETWORK.md): a real Caravan, its help and daily boss, and the Arena
+  online: {
+    caravanMax: 30, found: 5, // members at most; the Rainwyrm level that founds a Caravan
+    help: { need: 8, cut: 0.01, min: 3, points: 10, daily: 30 }, // helpers per request; each cuts 1% of the job (3 s at least); Caravan points per help, paid 30 times a day
+    boss: { name: 'Glass Serpent', hits: 3, hp: 8, atk: 1.1, cap: 250, perMember: 210, minMembers: 4, chest: { starglass: 30, journals: 3, crate_food: 1 } },
+    arena: { attacks: 5, range: 0.4, wall: 1.15, loss: 5, points: { base: 20, per: 25, min: 8, max: 40 }, paidWins: 5, win: { starglass: 12, journals: 2 } },
+  },
+
   rivals: {
     unlock: 8, // Rainwyrm level: your scouts find them
     count: 8,
@@ -1896,6 +1904,12 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.44', items: [
+      { icon: 'i-people', name: 'Play with real people', text: "When the game is shared with friends, the Caravan tab opens on its Online side: found or join a real Caravan, chat, speed up each other's builds and bring down the Glass Serpent together every day. The Square is a chat for everyone, and the Wardens board ranks every real keep.", act: 'tab:caravan' },
+      { icon: 'i-duel', name: 'The Arena', text: "Attack other players' keeps, each fighting as an expedition foe of its own stage behind its walls. A win takes Arena points and pays Starglass and journals five times a day; a keep that broke yours waits for your revenge.", act: 'tab:caravan' },
+      { icon: 'i-power', name: 'Faster, smoother', text: 'The game opens in about half the time, the keep draws a quarter fewer things each frame and the Dunes half as many, and Settings has a Graphics choice: Auto, High, Balanced or Low, for an older phone or a longer battery.', act: 'settings' },
+      { icon: 'i-mail', name: 'Feedback', text: 'Tell the makers what is confusing, slow or great: Menu → Feedback.', act: 'feedback' },
+    ] },
     { v: '4.43', items: [
       { icon: 'i-wyrm', name: 'A new Rainwyrm', text: 'Your Rainwyrm has a new painted body: a coiled river dragon with horns, whiskers and fins, rising out of the spring. It grows with every form, wears every skin, and the elder kin of Act III share it.', act: 'tab:keep' },
       { icon: 'i-world', name: 'The Dunes, repainted', text: 'The keep, the ruins, the Saltborn camps, the quarries, the copper and Sunsteel veins, the date farms and the wind-carved rocks on the Dunes are all new painted models.', act: 'tab:world' },

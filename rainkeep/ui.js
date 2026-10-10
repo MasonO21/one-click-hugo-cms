@@ -74,7 +74,14 @@
     if (UI.pointerDown && !force) return false;
     const scroller = el.querySelector('.sheet-body');
     const keep = scroller ? scroller.scrollTop : 0;
+    // what the player is typing survives a redraw (a chat message arriving, a timer ticking): inputs keep their
+    // value and the one in use keeps the caret
+    const typed = {}, act = document.activeElement;
+    el.querySelectorAll('input[id],textarea[id]').forEach((i) => { if (i.type !== 'checkbox') typed[i.id] = i.value; });
+    const focus = act && el.contains(act) && act.id && act.matches('input,textarea') ? { id: act.id, a: act.selectionStart, b: act.selectionEnd } : null;
     el.innerHTML = html;
+    for (const id in typed) { const i = el.querySelector(`#${CSS.escape(id)}`); if (i) i.value = typed[id]; }
+    if (focus) { const i = el.querySelector(`#${CSS.escape(focus.id)}`); if (i) { i.focus(); try { i.setSelectionRange(focus.a, focus.b); } catch (e) { /* not a text input */ } } }
     el._h = html;
     const s2 = el.querySelector('.sheet-body');
     if (s2) s2.scrollTop = keep;
@@ -174,7 +181,7 @@
     play: { icon: 'i-kite', label: 'Play', ids: ['heroic', 'crossing', 'siegehall', 'clash', 'leviathan', 'derby', 'fishing', 'cookfire', 'buriedcity', 'channels', 'cloudrun', 'gardens'], blurb: "Pastimes for you and your wyrm, each with a reward of its own." },
     ventures: { icon: 'i-caravan', label: 'Ventures', ids: ['outposts', 'trade', 'journeys'], blurb: "The keep's business out on the sand: outposts on the Dunes, trade caravans to the markets beyond, and heroes on far journeys." },
   };
-  const MENU_IDS = ['bag', 'news'];
+  const MENU_IDS = ['bag', 'news', 'feedback', 'playtest'];
   KH.HUBS = HUBS;
   const tile = (b, back) => {
     const badge = b.badge ? b.badge() : '';
@@ -753,7 +760,7 @@
     const native = window.KHNative && window.KHNative.isNative;
     return {
       title: 'Settings', lvl: '',
-      body: `<div class="card stack">${toggle('sfx', 'Sound effects')}${toggle('music', 'Music and ambience')}${toggle('haptics', 'Vibration')}${native ? toggle('notify', 'Notifications when builds finish') : ''}${KH.A3 && KH.A3.ok ? toggle('gfx3d', '3D graphics (turn off to save battery)') : ''}${toggle('liveBattle', 'Play battles round by round (off: they resolve at once)')}${toggle('scenes', 'Story scenes before boss fights')}</div>
+      body: `<div class="card stack">${toggle('sfx', 'Sound effects')}${toggle('music', 'Music and ambience')}${toggle('haptics', 'Vibration')}${native ? toggle('notify', 'Notifications when builds finish') : ''}${KH.A3 && KH.A3.ok ? toggle('gfx3d', '3D graphics (turn off to save battery)') : ''}${KH.A3 && KH.A3.ok && S.settings.gfx3d !== false && KH.gfxRow ? KH.gfxRow() : ''}${toggle('liveBattle', 'Play battles round by round (off: they resolve at once)')}${toggle('scenes', 'Story scenes before boss fights')}</div>
         <div class="section-label">Your keep</div>
         <dl class="kv"><dt>Time in the keep</dt><dd>${fmtTime(S.time)}</dd><dt>Survivors</dt><dd>${S.pop}</dd><dt>Stages cleared</dt><dd>${S.stage - 1}</dd>
         <dt>Heroes recruited</dt><dd>${Object.keys(S.heroes).length}/${DATA.heroes.length}</dd><dt>Storms survived cleanly</dt><dd>${S.stats.cleanStorms}</dd><dt>Buildings upgraded</dt><dd>${S.stats.upgrades}</dd>
@@ -762,7 +769,8 @@
         <p class="muted small">Progress saves on this device. To move it to another device or browser, copy your save code there.</p>
         <div class="row wrap"><button class="btn small alt" data-act="sheet" data-arg="savecode">Copy save code</button><button class="btn small alt" data-act="sheet" data-arg="loadcode">Load a save code</button>${native ? '<button class="btn small alt" data-act="restore">Restore purchases</button>' : ''}</div>
         <div class="section-label">About</div>
-        ${DATA.privacyUrl ? `<p class="small"><a href="${esc(DATA.privacyUrl)}" target="_blank" rel="noopener">Privacy policy</a></p>` : ''}<p class="muted small">Rainkeep ${DATA.version}. Timers and production run about 30× faster than a typical live-service strategy game, so the whole story fits in a couple of weeks of evenings. Caravan members and rival keeps are simulated.</p>
+        ${DATA.privacyUrl ? `<p class="small"><a href="${esc(DATA.privacyUrl)}" target="_blank" rel="noopener">Privacy policy</a></p>` : ''}<p class="muted small">Rainkeep ${DATA.version}. Timers and production run about 30× faster than a typical live-service strategy game, so the whole story fits in a couple of weeks of evenings. Your Caravan's members and the rival keeps on the Dunes are run by the game; when the game is played online, the Caravan tab's Online side is real players.</p>
+        ${S.online && Object.keys(S.online.blocked || {}).length ? `<div class="section-label">Blocked players</div><div class="card stack">${Object.keys(S.online.blocked).map((id) => `<div class="row"><span class="grow small">${esc((KH.mp && KH.mp.M.names[id]) || 'A player')}</span><button class="btn small alt" data-act="mpunblock" data-arg="${esc(id)}">Unblock</button></div>`).join('')}</div>` : ''}
         <button class="btn alt wide" data-act="reset">Start a new keep</button>`,
     };
   }
@@ -1414,6 +1422,8 @@
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && UI.sheet && UI.sheet.kind !== 'intro') { ACT.close(); renderAll(true); }
     if (e.key === 'Enter' && e.target && e.target.id === 'wyrm-name') { ACT.rename(); renderAll(true); }
+    // an input that names an action for Enter (a chat line, a search) runs it
+    else if (e.key === 'Enter' && e.target && e.target.dataset && e.target.dataset.enter && ACT[e.target.dataset.enter]) { e.preventDefault(); ACT[e.target.dataset.enter](e.target.dataset.arg); renderAll(true); }
   });
 
   // ======================================================================

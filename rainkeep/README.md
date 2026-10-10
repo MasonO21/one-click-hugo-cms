@@ -152,6 +152,7 @@ Progress saves in the browser. Settings (gear icon) has sound toggles, the 3D gr
 | `native.js` | App-store bridge (`KHNative`): RevenueCat purchases, notifications, haptics, sharing, service worker |
 | `sw.js` | Service worker for offline play when hosted |
 | `vendor/three.min.js` | three.js r158 (MIT, see `vendor/THREE_LICENSE.txt`) |
+| `vendor/meshopt-decoder.js` | meshoptimizer's glTF decoder (MIT, see `vendor/MESHOPT_LICENSE.txt`): the 3D models are meshopt-compressed |
 | `vendor/three-gltf.js` | three.js r158's GLTFLoader and SkeletonUtils, made to load as a plain script, with textures loaded through an image rather than `fetch()` (MIT) |
 | `fonts/` | El Messiri and Barlow Semi Condensed (SIL Open Font License) |
 | `icons/`, `icon.svg`, `manifest.webmanifest` | App icons, splash screen and home-screen install |

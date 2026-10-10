@@ -181,12 +181,11 @@
   // ======================================================================
   function init() {
     try {
-      renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true, powerPreference: 'high-performance' });
+      renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: KH.gfx ? KH.gfx.aa() : true, powerPreference: 'high-performance' });
     } catch (e) { A.ok = false; return false; }
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
-    renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     scene = new THREE.Scene();
     scene.fog = new THREE.Fog('#ecd0a0', 70, 190);
@@ -195,9 +194,7 @@
     hemi = new THREE.HemisphereLight('#d2ecff', '#d9a060', 1.15);
     scene.add(hemi);
     sun = new THREE.DirectionalLight('#fff0d4', 3);
-    sun.castShadow = true;
-    const small = Math.min(window.innerWidth, window.innerHeight) < 600;
-    sun.shadow.mapSize.set(small ? 1024 : 2048, small ? 1024 : 2048);
+    shadows(KH.gfx ? KH.gfx.tier() : null);
     Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 160 });
     sun.shadow.bias = -0.0008;
     sun.shadow.normalBias = 0.04;
@@ -973,11 +970,13 @@
     return job ? 'up' : 'built';
   }
   function syncPlots() {
+    let changed = false;
     for (const p of DATA.plots) {
       const pl = plots[p.id], st = plotState(p.id), tier = A.tierOf(S.lv[p.id] || 1);
       const key = `${st}:${tier}`;
       if (pl.key === key) continue;
       pl.key = key;
+      changed = true;
       if (pl.model) { pl.g.remove(pl.model); pl.model = null; }
       const m = new THREE.Group();
       let top = 1.2;
@@ -1004,6 +1003,46 @@
         pl.path = grp;
       }
     }
+    if (changed) rebatch();
+  }
+  // One batch for the static parts of every building and lane. Each building is baked on its own (a mesh per
+  // material), which leaves a built-up keep at some 250 draw calls for its plots alone; merged across plots by
+  // material it is a few dozen. Rebuilt when a plot changes (a new building, an upgrade tier, scaffolding), which
+  // takes a few milliseconds; the per-plot meshes stay in place, hidden, and taps still find their proxies.
+  let batchG = null;
+  T3.batchCount = () => (batchG ? batchG.children.length : 0);
+  function rebatch() {
+    if (batchG) { scene.remove(batchG); batchG.children.forEach((m) => m.geometry.dispose()); batchG = null; }
+    const buckets = new Map();
+    const take = (root, all) => {
+      if (!root) return;
+      root.updateMatrixWorld(true);
+      root.traverse((o) => {
+        if (!o.isMesh || o.isSkinnedMesh || (!all && !o.userData.baked) || o.userData.keep) return;
+        for (let q = o; q && q !== root.parent; q = q.parent) if (q.userData.dyn) return;
+        const m = o.material;
+        if (!m || Array.isArray(m) || m.transparent || !o.geometry.attributes.position) return;
+        const k = `${m.uuid}|${o.castShadow ? 1 : 0}|${o.geometry.attributes.color ? 1 : 0}`;
+        if (!buckets.has(k)) buckets.set(k, { m, cast: o.castShadow, list: [] });
+        buckets.get(k).list.push(o);
+      });
+    };
+    for (const p of DATA.plots) { const pl = plots[p.id]; if (pl.key && !pl.key.startsWith('locked')) { take(pl.model, false); take(pl.path, true); } }
+    batchG = new THREE.Group();
+    for (const { m, cast, list } of buckets.values()) {
+      for (const o of list) o.visible = true;
+      if (list.length < 2) continue; // nothing to gain
+      const geos = list.map((o) => {
+        const g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry.clone();
+        if (!g.attributes.normal) g.computeVertexNormals();
+        return g.applyMatrix4(o.matrixWorld);
+      });
+      const mm = new THREE.Mesh(A.mergeGeos(geos, !!geos[0].attributes.color), m);
+      mm.castShadow = cast; mm.receiveShadow = true;
+      batchG.add(mm);
+      for (const o of list) o.visible = false;
+    }
+    scene.add(batchG);
   }
 
   // ======================================================================
@@ -1355,7 +1394,11 @@
   }
   function syncPeople() {
     const posts = Object.keys(S.workers).filter((p) => S.workers[p] > 0 && S.lv[p]);
-    const want = posts.length ? Math.min(S.pop - S.sick, 22) : Math.min(S.pop, 4);
+    // the crowd follows the graphics tier (gfx.js): all of it on High, two thirds on Balanced, a third on Low
+    const g = KH.gfx ? KH.gfx.tier() : null;
+    const base = posts.length ? Math.min(S.pop - S.sick, 22) : Math.min(S.pop, 4);
+    const want = Math.min(base, Math.max(3, Math.round(base * (g ? g.crowd : 1))));
+    if (peopleTier !== (g && g.id)) { peopleTier = g && g.id; villReady = -1; }
     // as the models arrive, the drawn villagers make way for them
     if (A.models) {
       const n = A.models.want(VILL);
@@ -1368,6 +1411,9 @@
       people.push({ o, i, seed: seeded(i * 13 + 5)() });
     }
     while (people.length > want) scene.remove(people.pop().o);
+    skinned = [];
+    scene.traverse((o) => { if (o.isSkinnedMesh) skinned.push(o); });
+    shadowPolicy();
     // besides workers, a few villagers visit the other built plots
     const built = DATA.plots.map((p) => p.id).filter((id) => S.lv[id]);
     return posts.length ? [...posts, ...posts, ...built] : built;
@@ -1755,11 +1801,27 @@
     fitD = hi;
     Object.assign(view, save);
   }
+  // shadows for the graphics tier (gfx.js): none on Low, a smaller map on Balanced and on small screens
+  function shadows(g) {
+    const on = !g || g.shadow > 0, small = Math.min(window.innerWidth, window.innerHeight) < 600;
+    const size = !g ? (small ? 1024 : 2048) : Math.min(g.shadow || 1024, small ? 1024 : 2048);
+    const was = renderer.shadowMap.enabled;
+    renderer.shadowMap.enabled = on;
+    sun.castShadow = on;
+    if (sun.shadow.mapSize.x !== size) {
+      sun.shadow.mapSize.set(size, size);
+      if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; }
+    }
+    // materials compile with or without shadow code: switching needs a recompile
+    if (scene && was !== on) scene.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => { m.needsUpdate = true; }); });
+  }
+  if (KH.gfx) KH.gfx.on((g) => { if (!renderer) return; shadows(g); resize(); peopleTier = null; });
+  let peopleTier = null;
   function resize() {
     if (!renderer) return;
     const r = cv.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    DPR = Math.min(2, window.devicePixelRatio || 1);
+    DPR = KH.gfx ? KH.gfx.dpr() : Math.min(2, window.devicePixelRatio || 1);
     VW = r.width; VH = r.height;
     renderer.setPixelRatio(DPR);
     renderer.setSize(VW, VH, false);
@@ -1945,8 +2007,12 @@
     }
     if (!on || !VW) { if (on && !VW) resize(); return; }
     if (KH.covered && KH.covered()) { last = now; return; } // nothing to draw under a full-screen overlay
+    // Low draws 30 frames a second
+    const gt = KH.gfx ? KH.gfx.tier() : null;
+    if (gt && gt.fps < 60 && last && now - last < 1000 / gt.fps - 3) return;
     const t = now / 1000;
     const dt = Math.min(0.05, (now - (last || now)) / 1000), rdt = Math.min(0.5, (now - (last || now)) / 1000);
+    if (KH.gfx && last) KH.gfx.frame(now - last);
     last = now;
     slow -= dt;
     if (slow <= 0 || now - lastSync > 600) { slow = 0.5; lastSync = now; syncPlots(); syncDecor(); syncDefenses(); syncRanks(); syncDecrees(); syncDigSite(); syncKin(); syncPals(); syncHeroes(); syncSellers(); syncStandIns(); posts = syncPeople(); }
@@ -2039,13 +2105,53 @@
     applyOffset();
     place(lerp(d * 1.35, d, fk), lerp(0.22, camEl(), fk), lerp(-0.45, 0, fk) + view.az);
     T3.home = T3.atHome();
+    cullSkinned();
     renderer.render(scene, cam);
     anchors();
+  }
+  // Painted people and animals are skinned meshes whose bounds sit in their bind space, so three can't cull them
+  // and draws every one, twice with its shadow. The keep tests each one's spot against the view instead, and on
+  // Balanced and Low they cast no shadow.
+  // On Balanced only the big shapes cast shadows (the buildings, terraces, rocks and the wyrm): a jar's or a lamp's
+  // shadow is barely seen and costs a draw of its own in the shadow pass
+  let castTier = null;
+  const wsc = new V3();
+  function shadowPolicy() {
+    const g = KH.gfx ? KH.gfx.tier() : null, id = g ? g.id : 'high';
+    if (id !== 'mid' && castTier === id) return;
+    castTier = id;
+    scene.traverse((o) => {
+      if (!o.isMesh || o.isSkinnedMesh) return;
+      if (o.userData.cs0 === undefined) o.userData.cs0 = o.castShadow;
+      if (!o.userData.cs0) return;
+      if (id !== 'mid') { o.castShadow = true; return; }
+      if (o.userData.big === undefined) {
+        const gm = o.geometry;
+        if (!gm.boundingSphere) gm.computeBoundingSphere();
+        o.userData.big = gm.boundingSphere.radius * o.getWorldScale(wsc).x >= 1.1;
+      }
+      o.castShadow = o.userData.big;
+    });
+  }
+  let skinned = [];
+  const frus = new THREE.Frustum(), pvm = new THREE.Matrix4(), cullS = new THREE.Sphere(new V3(), 1.8);
+  function cullSkinned() {
+    const g = KH.gfx ? KH.gfx.tier() : null, sh = !g || g.peopleShadow;
+    cam.updateMatrixWorld();
+    pvm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    frus.setFromProjectionMatrix(pvm);
+    for (const m of skinned) {
+      cullS.center.setFromMatrixPosition(m.matrixWorld);
+      m.visible = frus.intersectsSphere(cullS);
+      m.castShadow = sh;
+    }
   }
 
   KH.on('booted', () => {
     S = KH.S;
+    const t0 = performance.now();
     if (!init()) return;
+    KH.timing.keep3d = Math.round(performance.now() - t0);
     resize();
     requestAnimationFrame(frame);
   });

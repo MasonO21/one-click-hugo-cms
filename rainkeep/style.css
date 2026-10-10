@@ -1505,3 +1505,52 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 .od-row:last-child { border-bottom: 0; }
 .od-row.done { opacity: 0.6; }
 .od-ic { width: 28px; height: 28px; flex: none; }
+
+/* ---------- Graphics quality (gfx.js) ---------- */
+.gfx-seg button { font-size: 12px; padding: 7px 2px; }
+
+/* ---------- Wardens online (mp.js) ---------- */
+.mp-seg { margin: 0 0 10px; }
+.mp-seg button { position: relative; }
+.mp-seg .dot { position: absolute; top: 4px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+.mp-row { gap: 8px; align-items: center; padding: 5px 6px; border-radius: 8px; }
+.mp-row.you { background: #3fd0c022; box-shadow: inset 0 0 0 1px #3fd0c066; }
+.mp-rank { width: 22px; text-align: right; font-weight: 800; color: var(--dim); flex: none; }
+.mp-on { width: 8px; height: 8px; border-radius: 50%; background: #4c3e5e; flex: none; }
+.mp-on.on { background: var(--good); box-shadow: 0 0 6px var(--good); }
+.mp-crest { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-weight: 900; font-size: 12px; color: #120c1d; flex: none; box-shadow: inset 0 -3px 0 #0004, 0 2px 6px #0006; }
+.mp-al, .mp-alhead { gap: 10px; align-items: center; }
+.mp-alhead h3 { margin: 0; }
+.mp-dmg { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.mp-dmg span { padding: 2px 7px; border-radius: 99px; background: #0005; }
+.mp-dmg span.you { background: #3fd0c044; }
+.mp-help { gap: 8px; align-items: center; }
+.mp-help.you { opacity: .85; }
+.mp-chat { max-height: 300px; }
+.mp-say { gap: 6px; margin: 6px 0 4px; }
+.mp-say input { flex: 1; min-width: 0; }
+.mp-opp { display: grid; justify-items: end; gap: 4px; }
+.mp-log { gap: 8px; align-items: center; }
+.mp-log .ic { width: 20px; height: 20px; flex: none; }
+.mp-log.lost .ic { color: var(--bad); }
+.mp-log.held .ic { color: var(--good); }
+.mp-me { align-items: center; gap: 10px; }
+.mp-me .mp-big { width: 36px; height: 36px; color: var(--gold); }
+
+/* ---------- Playtest (playtest.js) ---------- */
+.pt-stars { gap: 6px; justify-content: center; margin: 4px 0 10px; }
+.pt-star { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; background: #0004; color: #5a4a6e; }
+.pt-star .ic { width: 28px; height: 28px; }
+.pt-star.on { color: var(--gold); background: #e8b54a22; }
+.pt-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.pt-kpi { display: grid; gap: 2px; padding: 8px 6px; border-radius: 10px; background: #0004; border: 1px solid var(--line); text-align: center; }
+.pt-kpi b { font-size: 20px; color: var(--gold); }
+.pt-kpi span { font-size: 11px; color: var(--dim); }
+.pt-f { gap: 8px; align-items: center; }
+.pt-bar { flex: 0 0 38%; height: 8px; border-radius: 99px; background: #0006; overflow: hidden; }
+.pt-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--water-2), #8ff0ff); }
+.pt-fb { border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.pt-fb p { margin: 2px 0 0; }
+.pt-p { gap: 8px; align-items: center; }
+textarea { resize: vertical; }
+.mp-more { margin-left: 6px; padding: 0 6px; border-radius: 6px; color: var(--dim); font-weight: 900; line-height: 1.2; background: #0003; }

@@ -32,6 +32,8 @@
   // Models for map tiles
   // ======================================================================
   const CLS = { guard: ['#c27a3a', '#7a3f1c'], bow: ['#8a6ad0', '#4a2f80'], lancer: ['#2fa89a', '#16605a'] };
+  // nothing sways on the Dunes: palm crowns (drawn to sway in the keep) bake in with the rest
+  const settle = (g) => { g.traverse((o) => { if (o.userData.sway !== undefined) o.userData.dyn = false; }); return g; };
   const blob = (r) => { const m = new THREE.Mesh(A.geo(`blob${r}`, () => new THREE.CircleGeometry(r, 16).rotateX(-Math.PI / 2)), new THREE.MeshBasicMaterial({ color: '#3a1a08', transparent: true, opacity: 0.28, depthWrite: false })); m.position.y = 0.04; return m; };
   // the painted beasts (models3d.js), by name: [model, how many, size (body length, or wingspan)]; the Dust
   // Wraith stays a drawn spirit, and the drawn beasts stand in until a model has loaded
@@ -332,7 +334,7 @@
   // ======================================================================
   function init() {
     try {
-      renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+      renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: KH.gfx ? KH.gfx.aa() : true });
     } catch (e) { return false; }
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -382,7 +384,7 @@
   function buildKeep() {
     if (keepG) scene.remove(keepG);
     keepGlb = mapGlb('keep');
-    keepG = A.bake(keepModel());
+    keepG = A.bake(settle(keepModel()));
     keepG.position.set(0, hAt(0, 0), 0);
     scene.add(keepG);
   }
@@ -406,7 +408,7 @@
       m.position.set(Math.cos(a) * d, m.position.y, Math.sin(a) * d);
       decor.add(m);
     }
-    decorG = A.bake(decor);
+    decorG = A.bake(settle(decor));
     scene.add(decorG);
   }
   function makeIcons() {
@@ -450,9 +452,9 @@
         else if (g.userData.beam) g.userData.beam.visible = false;
       }
       g.position.set(wx(x), hAt(wx(x), wz(y)), wz(y));
-      A.bake(g);
+      A.bake(settle(g));
       scene.add(g);
-      tiles[b.k] = { g, key, t: b };
+      tiles[b.k] = { g, key, t: b, x, y };
     }
   }
   // Bloom (bloom.js): groves on open sand, rebuilt as they grow from seedlings to an oasis
@@ -495,7 +497,7 @@
       const [x, y] = k.split(',').map(Number);
       const g = groveModel(x, y, st);
       g.position.set(wx(x), hAt(wx(x), wz(y)), wz(y));
-      A.bake(g);
+      A.bake(settle(g));
       scene.add(g);
       groves[k] = { g, st };
     }
@@ -532,7 +534,7 @@
       if (outs[o.k]) scene.remove(outs[o.k].g);
       const g = outpostModel(o);
       g.position.set(wx(o.x), hAt(wx(o.x), wz(o.y)), wz(o.y));
-      A.bake(g);
+      A.bake(settle(g));
       scene.add(g);
       outs[o.k] = { g, lvl: o.lvl };
     }
@@ -623,6 +625,7 @@
     cam.updateMatrixWorld();
   }
   W3.pan = (dx, dy) => {
+    if (!cam) return;
     const d = camDist(), k = (2 * d * Math.tan((cam.fov * Math.PI) / 360)) / VH;
     view.tx -= dx * k;
     view.tz -= (dy * k) / Math.sin(EL);
@@ -631,9 +634,24 @@
   W3.center = () => { view.tx = 0; view.tz = 0; };
   // where the camera looks and how close (tests and tools)
   W3.look = () => ({ tx: view.tx, tz: view.tz, zoom: view.zoom });
+  // tiles under the dust past the wyrm's sight, or off screen, are not drawn: the painted beasts can't be culled
+  // by three (their bounds sit in bind space), and a map holds some seventy of them
+  const frus = new THREE.Frustum(), pvm = new THREE.Matrix4(), cs = new THREE.Sphere(new V3(), TS * 0.75);
+  function cullTiles(reach) {
+    cam.updateMatrixWorld();
+    pvm.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+    frus.setFromProjectionMatrix(pvm);
+    for (const k in tiles) {
+      const e = tiles[k];
+      cs.center.copy(e.g.position); cs.center.y += 1;
+      e.g.visible = Math.hypot(e.x - C, e.y - C) <= reach && frus.intersectsSphere(cs);
+    }
+  }
+  W3.stats = () => renderer && { calls: renderer.info.render.calls, tris: renderer.info.render.triangles, scene };
   W3.focus = (x, y) => { view.tx = wx(x); view.tz = wz(y) - 4; };
   const ray = new THREE.Raycaster(), ground = new THREE.Plane(new V3(0, 1, 0), 0);
   W3.pick = (px, py) => {
+    if (!cam) return null;
     ray.setFromCamera(new THREE.Vector2((px / VW) * 2 - 1, -(py / VH) * 2 + 1), cam);
     const p = new V3();
     if (!ray.ray.intersectPlane(ground, p)) return null;
@@ -646,7 +664,7 @@
     if (!renderer) return;
     const r = cv.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    DPR = Math.min(2, window.devicePixelRatio || 1);
+    DPR = KH.gfx ? KH.gfx.dpr() : Math.min(2, window.devicePixelRatio || 1);
     VW = r.width; VH = r.height;
     renderer.setPixelRatio(DPR);
     renderer.setSize(VW, VH, false);
@@ -723,9 +741,23 @@
   // Frame
   // ======================================================================
   let last = 0, nextSync = 0;
+  // The Dunes scene is built the first time the map is opened, not at boot: a session starts in the keep, and the
+  // terrain, decor and tiles cost a phone a second or more. Where it can't be built, the 2D map stays.
+  let built = false, failed = false;
+  function build() {
+    built = true;
+    const t0 = performance.now();
+    if (!init()) { failed = true; return false; }
+    KH.timing.dunes3d = Math.round(performance.now() - t0);
+    octx = ov.getContext('2d');
+    return true;
+  }
   function frame(now) {
+    if (failed) return;
     requestAnimationFrame(frame);
-    const on = !!S && A.enabled() && UI.tab === 'world' && UI.sub.world === 'map' && !document.hidden;
+    const want = !!S && A.enabled() && UI.tab === 'world' && UI.sub.world === 'map' && !document.hidden;
+    if (want && !built && !build()) return;
+    const on = want && built;
     if (on !== W3.active) {
       W3.active = on;
       KH.world3dActive = on;
@@ -735,6 +767,8 @@
     if (!on) return;
     if (!VW) { resize(); if (!VW) return; }
     if (KH.covered && KH.covered()) return; // nothing to draw under a full-screen overlay
+    const gt = KH.gfx ? KH.gfx.tier() : null;
+    if (gt && gt.fps < 60 && last && now - last < 1000 / gt.fps - 3) return;
     const t = now / 1000, dt = Math.min(0.5, (now - (last || now)) / 1000);
     last = now;
     if (now >= nextSync) {
@@ -778,6 +812,7 @@
     if (sk) { const [x, y] = sk.split(',').map(Number); sel.position.set(wx(x), hAt(wx(x), wz(y)) + 0.15, wz(y)); sel.material.opacity = 0.6 + 0.3 * Math.sin(t * 4); }
     scene.fog.near = camDist() + 20; scene.fog.far = camDist() + 120;
     place();
+    cullTiles(R / TS + 2);
     renderer.render(scene, cam);
     overlay(t);
     void dt;
@@ -785,8 +820,6 @@
 
   KH.on('booted', () => {
     S = KH.S;
-    if (!init()) return;
-    octx = ov.getContext('2d');
     requestAnimationFrame(frame);
   });
   KH.hooks.boot.push(() => {
@@ -795,6 +828,7 @@
     for (const k of Object.keys(tiles)) { scene.remove(tiles[k].g); delete tiles[k]; }
     buildDecor();
   });
+  if (KH.gfx) KH.gfx.on(() => resize());
   window.addEventListener('resize', resize);
   if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);
 })();

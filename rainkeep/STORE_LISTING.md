@@ -14,12 +14,18 @@ Rainkeep: Desert Wyrm
 Raise a water dragon. Survive.
 ```
 
-## Promotional text (170 max) · 152 characters
+## Promotional text (170 max) · 146 characters
 
 Promotional text can be changed at any time without a new review, so use it for the current event or season.
 
 ```
-Every hero, foe and story scene now has painted art. Past the Burning Line your wyrm's sleeping kin wait to be freed, and every hero has a tale to tell.
+Play with real people: found a Caravan with friends, help each other build, bring down the Glass Serpent together and test your keep in the Arena.
+```
+
+For a build without a server (offline only), use instead:
+
+```
+Your Rainwyrm has a new painted body, and the Dunes are repainted. Raise the last water dragon from a Hatchling to a river that flies.
 ```
 
 ## Keywords (100 max) · 96 characters
@@ -30,7 +36,7 @@ Comma-separated, no spaces after commas. Words already in the name and subtitle 
 desert,survival,city builder,strategy,heroes,oasis,sandstorm,colony,kingdom,4x,base,3d,dune,well
 ```
 
-## Description (4,000 max) · 3987 characters
+## Description (4,000 max) · 3823 characters
 
 ```
 The rain stopped a generation ago. At the bottom of a dry well you found the last of the water dragons: a hatchling Rainwyrm, cool to the touch. Its mist is all that stands between your people and the sun.
@@ -45,10 +51,8 @@ SURVIVAL THAT STAYS REAL
 
 BUILD YOUR KEEP IN 3D
 • Thirteen buildings on the terraces of a canyon oasis, from Deep Wells and Date Groves to the Archive of Rains and the Sunsteel Forge, each changing shape as it levels up.
-• Pan, zoom and turn anywhere in your keep as villagers carry water up the stairs and lanterns come on at night.
 • Light the Sunsteel Forge and forge the Warden's Gear: six pieces, five tiers, and every squad you send out gets stronger.
-• Settle what happens in your keep: travellers at the gate, a fever, a wedding under the palms.
-• Raise fountains, wyrm statues and a glass mosaic court in the keep gardens. Each has its own place on the terraces and a lasting bonus.
+• Raise fountains, wyrm statues and a glass mosaic court in the keep gardens.
 
 A STORY IN THREE ACTS
 • Fifteen chapters: from the Salt Flats to the Sunheart, through the floods of The Long Rains, and past the Burning Line to wake the Mother of Rains.
@@ -66,11 +70,11 @@ CROSS THE DUNES
 • Send caravans to gather stone, dates, water and copper.
 • Once the rain returns, plant groves on the Dunes and watch the desert turn green, oasis by oasis.
 • Hunt beasts, burn Scorpion camps, and explore ruins where your choices decide what your scouts bring home.
-• Climb the Mirage Spire, a tower where every floor has its own twist, and duel rival wardens up a ladder of a thousand ranks.
+• Climb the Mirage Spire, a tower where every floor has its own twist.
 
-RIDE WITH YOUR CARAVAN
-• Join a Caravan whose members speed up your upgrades, fund shared research and send gifts.
-• Climb the Oasis Wars bracket, matched so you face rivals who play like you.
+PLAY WITH REAL PEOPLE
+• Found or join a Caravan of real players: chat, speed up each other's builds and bring down the Glass Serpent together, every day.
+• Attack other wardens' keeps in the Arena, take their points and plan your revenge.
 
 PLAY YOUR WAY
 • Your keep keeps working while you're away, and your wyrm keeps a gentle mist so no one falls ill.
@@ -78,11 +82,17 @@ PLAY YOUR WAY
 • Fly your Rainwyrm through the sky in Cloud Run: thread rain rings for combos, catch Rain Pearls, and spend them on Wyrm Gifts that make every flight better.
 • Lead your squad on the Crossing: a roguelite trek to a hidden oasis, with a new route of raiders, mirages, merchants and boons every few hours.
 • Finished the story? Wake the Deepspring beneath your wyrm's pool: refine glowing Tideglass and deepen the spring through 30 levels and six Springsong ranks.
-• Your Rainwyrm makes wishes: a splash in the rain, fresh dates, a story from the Dunes. Grant them to deepen your bond.
 • Daily duties, gifts, six rotating events and a season pass with a new wyrm skin every season.
-• Patron levels reward loyal players with faster production, shorter timers and a daily chest. They never add combat strength.
 
 Rainkeep is free to play with optional in-app purchases, including items that give random heroes. You can turn off in-app purchases in your device settings.
+```
+
+For a build without a server (`DATA.server` unset: no online play), replace the PLAY WITH REAL PEOPLE section with:
+
+```
+RIDE WITH YOUR CARAVAN
+• Join a Caravan whose members speed up your upgrades, fund shared research and send gifts.
+• Climb the Oasis Wars bracket, matched so you face rivals who play like you.
 ```
 
 ## Categories

@@ -171,11 +171,13 @@
     for (const { m, vc, list } of buckets.values()) {
       const mm = new THREE.Mesh(mergeGeos(list, vc), m);
       mm.castShadow = !m.userData.noShadow; mm.receiveShadow = true;
+      mm.userData.baked = true;
       group.add(mm);
     }
     return group;
   }
   A.bake = bake;
+  A.mergeGeos = mergeGeos;
 
   // ======================================================================
   // Procedural textures
