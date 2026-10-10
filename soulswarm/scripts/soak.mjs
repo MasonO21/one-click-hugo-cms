@@ -11,7 +11,8 @@
 //   engine.step with a full horde, the legion, a Rite, a Nova and an event at once (CH=29: in a late realm, with its foe). OUT=file.json writes every run's result.
 // Invariants: no page errors or console.error; finite positions, HP, XP, Nova, timers, gold and counters; the enemy pool
 // (count, duplicates, pooled-and-active); 0 <= legion <= 400; run time advances unless legitimately blocked, every block
-// resolves once the bot acts, the time scale recovers; Gravemaw rises at 6:00 and dies in bounded time in god mode, and the
+// resolves once the bot acts, the time scale recovers; the boss rises at 6:00 and dies in bounded time in god mode (8 min, +2 for
+// a returning boss, +2 on Nightmare or Torment), and the
 // victory beat ends the run, which onEnd reports exactly once (never a defeat once he fell) with a matching results screen;
 // rules and HUD (no Nova charge mid-detonation, NOVA reads ready only when a tap fires it, the boss bar); after exitRun
 // nothing from the run ticks and no HUD nodes or intervals remain.
@@ -435,7 +436,7 @@ function installSoak() {
     if (r.bossSpawned && !S.boss) S.burst = Math.max(S.burst, 2);
     S.boss = r.bossSpawned;
     if (r.boss.phase !== S.phase) { S.phase = r.boss.phase; S.burst = Math.max(S.burst, 1); }
-    if (r.bossSpawned && !r.bossDead) { S.bossT += DT; if (cfg.god && S.bossT > 480 && S.bossT < 480 + DT * 1.5) V('boss', `Gravemaw still alive after 8 min in god mode (hp ${(r.bossEnemy ? r.bossEnemy.hp / r.bossEnemy.maxHp : 0).toFixed(3)}, phase ${r.boss.phase}, state ${r.boss.state})`); }
+    if (r.bossSpawned && !r.bossDead) { S.bossT += DT; const lim = 480 + 120 * ((r.boss.tier || 1) > 1) + 120 * (r.diff.id !== 'normal'); /* a returning boss, or Nightmare/Torment, may take longer against a weak bot */ if (cfg.god && S.bossT > lim && S.bossT < lim + DT * 1.5) V('boss', `${r.boss.kit ? r.boss.kit.name || r.boss.id : 'the boss'} still alive after ${lim / 60} min in god mode (hp ${(r.bossEnemy ? r.bossEnemy.hp / r.bossEnemy.maxHp : 0).toFixed(3)}, phase ${r.boss.phase}, state ${r.boss.state})`); }
     else S.bossT = 0;
     if (!r.endless && r.time > 360 + 900 && !r.ended && !S.wantAbandon) { V('stuck', 'campaign run past 21:00'); S.wantAbandon = true; }
     if (r.endless && r.time > 1200 && !S.wantAbandon) S.wantAbandon = true;
