@@ -12,6 +12,8 @@ import { cd, nextMidnight, bundleItems, rewardChip, popRewards, bar, tap, portra
 import { LOGO_ART } from '../art.js';
 import { privacySection, privacyActions } from './privacy.js';
 import { openAbout, APP_VERSION } from './about.js';
+import { canNotify, notifyPermit } from '../../engine/platform.js';
+import { cancelReminders } from '../../meta/reminders.js';
 
 const ENERGY_AD = 10, ENERGY_BANK = 99; // a video gives +10 as often as wanted (ads are never capped); energy banks up to 99 (economy.grant)
 const QUEST_ICON = { kill: 'skull', raise: 'raise', surv: 'hourglass', nova: 'nova', gate: 'banner', runs: 'swords', chest: 'chest', elite: 'crown', legion: 'helm', evolve: 'star', boss: 'trophy', trial: 'star' };
@@ -202,6 +204,7 @@ export function openSettings(ctx) {
     <div class="st-row st-col"><span class="st-l">${icon('eye')} Graphics</span>
       <div class="seg">${['auto', 'low', 'medium', 'high'].map((q) => `<button data-q="${q}">${q}</button>`).join('')}</div></div>
     <div class="st-row"><span class="st-l">${icon('energy')} Battery saver</span><button class="tgl" role="switch" data-t="fps30"><i></i></button><small class="t-dim">30 FPS</small></div>
+    ${canNotify() ? `<div class="st-row"><span class="st-l">${icon('calendar')} Reminders</span><button class="tgl" role="switch" data-t="reminders"><i></i></button><small class="t-dim">energy, daily, events</small></div>` : ''}
     <div class="st-sep"></div>
     <div class="st-h t-label">Accessibility</div>
     <div class="st-row"><span class="st-l">${icon('wing')} Screen shake</span><input class="rng" type="range" min="0" max="1" step="0.05" data-k="shake"><b class="st-v tnum"></b></div>
@@ -242,8 +245,12 @@ export function openSettings(ctx) {
     r.addEventListener('input', () => { st[r.dataset.k] = Number(r.value); sync(); app.applySettings(); });
     r.addEventListener('change', () => { if (r.dataset.k === 'sfx') app.audio.sfx('click'); else if (r.dataset.k === 'voice') app.audio.voice(`${p.selectedHero}_greet`); commit(p); });
   });
-  $$(body, '.tgl').forEach((t) => t.addEventListener('click', () => {
-    st[t.dataset.t] = !st[t.dataset.t]; sync(); app.applySettings(); commit(p); tap(app);
+  $$(body, '.tgl').forEach((t) => t.addEventListener('click', async () => {
+    const k = t.dataset.t;
+    // reminders need the system's permission first; turning them off clears what is scheduled
+    if (k === 'reminders' && !st.reminders && !(await notifyPermit())) { toast('Notifications are off for SOULSWARM in your device settings.'); return; }
+    st[k] = !st[k]; sync(); app.applySettings(); commit(p); tap(app);
+    if (k === 'reminders' && !st.reminders) cancelReminders();
   }));
   $$(body, '.seg button').forEach((b) => b.addEventListener('click', () => {
     st.quality = b.dataset.q; sync(); app.applySettings(); commit(p); tap(app);

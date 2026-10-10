@@ -1207,6 +1207,16 @@ export const FEATS = {
   },
 };
 
+// Reminders (meta/reminders.js): opt-in local notifications, never in the quiet hours (22:00–09:00 local).
+export const REMINDERS = {
+  quiet: [22, 9], dailyHour: 19,
+  text: {
+    energy: { title: 'Your energy is full', body: 'The legion is restless, Shepherd. Your runs are ready.' },
+    daily: { title: 'A new day in the dark', body: 'Your free chest and new quests are waiting.' },
+    rush: { title: 'The Boss Rush is open', body: 'The court gathers. Face its five bosses back to back before Friday.' },
+  },
+};
+
 // The store review prompt (meta/review.js): only after a high point, a few times ever, never to a child.
 export const REVIEW = { chapters: [3, 10, 20, 30], max: 3, gapDays: 60, delayMs: 2500 };
 

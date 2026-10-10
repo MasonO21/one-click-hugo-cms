@@ -1341,6 +1341,8 @@ The home screen's **Feats** button (right column) carries a dot while a tier wai
 
 **The review prompt** (`src/meta/review.js`, `REVIEW` in `data.js`). The store's own review sheet, asked only at a high point: a first Normal clear of Chapter 3, 10, 20 or 30, or a full Boss Rush, 2.5 s after the results show. At most three times ever and 60 days apart, never to a child (restricted mode), and only where the store build registered its in-app review plugin (`setReviewBridge`); the stores cap it again. No pre-prompt asks "do you like the game?" first.
 
+**Reminders** (`src/meta/reminders.js`, `REMINDERS` in `data.js`): opt-in local notifications, Settings → Reminders, off by default and shown only where the store build registered a notification plugin (`platform.setNotifyBridge`); switching them on asks the system's permission first. When the app goes to the background it schedules energy full, the next day's free chest and quests (19:00 local) and, while the event is closed, the Boss Rush opening; when it comes back, all are cleared. None lands in the quiet hours (22:00–09:00 local): it moves to 9:00. `playtest.mjs` §56.
+
 **About** (Settings → About and licences, `src/ui/meta/about.js`): the version (`package.json`, injected by `vite.config.js`), the player ID to quote to support, the privacy policy, and the open-source notices the game must ship with (three.js and Capacitor under MIT, Cinzel and Oxanium under the SIL Open Font License 1.1).
 
 **Home layout.** The side buttons stay above the chapter card on every screen: when a column does not fit (every offer and event showing, or a short phone) its buttons tighten, then drop their labels, and only then wrap into a second column (`home.js fitSides`).

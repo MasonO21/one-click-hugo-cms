@@ -4277,6 +4277,48 @@ errs = await session(async (page) => {
 });
 check('update 14 feats, review and about: no runtime errors', !errs.length, errs[0] || '');
 
+// 56. Update 14: reminders. Opt-in local notifications (energy full, the next day's chest and quests, the Boss Rush
+//     opening), only where the store build has a notification plugin, never in the quiet hours (22:00–09:00 local).
+errs = await session(async (page) => {
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), RM = await import('/src/meta/reminders.js'), PL = await import('/src/engine/platform.js');
+    const app = window.__soulswarm, p = app.profile, out = {};
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms)), q = (sel) => document.querySelector(sel);
+    p.flags.tutorialDone = true; p.flags.coach = ''; app.meta.refresh();
+    // the web build has no plugin: no setting
+    q('.fab[data-act="settings"]').click(); await wait(200);
+    out.web = !!q('.mm-settings [data-t="reminders"]');
+    document.querySelectorAll('.modal-back').forEach((x) => x.remove());
+    // with a plugin: the switch asks permission, then schedules when the app is backgrounded
+    const log = []; let allow = false;
+    PL.setNotifyBridge({ permit: async () => { log.push('permit'); return allow; }, schedule: (list) => { log.push('schedule:' + list.map((r) => r.id).join('+')); }, cancel: () => { log.push('cancel'); } });
+    q('.fab[data-act="settings"]').click(); await wait(200);
+    const tg = q('.mm-settings [data-t="reminders"]'); out.row = !!tg;
+    tg.click(); await wait(100); out.denied = p.settings.reminders;
+    allow = true; tg.click(); await wait(100); out.allowed = p.settings.reminders;
+    // a quiet-hours fix and the list at a known time (Wednesday 2026-10-14 15:00 local, energy 10 of 30, the Rush open)
+    const at = (y, mo, d, h, mi = 0) => new Date(y, mo, d, h, mi).getTime(), hh = (t) => { const d = new Date(t); return `${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`; };
+    out.quiet = [RM.outOfQuiet(at(2026, 9, 14, 23, 30)), RM.outOfQuiet(at(2026, 9, 14, 3)), RM.outOfQuiet(at(2026, 9, 14, 15))].map(hh).join(', ');
+    p.energy = 10; p.chapter.unlocked = 6;
+    const list = RM.reminderList(p, at(2026, 9, 14, 15));
+    out.list = list.map((r) => `${r.id}@${hh(r.at)}`).join(', ');
+    out.saturday = RM.reminderList(p, at(2026, 9, 17, 15)).map((r) => r.id).join('+'); // the Rush closed: its opening is scheduled
+    out.count = RM.scheduleReminders(p);
+    tg.click(); await wait(100); out.off = p.settings.reminders;
+    out.offCount = RM.scheduleReminders(p);
+    out.log = log.join(', ');
+    PL.setNotifyBridge(null); document.querySelectorAll('.modal-back').forEach((x) => x.remove());
+    return out;
+  });
+  check('reminders: no setting on the web build; with a plugin the switch asks permission first (refused: stays off)',
+    s.web === false && s.row && s.denied === false && s.allowed === true, JSON.stringify(s));
+  check('reminders: never in the quiet hours (23:30 → 9:00 next day, 03:00 → 9:00); energy full, the next day at 19:00, the Rush when it opens',
+    s.quiet === '15 9:00, 14 9:00, 14 15:00' && /^energy@14 1\d:\d\d, daily@15 19:00$/.test(s.list) && s.saturday.includes('rush'), JSON.stringify({ q: s.quiet, l: s.list, sat: s.saturday }));
+  check('reminders: scheduled only while switched on; turning them off clears what is scheduled',
+    s.count >= 2 && s.off === false && s.offCount === 0 && /permit, permit, schedule:energy\+daily(\+rush)?, cancel/.test(s.log), s.log);
+});
+check('update 14 reminders: no runtime errors', !errs.length, errs[0] || '');
+
 await browser.close();
 if (server) server.kill();
 const failed = results.filter((r) => !r.ok);

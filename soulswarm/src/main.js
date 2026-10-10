@@ -22,6 +22,7 @@ import { toast } from './ui/dom.js';
 import { analytics } from './meta/analytics.js';
 import { reportFeats, featsReached, newFeats } from './meta/feats.js';
 import { maybeAskReview } from './meta/review.js';
+import { scheduleReminders, cancelReminders } from './meta/reminders.js';
 import { needsGate, needsConsent, answerGate, setConsent } from './meta/privacy.js';
 import { openAgeGate, openConsent } from './ui/meta/privacy.js';
 import { actOf } from './game/data.js';
@@ -206,8 +207,8 @@ function boot() {
   timeSync(false);
   setInterval(() => timeSync(false), CLOCK.resyncMin * 60000);
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { saveProfile(profile, true); if (app.run) app.run.pause(true); }
-    else timeSync(true);
+    if (document.hidden) { saveProfile(profile, true); if (app.run) app.run.pause(true); scheduleReminders(profile); }
+    else { cancelReminders(); timeSync(true); }
   });
   // Android back: close, pause or step back a layer; at the home screen it sends the app to the background (state kept)
   if (isNative) NativeApp.addListener('backButton', () => { if (handleBack(app) === 'exit') NativeApp.minimizeApp(); });

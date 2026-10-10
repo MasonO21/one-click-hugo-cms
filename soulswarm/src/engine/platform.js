@@ -47,3 +47,16 @@ export function submitScore(board, value) {
   if (!scoreBridge || !(value > 0)) return false;
   try { Promise.resolve(scoreBridge(board, Math.round(value))).catch(() => {}); return true; } catch (e) { return false; }
 }
+
+// Local notifications (Settings → Reminders, meta/reminders.js): the store build registers
+// setNotifyBridge({ permit: () => Promise<boolean>, schedule: (list) => Promise, cancel: () => Promise }). The web build
+// has none, and the setting is hidden.
+let notifyBridge = null;
+export const setNotifyBridge = (b) => { notifyBridge = b && typeof b.schedule === 'function' ? b : null; };
+export const canNotify = () => !!notifyBridge;
+export async function notifyPermit() {
+  if (!notifyBridge) return false;
+  try { return notifyBridge.permit ? !!(await notifyBridge.permit()) : true; } catch (e) { return false; }
+}
+export function notifySchedule(list) { if (notifyBridge) try { Promise.resolve(notifyBridge.schedule(list)).catch(() => {}); } catch (e) { /* not supported */ } }
+export function notifyCancel() { if (notifyBridge && notifyBridge.cancel) try { Promise.resolve(notifyBridge.cancel()).catch(() => {}); } catch (e) { /* not supported */ } }
