@@ -23,7 +23,7 @@ A Rainkeep server also keeps a device ID it creates for your account and, if you
 
 ## Playtests
 
-When the game is played as part of a playtest from a shared link, it sends a gameplay report to the person running the test: the days you played, how long, which screens you opened, how far you got, your device type, screen size, graphics setting and frame rate, start-up times, any script errors, and the feedback notes you choose to send. The report is tied to the same opaque ID, is readable only by the test's owner, and contains no names, messages or anything you typed outside the Feedback box.
+When the game is played as part of a playtest from a shared link, it sends a gameplay report to the person running the test: the days you played, how long, which screens you opened, how far you got, your device type, screen size, graphics setting and frame rate, start-up times, any script errors, and the feedback notes you choose to send. If you report another player's chat message, a copy of that message goes with your report so the owner can review it. The report is tied to the same opaque ID, is readable only by the test's owner, and contains no names, and none of your own messages or anything you typed outside the Feedback box.
 
 ## What we don't collect
 
