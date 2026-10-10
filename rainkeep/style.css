@@ -1294,12 +1294,42 @@ svg.painted.boss { box-shadow: 0 0 22px #ffb34a66, 0 6px 18px #0008; }
 
 /* The Cookfire (cookfire.js) */
 .ck-ic { width: 44px; height: 44px; flex: none; }
-.ck-shelf { gap: 8px; }
-.ck-fish { display: inline-flex; align-items: center; gap: 3px; padding: 3px 8px; border-radius: 12px; background: #ffffff0d; }
-.ck-fish .ic { width: 24px; height: 24px; }
+.ck-shelf { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.ck-fish { display: inline-flex; align-items: center; justify-content: center; gap: 2px; padding: 3px 2px; border-radius: 12px; background: #ffffff0d; }
+.ck-fish .ic { width: 22px; height: 22px; }
 .ck-fish.none { opacity: 0.4; }
 .ck-need { gap: 4px; margin-top: 4px; }
 .ck-need .ic { width: 16px; height: 16px; }
 .ck-card { gap: 10px; align-items: center; }
 .ck-card.on { border-color: var(--gold); }
 .ck-served { gap: 8px; align-items: center; }
+
+/* The Buried City */
+.dg-tools { gap: 8px; align-items: center; flex-wrap: wrap; }
+.dg-tools .ic { width: 20px; height: 20px; }
+.dg-grid { display: grid; gap: 3px; padding: 6px; margin: 8px 0; border-radius: 14px; background: linear-gradient(#4a2e1a, #2e1c10); box-shadow: inset 0 2px 10px #000a, 0 0 0 1px #c9a45c55; touch-action: manipulation; }
+.dg-tile { aspect-ratio: 1; min-width: 0; border: 0; border-radius: 7px; padding: 0; display: grid; place-items: center; position: relative; cursor: pointer; color: inherit; }
+.dg-tile.sand { background: radial-gradient(circle at 32% 26%, #f6dca6, #dcac63 58%, #b5843f); box-shadow: inset 0 -3px 0 #00000038, inset 0 2px 0 #ffffff50; }
+.dg-tile.sand.clear { background: radial-gradient(circle at 32% 26%, #b9a581, #8f7a57 70%); opacity: 0.55; }
+.dg-tile.sand.clear::after { content: ''; width: 30%; height: 30%; border-radius: 50%; border: 2px solid #ffffff55; }
+.dg-tile.rock { background: radial-gradient(circle at 32% 26%, #b8b2a8, #7d766d 58%, #554f48); box-shadow: inset 0 -3px 0 #00000055, inset 0 2px 0 #ffffff30; }
+.dg-tile.rock.cracked::after { content: ''; position: absolute; inset: 18%; background: linear-gradient(55deg, transparent 46%, #2a2520 47% 53%, transparent 54%), linear-gradient(-30deg, transparent 46%, #2a2520 47% 52%, transparent 53%); }
+.dg-tile.hollow { background: radial-gradient(circle at 50% 40%, #6b4529, #3e2715); box-shadow: inset 0 3px 7px #000b; }
+.dg-tile.hollow b { font-size: 19px; font-weight: 800; text-shadow: 0 1px 2px #000; }
+.dg-tile.hollow b.n1 { color: #8fd0ff; } .dg-tile.hollow b.n2 { color: #9be38f; } .dg-tile.hollow b.n3 { color: #ffd462; }
+.dg-tile.hollow b.n4 { color: #ff9b62; } .dg-tile.hollow b.n5 { color: #ff6f8f; }
+.dg-tile.relic { background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 70%, #fff 10%), color-mix(in srgb, var(--c) 55%, #1c120a)); box-shadow: inset 0 0 0 2px var(--c); }
+.dg-tile.relic .ic { width: 72%; height: 72%; opacity: 0.75; }
+.dg-tile.relic.whole { box-shadow: inset 0 0 0 2px #ffe08a; }
+.dg-over { pointer-events: none; z-index: 1; display: grid; place-items: center; border-radius: 9px; box-shadow: 0 0 0 2px #ffe08a, 0 0 14px var(--c); animation: dg-glow 1.2s ease-out; }
+.dg-over .ic { width: 82%; height: 82%; max-width: 110px; max-height: 110px; filter: drop-shadow(0 2px 3px #000a); }
+.dg-tile.just { animation: dg-pop 0.5s ease-out; }
+.dg-grid.charge .dg-tile.sand, .dg-grid.charge .dg-tile.rock { outline: 2px dashed #ff9b6299; outline-offset: -3px; }
+@keyframes dg-pop { 0% { transform: scale(0.7); filter: brightness(1.9); } 60% { transform: scale(1.07); } 100% { transform: none; } }
+@keyframes dg-glow { 0% { transform: scale(0.85); box-shadow: 0 0 0 2px #fff, 0 0 30px #ffe08a; } 100% { transform: none; } }
+.dg-relic { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.dg-relic.done { opacity: 0.6; }
+.dg-relic .ic { width: 18px; height: 18px; }
+.dg-shape { display: inline-grid; gap: 2px; width: 32px; justify-content: center; flex: none; }
+.dg-shape i { width: 8px; height: 8px; border-radius: 2px; background: var(--c); }
+.dg-chest { border-color: var(--gold); }

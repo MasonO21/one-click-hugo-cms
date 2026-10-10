@@ -7,7 +7,7 @@
 'use strict';
 
 const DATA = {
-  version: '4.30.0',
+  version: '4.31.0',
   saveKey: 'rainkeep.save.v1',
   offline: { capSeconds: 4 * 3600, efficiency: 0.25 },
   // RevenueCat public SDK key for the App Store build (see NATIVE.md). Empty = simulated store.
@@ -772,6 +772,9 @@ const DATA = {
     { id: 'roadkit', name: 'Road Dice', usd: 1.99, daily: true, tag: 'Daily', needs: 'hall',
       grants: { dice: 20, lucky: 1 },
       desc: 'Twenty Road Dice and a Lucky Die for the Spice Road. Once per day, after you build the Caravan Hall.' },
+    { id: 'digkit', name: "Digger's Kit", usd: 1.99, daily: true, tag: 'Daily', needsWyrm: 11,
+      grants: { trowel: 30, charge: 2 },
+      desc: 'Thirty Trowels and two Blasting Charges for the Buried City. Once per day, from Rainwyrm Lv 11.' },
     { id: 'heirloomkit', name: 'Heirloom Kit', usd: 4.99, daily: true, tag: 'Daily', needsWyrm: 6,
       grants: { whetstone: 40, journals: 400, speed60: 1 },
       desc: "Forty Desert Whetstones for your heroes' heirlooms, 400 Field Journals and a 1-hour speedup. Once per day, from Rainwyrm Lv 6." },
@@ -922,6 +925,8 @@ const DATA = {
     bells: { name: 'Camel Bell', kind: 'pet', icon: 'i-bell', desc: 'Tames new companions and Advances them past Lv 10 and 20.' },
     dice: { name: 'Road Die', kind: 'road', icon: 'i-die', desc: 'Rolls the caravan forward on the Spice Road.' },
     lucky: { name: 'Lucky Die', kind: 'road', icon: 'i-luckydie', desc: 'Rolls whatever number you choose on the Spice Road.' },
+    trowel: { name: 'Trowel', kind: 'dig', icon: 'i-dg-trowel', desc: 'Digs one tile of sand in the Buried City.' },
+    charge: { name: 'Blasting Charge', kind: 'dig', icon: 'i-dg-charge', desc: 'Clears a 3x3 patch of the Buried City at once, bedrock and all.' },
     whetstone: { name: 'Desert Whetstone', kind: 'heirloom', icon: 'i-whetstone', desc: "Wakes and tempers a hero's heirloom." },
   },
 
@@ -960,6 +965,7 @@ const DATA = {
     { id: 'derby', text: 'Run a Camel Derby race', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 8 },
     { id: 'journey', text: 'Send heroes on a Far Journey', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'cook', text: 'Cook a dish at the Cookfire', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 4 },
+    { id: 'dig', text: 'Dig 10 tiles in the Buried City', n: 10, pts: 10, show: (S) => S.lv.wyrm >= 11 },
     { id: 'decree', text: 'Give a Warden\'s Decree', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 5 },
     { id: 'outpost', text: 'Collect from an outpost', n: 1, pts: 10, show: (S) => S.lv.wyrm >= 7 },
     { id: 'fish', text: 'Catch 2 fish in the spring', n: 2, pts: 10, show: (S) => S.lv.wyrm >= 3 },
@@ -1280,6 +1286,33 @@ const DATA = {
       { id: 'banquet', name: 'Rain Koi Banquet', icon: 'i-ck-banquet', fish: { koi: 1, barb: 2 }, food: 2, hours: 4, fx: { prod: 0.1, teamAtk: 0.08, breath: 0.1 }, text: 'Production +10%, squads 8% harder, the Torrent +10%' },
     ],
     warPts: 10,
+  },
+
+  // ---------- The Buried City ----------
+  // From Rainwyrm Lv 11 the well-diggers break into a city under the sand. Each layer is a grid of sand hiding five
+  // relics (rectangles, either way round; the last is the layer's grand relic). A Trowel digs one tile; dug sand shows
+  // how many relic pieces lie in the eight tiles around it, so a careful digger clears a layer in about 24 Trowels and
+  // a careless one in about 40. Bedrock (from layer 4) takes two. A Blasting Charge clears a 3x3 patch. Every relic
+  // dug up whole pays by its size; clearing all five opens the layer's chest and the way down.
+  dig: {
+    unlock: 11, w: 6, h: 7,
+    free: { every: 2700, cap: 12 }, // a free Trowel every 45 minutes of keep time, while fewer than 12 are in hand
+    welcome: { trowel: 20, charge: 1 },
+    beast: 0.06, bossTrowels: 2, // a Trowel now and then from a beast hunt, two from every expedition boss
+    rock: (layer) => (layer < 4 ? 0 : Math.min(8, 2 + Math.floor((layer - 4) / 3))),
+    sizes: [[1, 2], [1, 2], [1, 3], [2, 2], [2, 3]],
+    relics: {
+      '1x2': [{ id: 'lamp', name: 'Clay Lamp' }, { id: 'seal', name: 'Scarab Seal' }, { id: 'beads', name: 'Carnelian Beads' }, { id: 'sandal', name: 'Gilded Sandal' }],
+      '1x3': [{ id: 'spear', name: 'Bronze Spear' }, { id: 'flute', name: 'Reed Flute' }, { id: 'staff', name: "Rainmaker's Staff" }],
+      '2x2': [{ id: 'clock', name: 'Water Clock' }, { id: 'mirror', name: 'Bronze Mirror' }, { id: 'jar', name: 'Painted Jar' }],
+      '2x3': [{ id: 'idol', name: 'Rain Idol' }, { id: 'tablet', name: 'Star Tablet' }, { id: 'chariot', name: 'Sun Chariot' }],
+    },
+    pay: { '1x2': { copper: 0.5 }, '1x3': { whetstone: 2 }, '2x2': { speed15: 1, journals: 1 }, '2x3': { starglass: 25, treats: 10 } },
+    deeper: 0.04, // relics pay 4% more per layer down, up to double
+    chest: { starglass: 20, trowel: 3 },
+    chargeEvery: 3, // a Blasting Charge in every third layer's chest
+    milestones: [[5, { shard_epic: 1 }], [10, { shard_legendary: 1 }], [15, { shard_epic: 2 }], [20, { shard_legendary: 1 }]], // and a Legendary Shard Pouch every 10 layers past 20
+    warPts: 4, // Oasis Wars points per relic tile dug up
   },
 
   // ---------- Building Charters ----------
@@ -1701,6 +1734,9 @@ const DATA = {
   // Shown once to a returning player after an update (news.js): the newest features first, each with a way
   // to it, or what opens it.
   news: [
+    { v: '4.31', items: [
+      { icon: 'i-dg-trowel', name: 'The Buried City', text: 'The well-diggers have broken into a city under the sand. Dig it out layer by layer with Trowels: the sand you dig shows how many relic pieces lie around it, so read it before you dig again. Every relic dug up whole pays, and five open the way down.', act: 'buriedcity', open: (S) => S.lv.wyrm >= 11, needs: 'Rainwyrm Lv 11' },
+    ] },
     { v: '4.30', items: [
       { icon: 'i-ck-fire', name: 'The Cookfire', text: 'Every fish you land now goes into the larder too. Cook them into dishes that serve the whole keep for a few hours: skewers for gathering, stew for production, pilaf for battle, and a Rain Koi Banquet for everything.', act: 'cookfire', open: (S) => S.lv.wyrm >= 4, needs: 'Rainwyrm Lv 4' },
     ] },
@@ -2034,6 +2070,9 @@ const DATA = {
     { id: 'cook1', text: 'Cook a dish at the Cookfire', stat: 'cooked', n: 1, reward: { food: 2 } },
     { id: 'cook50', text: 'Cook 50 dishes', stat: 'cooked', n: 50, reward: { starglass: 200 } },
     { id: 'banquet', text: 'Serve a Rain Koi Banquet', stat: 'banquets', n: 1, reward: { beacons: 2 } },
+    { id: 'relic1', text: 'Dig up a relic in the Buried City', stat: 'relics', n: 1, reward: { trowel: 5 } },
+    { id: 'layer10', text: 'Reach layer 10 of the Buried City', stat: 'digLayer', n: 10, reward: { starglass: 200, charge: 2 } },
+    { id: 'grand25', text: 'Dig up 25 grand relics', stat: 'grandRelics', n: 25, reward: { shard_legendary: 1 } },
     { id: 'decree10', text: "Give 10 Warden's Decrees", stat: 'decrees', n: 10, reward: { starglass: 100 } },
     { id: 'decree100', text: "Give 100 Warden's Decrees", stat: 'decrees', n: 100, reward: { starglass: 300, speed60: 2 } },
     { id: 'decreeAll', text: 'Have four decrees in force at once', stat: 'decreeMost', n: 4, reward: { beacons: 2 } },

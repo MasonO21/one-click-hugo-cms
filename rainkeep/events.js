@@ -390,6 +390,7 @@
   KH.on('derby', () => addPts('oasis', DATA.derby.warPts));
   KH.on('rivalGift', () => addPts('oasis', DATA.pacts.warPts));
   KH.on('cooked', () => addPts('oasis', DATA.cook.warPts));
+  KH.on('dug', ({ relic }) => { if (relic) addPts('oasis', DATA.dig.warPts); });
   KH.on('defense', (e) => addPts('oasis', 10 * e.to));
   KH.on('tradeHome', () => addPts('oasis', DATA.trade.warPts));
   KH.on('outpostHeld', () => addPts('oasis', DATA.outposts.warPts));
