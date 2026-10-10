@@ -962,7 +962,7 @@ errs = await session(async (page) => {
     };
     out.ch1 = schedule(1, false); out.ch5 = schedule(5, false); out.tut = schedule(1, true);
     // Endless keeps rolling after 5:20 (once the depth banner has played); nothing starts in Gravemaw's fight
-    let r = window.__aq(6); delete r.events.director;
+    let r = window.__aq(100); delete r.events.director;
     r.bossKills = 1; r.nextBossAt = 700; r.time = 400; r.events.nextAt = 0; r.director(0.1); const early = !!r.events.cur;
     r.time = 430; r.director(0.1); out.endless = { early, at430: r.events.cur ? r.events.cur.kind : null };
     r.events.start('shrine') || r.events.cur; r.bossSpawned = true; step(r, 1); out.endless.bossClears = !r.events.cur;
@@ -1665,7 +1665,7 @@ errs = await session(async (page, errors) => {
     s.ids.sel === 'vael' && s.ids.relics === 'r2,r5' && s.ids.eq === '[null,"r2",null]' && s.ids.seq === 6 && s.ids.gold === 7777 && s.ids.power === true && s.unowned === 'vael', JSON.stringify(s.ids) + ' ' + s.unowned);
   const T = s.types;
   check('bug-test: wrong types and out-of-range save values are coerced and clamped (no string maths)',
-    T.gold === 5000 && T.gems === 150 && T.sigils === 0 && T.energy === 99 && T.level === 7 && T.might === 4 && T.vit === 25 && T.pass === 1200 && T.cf && T.un === 6 && T.sel === 2 && T.stars === 5 && T.shards === 4 && T.rl === 10, JSON.stringify(T));
+    T.gold === 5000 && T.gems === 150 && T.sigils === 0 && T.energy === 99 && T.level === 7 && T.might === 4 && T.vit === 25 && T.pass === 1200 && T.cf && T.un === 30 && T.sel === 2 && T.stars === 5 && T.shards === 4 && T.rl === 10, JSON.stringify(T));
   check('bug-test: an unreadable save starts fresh and keeps its bytes aside', s.corrupt.gold === 1500 && s.corrupt.kept === '{"gold": 12', JSON.stringify(s.corrupt));
   check('bug-test: a partial run result writes no NaN', s.partial.xp > 0 && s.partial.kills === 0 && s.partial.legion === 0 && s.partial.gold === 440 && s.partial.passXp > 0, JSON.stringify(s.partial));
   check('bug-test: negative or NaN prices and non-existent pass tiers never pay', s.spend.join() === 'false,false,150,1500' && s.tiers === 'false,false,false,false,false,false' && s.gems === 150, JSON.stringify([s.spend, s.tiers, s.gems]));
@@ -1970,7 +1970,7 @@ errs = await session(async (page) => {
     out.resArt = (q('.res-head.has-art')?.getAttribute('style') || '').includes('chapter-1');
     q('.modal-results .btn-primary')?.click(); await wait(200);
     // Endless: every Gravemaw kill counts, and the run goes on
-    r = start(6); r.boss.spawn(); r.bossSpawned = true; r.enemies.kill(r.bossEnemy, 'bolt');
+    r = start(100); r.boss.spawn(); r.bossSpawned = true; r.enemies.kill(r.bossEnemy, 'bolt');
     out.endless = { gm: r.counters.byType.gravemaw, ended: r.ended, kills: r.bossKills }; app.exitRun();
     // applyRunResult adds known ids only and ignores junk
     const t = save.newProfile(); t.flags.bloodMoon = 'off';
