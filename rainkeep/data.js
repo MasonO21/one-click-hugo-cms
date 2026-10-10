@@ -1390,10 +1390,10 @@ const DATA = {
     charms: {
       max: 10,
       kinds: {
-        lamp: { fx: 'hp', per: 0.015 }, seal: { fx: 'def', per: 0.015 }, beads: { fx: 'atk', per: 0.015 }, sandal: { fx: 'skill', per: 0.02 },
-        spear: { fx: 'atk', per: 0.02 }, flute: { fx: 'skill', per: 0.025 }, staff: { fx: 'hp', per: 0.02 },
-        clock: { fx: 'skill', per: 0.03 }, mirror: { fx: 'def', per: 0.025 }, jar: { fx: 'hp', per: 0.025 },
-        idol: { fx: 'hp', per: 0.03 }, tablet: { fx: 'skill', per: 0.04 }, chariot: { fx: 'atk', per: 0.03 },
+        lamp: { fx: 'hp', per: 0.01 }, seal: { fx: 'def', per: 0.01 }, beads: { fx: 'atk', per: 0.01 }, sandal: { fx: 'skill', per: 0.015 },
+        spear: { fx: 'atk', per: 0.012 }, flute: { fx: 'skill', per: 0.015 }, staff: { fx: 'hp', per: 0.012 },
+        clock: { fx: 'skill', per: 0.02 }, mirror: { fx: 'def', per: 0.015 }, jar: { fx: 'hp', per: 0.015 },
+        idol: { fx: 'hp', per: 0.02 }, tablet: { fx: 'skill', per: 0.025 }, chariot: { fx: 'atk', per: 0.02 },
       },
     },
     warPts: 4, // Oasis Wars points per relic tile dug up
