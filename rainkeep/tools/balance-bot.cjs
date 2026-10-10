@@ -396,7 +396,9 @@ const HOURS = Number(process.argv[3] || 8);
         // the Sparring Ring: the highest-starred heroes off the squad fill the free seats
         if (KH.spar && KH.spar.unlocked() && !NO.includes('spar')) {
           const free = S.spar.seats.map((x, i) => (!x.id && x.until <= S.time ? i : -1)).filter((i) => i >= 0);
-          const pool = Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && KH.spar.seatOf(id) < 0).sort((x, y) => S.heroes[y].stars - S.heroes[x].stars || KH.heroPower(y) - KH.heroPower(x));
+          // the heroes the ring lifts most, as the picker lists them
+          const lv = KH.spar.squadLevel(), gain = (id) => Math.min(lv, KH.heroCap(id)) - S.heroes[id].lvl;
+          const pool = Object.keys(S.heroes).filter((id) => KH.spar.seatOf(id) < 0 && gain(id) > 0).sort((x, y) => gain(y) - gain(x) || S.heroes[y].stars - S.heroes[x].stars);
           free.forEach((i, k) => { if (pool[k]) { A.sparset(`${i}:${pool[k]}`); UI.sheet = null; } });
         }
         // relic charms: the strongest charms on the squad (skill power counted a little lower)

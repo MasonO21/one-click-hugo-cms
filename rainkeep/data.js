@@ -1324,9 +1324,9 @@ const DATA = {
   },
 
   // ---------- The Sparring Ring ----------
-  // From Rainwyrm Lv 10 heroes off the squad can take a seat in the ring, where they spar with the squad and fight at
-  // its level: the lowest level among the squad's heroes, but never past a seated hero's own level cap (so stars still
-  // matter). Four seats, two more for Starglass; a seat whose hero leaves can't take another for twelve hours.
+  // From Rainwyrm Lv 10 heroes can take a seat in the ring, where they spar with the keep's best and fight at the level
+  // of its third-best hero outside the ring, but never past a seated hero's own level cap (so stars still matter); they
+  // keep it in the squad too. Four seats, two more for Starglass; a seat whose hero leaves rests for twelve hours.
   spar: { unlock: 10, seats: 4, extra: [300, 600], cooldown: 43200 },
 
   // ---------- Hero Kinships ----------
@@ -1843,7 +1843,7 @@ const DATA = {
   // to it, or what opens it.
   news: [
     { v: '4.38', items: [
-      { icon: 'i-duel', name: 'The Sparring Ring', text: "Heroes off the squad can now spar with it: up to four sit in the ring on the Heroes tab and fight at the squad's level, so a kinship partner or the hero whose skill answers a foe's trait is ready when you need them.", act: 'tab:heroes', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
+      { icon: 'i-duel', name: 'The Sparring Ring', text: "Up to four heroes sit in the ring on the Heroes tab and fight at the level of your third-best hero outside it, in the squad or anywhere else, so a kinship partner or the hero whose skill answers a foe's trait is ready when you need them.", act: 'tab:heroes', open: (S) => S.lv.wyrm >= 10, needs: 'Rainwyrm Lv 10' },
     ] },
     { v: '4.37', items: [
       { icon: 'i-check', name: 'Ready now', text: 'A new Ready entry on the left gathers everything waiting for you in one list: idle builders, a quest to claim, attacks left, a full stack of Trowels, dishes to cook. One tap goes to each.', act: 'ready', open: (S) => S.quest >= 6, needs: 'chapter quest 7' },

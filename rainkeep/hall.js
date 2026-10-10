@@ -118,5 +118,5 @@
   };
   KH.side.push({ id: 'hall', icon: 'i-trophy', label: 'Wardens', act: 'hall', show: unlocked, badge: () => `#${S.hall.last || rank()}` });
 
-  KH.hall = { unlocked, rank, table, ref, powerOf, list };
+  KH.hall = { unlocked, rank, table, ref, powerOf, list, mine };
 })();

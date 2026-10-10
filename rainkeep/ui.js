@@ -305,9 +305,11 @@
     const swap = (t) => {
       const c = traitAnswerer(t);
       if (!c) return '';
-      const out = swapOut(), after = S.squad.length < 3 ? S.squad.concat([c]) : S.squad.map((id) => (id === out ? c : id));
+      const out = swapOut(t, foe.traits);
+      if (!out && S.squad.length >= 3) return '';
+      const after = S.squad.length < 3 ? S.squad.concat([c]) : S.squad.map((id) => (id === out ? c : id));
       const pw = (h) => KH.statPower(KH.teamStats(foe.cls, { heroes: h })), d = Math.round((pw(after) / Math.max(1, pw(S.squad)) - 1) * 100);
-      return ` <button class="btn small alt tr-swap" data-act="traitswap" data-arg="${t}">Swap in ${esc(HERO[c].name.split(' ')[0])} <small>(squad ${d >= 0 ? '+' : '−'}${Math.abs(d)}%)</small></button>`;
+      return ` <button class="btn small alt tr-swap" data-act="traitswap" data-arg="${t}|${(foe.traits || []).join(',')}">Swap in ${esc(HERO[c].name.split(' ')[0])} <small>(squad ${d >= 0 ? '+' : '−'}${Math.abs(d)}%)</small></button>`;
     };
     return (foe.traits || []).map((t) => `<div class="row trait-row">${icon(TL[t].icon, 'tr-ic')}<div class="grow"><b>${esc(TL[t].name)}</b> <span class="small">${esc(TL[t].text)}</span>${!traitAnswered(t, heroes) && need[t] ? `<div class="small tr-need">No hero in the squad has ${need[t]}.${swap(t)}</div>` : ''}</div>
       ${traitAnswered(t, heroes) ? `<span class="chip tr-ok" title="Your squad can answer it">${icon('i-check')}</span>` : `<span class="chip tr-no" title="No hero in the squad can answer it">!</span>`}</div>`).join('');
@@ -318,14 +320,18 @@
     if (!need || need[0] === 'breath') return null;
     return Object.keys(S.heroes).filter((id) => !S.squad.includes(id) && !(KH.heroBusy && KH.heroBusy(id)) && need.includes(KH.skillKind(id))).sort((a, b) => KH.heroPower(b) - KH.heroPower(a))[0] || null;
   }
-  // the squad hero a swap would replace: the weakest one at home
-  const swapOut = () => { const free = S.squad.filter((id) => !(KH.heroBusy && KH.heroBusy(id))); return (free.length ? free : S.squad).slice().sort((a, b) => KH.heroPower(a) - KH.heroPower(b))[0]; };
-  ACT.traitswap = (t) => {
-    const c = traitAnswerer(t);
+  // the squad hero a swap would replace: the weakest one at home who isn't the only answer to the foe's other trait
+  const swapOut = (t, traits) => {
+    const needed = (id) => (traits || []).some((o) => o !== t && traitAnswered(o, S.squad) && !traitAnswered(o, S.squad.filter((x) => x !== id)));
+    return S.squad.filter((id) => !(KH.heroBusy && KH.heroBusy(id)) && !needed(id)).sort((a, b) => KH.heroPower(a) - KH.heroPower(b))[0] || null;
+  };
+  ACT.traitswap = (arg) => {
+    const [t, list] = String(arg).split('|'), c = traitAnswerer(t);
     if (!c) return;
     if (S.squad.length < 3) S.squad.push(c);
     else {
-      const out = swapOut();
+      const out = swapOut(t, list ? list.split(',') : []);
+      if (!out) return toast('No hero in the squad can make way: the others are away or answer another trait.', 'warn');
       S.squad[S.squad.indexOf(out)] = c;
       toast(`${HERO[c].name.split(' ')[0]} takes ${HERO[out].name.split(' ')[0]}'s place in the squad.`, 'good');
     }

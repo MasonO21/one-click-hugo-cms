@@ -33,8 +33,9 @@
   const fxText = (fx) => Object.entries(fx).map(([k, v]) => (k === 'dr' ? `${NAMES[k]} −${Math.round(v * 100)}%` : `${NAMES[k]} +${Math.round(v * 100)}%`)).join(', ');
   const first = (id) => esc(HERO[id].name.split(' ')[0]);
 
-  // a fight with a kinship at work counts toward the achievement
-  KH.on('battle', () => { if (S && activeIn(S.squad).length) S.stats.kinFought++; });
+  // a squad fight with a kinship at work counts toward the achievement (not marches, raids or the gate)
+  const SQUAD_FIGHTS = new Set(['stage', 'crossing', 'leviathan', 'tale', 'duel', 'spire']);
+  KH.on('battle', (e) => { if (S && e && SQUAD_FIGHTS.has(e.kind) && activeIn(S.squad).length) S.stats.kinFought++; });
   KH.hooks.tick.push(() => { if (S) S.stats.kinTop = Math.max(S.stats.kinTop || 0, ...K.pairs.map(level)); });
 
   const pairRow = (p) => {
