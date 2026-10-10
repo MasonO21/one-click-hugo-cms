@@ -2,7 +2,7 @@
 import './ui/style.css';
 import { audio, loadAudio } from './audio/index.js';
 import { loadProfile, saveProfile, newProfile } from './meta/save.js';
-import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon, beginRush, rushCourt } from './meta/economy.js';
+import { upkeep, commit, spendEnergy, computeLoadout, applyRunResult, beginTrial, dailyTrial, bloodMoon, beginRush, eventCourt } from './meta/economy.js';
 import { Store } from './meta/store.js';
 import { difficultyUnlocked, selectDifficulty } from './meta/difficulty.js';
 import { activePage } from './meta/grimoire.js';
@@ -92,7 +92,7 @@ function applySettings() {
  *  opts.rush: Boss Rush (BOSS_RUSH): free, one of today's tries while the event is open; it starts at Chapter 1's scaling. */
 function startRun(chapterId, opts = {}) {
   if (opts.tutorial) return beginRun(CHAPTERS[0], { tutorial: true });
-  if (opts.rush) { const court = rushCourt(profile); return beginRush(profile) ? beginRun(CHAPTERS[BOSS_RUSH.courts[court].chapters[0] - 1], { rush: true, court }) : false; } // this week's court
+  if (opts.rush) { const court = eventCourt(profile); return beginRush(profile) ? beginRun(CHAPTERS[BOSS_RUSH.courts[court].chapters[0] - 1], { rush: true, court }) : false; } // this week's court
   let mutators = null;
   if (opts.trial) { const t = dailyTrial(profile); chapterId = t.chapter; mutators = [t.boon, t.bane]; }
   chapterId = +chapterId;

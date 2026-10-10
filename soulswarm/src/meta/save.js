@@ -44,7 +44,7 @@ export function newProfile() {
     purchases: { first: {}, starterBought: false, starterExpires: now + STARTER_PACK_HOURS * 3600e3, pactUntil: 0, pactLastClaim: null, history: [] },
     altar: { pity: 0, pulls: 0, freeDate: null },
     trial: { day: null, done: false, ads: 0, won: false, failPaid: 0, clears: 0 }, // Daily Trial (economy.trialState)
-    rush: { event: null, day: null, tries: 0, ads: 0, claimed: 0, best: 0, bestKills: 0, allBest: 0, clears: 0 }, // Boss Rush (economy.rushState)
+    rush: { event: null, day: null, tries: 0, ads: 0, claimed: 0, best: 0, bestKills: 0, allBest: 0, clears: 0, court: '' }, // Boss Rush (economy.rushState)
     weekly: { week: null, done: 0, claimed: false },
     stats: { runs: 0, kills: 0, bestLegion: 0, raised: 0, clears: 0, bestStreak: 0 },
     grimoire: { selected: '', seen: [] }, // meta/grimoire.js: the inscribed page and the unlocked pages already shown
@@ -105,7 +105,7 @@ function migrate(p) {
   for (const id of BESTIARY.order) { const b = out.bestiary; b.kills[id] = int(b.kills[id], 0); b.claimed[id] = int(b.claimed[id], 0, 0, bestiaryGoals(id).length); }
   if (!(p && p.bestiary)) out.bestiary.kills.gravemaw = int(out.stats.clears, 0); // saves from before the Bestiary: every clear slew Gravemaw
   { const T = out.trial; for (const k of ['ads', 'failPaid', 'clears']) T[k] = int(T[k], 0); T.won = !!T.won; T.done = !!T.done; }
-  { const R = out.rush; for (const k of ['tries', 'ads', 'best', 'allBest', 'clears']) R[k] = int(R[k], 0); R.claimed = int(R.claimed, 0, 0, 5); R.bestKills = int(R.bestKills, 0, 0, 5); }
+  { const R = out.rush; for (const k of ['tries', 'ads', 'best', 'allBest', 'clears']) R[k] = int(R[k], 0); R.claimed = int(R.claimed, 0, 0, 5); R.bestKills = int(R.bestKills, 0, 0, 5); R.court = R.court === 'hollow' || R.court === 'fallen' ? R.court : ''; }
   if (!(p && p.flags && 'tutorialPaid' in p.flags)) out.flags.tutorialPaid = !!out.flags.tutorialDone; // saves from before the tutorial: their first run was it
   { const G = out.grimoire; if (!GRIMOIRE.pages[G.selected]) G.selected = ''; G.seen = [...new Set(G.seen.filter((id) => GRIMOIRE.pages[id]))]; }
   out.mastery = sanitizeMastery(out.mastery);

@@ -435,8 +435,7 @@ export class Boss {
     if (this.state === 'enter' || this.state === 'dead' || !e) return;
     if (!this.well) {
       if ((this.wellT -= dt) > 0) return;
-      this.well = { t: 0 };
-      run.hazards.circle(e.x, e.z, W.r, W.warn, this.danger, 1.0);
+      this.well = { t: 0, x: e.x, z: e.z, tele: run.hazards.circle(e.x, e.z, W.r, W.warn, this.danger, 1.0) };
       run.audio.sfx('summon', { volume: 0.5, pitch: 0.4 });
       return;
     }
@@ -634,7 +633,8 @@ export class Boss {
     Z.length = w;
     for (const s of this.strikes) this.unmark(s.tele, s.x, s.z);
     this.strikes.length = 0; this.rainQ.length = 0;
-    this.lanes.length = 0; this.beams = null; this.well = null; // Tidal Lanes, Tempest and the dark's pull are withdrawn too
+    this.lanes.length = 0; this.beams = null; // Tidal Lanes, Tempest and the dark's pull are withdrawn too
+    if (this.well) { this.unmark(this.well.tele, this.well.x, this.well.z); this.well = null; this.wellT = rnd(BP.well.every[0], BP.well.every[1]); } // a fresh wait, not a new pull mid-roar
   }
   /** Ends a mark still showing (telegraphs are pooled: only if it is still the one placed at x, z). */
   unmark(t, x, z) { if (t && t.x === x && t.z === z && t.t < t.dur) t.t = t.dur; }

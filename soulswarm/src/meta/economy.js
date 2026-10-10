@@ -444,20 +444,30 @@ export function rushTimes(t = now()) {
 /** The profile's Boss Rush block, rolled to this event (milestones and event best) and this day (tries). */
 function rushNow(p) {
   const R = p.rush, k = rushTimes().key, d = todayKey();
-  if (R.event !== k) Object.assign(R, { event: k, claimed: 0, best: 0, bestKills: 0 });
+  if (R.event !== k) Object.assign(R, { event: k, claimed: 0, best: 0, bestKills: 0, court: '' });
   if (R.day !== d) Object.assign(R, { day: d, tries: 0, ads: 0 });
+  if (!BOSS_RUSH.courts[R.court]) R.court = calendarCourt(p); // settled when the player first sees the event, kept to its end
   return R;
 }
-/** This week's court for the player: the Fallen Court in odd weeks once Chapter 10 is cleared, else the Hollow Court. */
-export function rushCourt(p, t = now()) {
-  const o = p.flags && p.flags.rushCourt, C = BOSS_RUSH.courts;
-  if (C[o]) return o;
+/** The calendar's court for the week of `t`: the Fallen Court in odd weeks once Chapter 10 is cleared, else the Hollow Court. */
+function calendarCourt(p, t = now()) {
   const week = Math.floor(Date.parse(rushTimes(t).key) / (7 * DAY));
-  return p.chapter.unlocked >= C.fallen.unlockAt && week % 2 === 1 ? 'fallen' : 'hollow';
+  return p.chapter.unlocked >= BOSS_RUSH.courts.fallen.unlockAt && week % 2 === 1 ? 'fallen' : 'hollow';
+}
+/** The court for the week of `t` (profile.flags.rushCourt overrides). */
+export function rushCourt(p, t = now()) {
+  const o = p.flags && p.flags.rushCourt;
+  return BOSS_RUSH.courts[o] ? o : calendarCourt(p, t);
+}
+/** This event's court: the override, else the one settled for the event, so clearing Chapter 10 mid-event does not swap
+ *  the bosses under the event's milestones and best clear. */
+export function eventCourt(p) {
+  const o = p.flags && p.flags.rushCourt;
+  return BOSS_RUSH.courts[o] ? o : rushNow(p).court;
 }
 export function rushState(p) {
   const R = rushNow(p), unlocked = p.chapter.unlocked >= BOSS_RUSH.unlockAt, open = rushOpen(p), T = rushTimes();
-  const left = Math.max(0, BOSS_RUSH.tries + R.ads - R.tries), court = rushCourt(p);
+  const left = Math.max(0, BOSS_RUSH.tries + R.ads - R.tries), court = eventCourt(p);
   return { court, name: BOSS_RUSH.courts[court].name, bosses: BOSS_RUSH.courts[court].bosses,
     unlocked, open, ends: T.ends, starts: T.starts, triesLeft: left, available: unlocked && open && left > 0,
     retry: unlocked && open && left === 0, claimed: R.claimed, best: R.best, bestKills: R.bestKills, allBest: R.allBest, clears: R.clears };

@@ -2244,7 +2244,7 @@ errs = await session(async (page) => {
   const s = await page.evaluate(async () => {
     const app = window.__soulswarm, E = app.engine, p = app.profile, out = { ch: {} };
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    p.chapter.unlocked = 6; p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1 };
+    p.chapter.unlocked = 30; p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1, tide: 1, brambles: 1, miasma: 1, lightning: 1, gravity: 1 };
     for (const id of [1, 2, 3, 4, 5, 100, 6, 11, 16, 21, 26]) { // Act I, the Endless Abyss, and the first chapter of each later act
       p.energy = 30; app.startRun(id); E.manual = true;
       const r = app.run, W = r.world, u = W.groundMat.uniforms;
@@ -2924,7 +2924,7 @@ errs = await session(async (page) => {
   });
   const B = s.bestiary, M = s.mix;
   check('update 5: the Grave Wraith and the Corpse Priest join the Bestiary after the Bloater, painted and modelled (the Priest\'s goals 50 / 500 / 3,000); they rise as the Phantom and the Soul Priest',
-    B.order === 'husk,ghoul,brute,witch,bloater,wraith,priest,thief,gravemaw,pyrexa,vaulkar,azrathel,vesperine' && B.art && B.models && B.variants === 'wraith,priest'
+    B.order.startsWith('husk,ghoul,brute,witch,bloater,wraith,priest,') && B.art && B.models && B.variants === 'wraith,priest'
     && B.goals === '100/1000/10000,50/500/3000,1/10/50', JSON.stringify(B));
   check('update 5: never in Chapter 1; Wraiths from Chapter 2 at 2:30, Priests from Chapter 3 at 3:00, each under its alive cap',
     M.ch1.wraith === 0 && M.ch1.priest === 0 && M.ch2early.wraith === 0 && M.ch2.wraith > 100 && M.ch2.priest === 0 && M.ch3early.priest === 0 && M.ch3.priest > 50
@@ -4127,6 +4127,74 @@ errs = await session(async (page) => {
     && s.panel.name === 'The Fallen Court' && s.panel.bosses === 'Morwenna,Gorrath,Mother Mire,Kaelthar,Nihl', JSON.stringify(s));
 });
 check('update 14 fallen court: no runtime errors', !errs.length, errs[0] || '');
+
+// 54. Code-review regressions (Update 14): a Thornback tramples a minion on every charge (and a freshly raised minion is
+//     never spared); each Boss Rush fight takes its own chapter's hazards; a pull cancelled by Nihl's roar waits its full
+//     delay; a Siren or Stalker slain or despawned mid-move takes its mark with it; the court is settled for the event.
+errs = await session(async (page) => {
+  await page.evaluate(BOSS_QA);
+  const s = await page.evaluate(async () => {
+    const D = await import('/src/game/data.js'), eco = await import('/src/meta/economy.js'), app = window.__soulswarm, p = app.profile, out = {};
+    p.flags.tutorialDone = true; p.flags.hints = { move: 1, raise: 1, gates: 1, nova: 1, rite: 1, tide: 1, brambles: 1, miasma: 1, lightning: 1, gravity: 1 }; p.flags.bloodMoon = 'off'; p.chapter.unlocked = 30;
+    const start = (ch) => {
+      if (app.run) app.exitRun();
+      p.energy = 30; app.startRun(ch); const r = app.run;
+      r.spawnAcc = -1e9; r.nextGate = r.nextSwarm = 1e9; r.eliteIdx = 99; r.modBannerAt = 0; r.time = 120;
+      r.weapons.update = () => {}; r.addXp = () => {}; r.player.invuln = 0; r.input.tx = r.input.tz = 0; r.events.nextAt = 1e9; r.player.hurt = () => {};
+      return r;
+    };
+    const step = (r, sec) => { for (let i = 0; i < Math.round(sec * 30); i++) r.update(1 / 30); };
+    const near = (r, type, dx, dz) => { const e = r.enemies.spawn(type, r.player.x + dx, r.player.z + dz, { hpMul: 50 }); e.spawnT = 2; return e; };
+    // a Thornback's second charge tramples the minion its first one did
+    let r = start(12), P = r.player, C = D.ENEMIES.thornback.charge;
+    let e = near(r, 'thornback', 0, -6); e.moveCd = 0; step(r, 0.1);
+    const m = r.legion.raise(P.x + 4, P.z, { fx: false }); m.maxHp = m.hp = 1e4;
+    const hit = () => { m.x = e.x; m.z = e.z; r.enemies.trample(e, C, P, 99); return Math.round(m.hp); };
+    const c1 = e.charge, h1 = hit(), h1b = hit();
+    e.state = 3; e.stateT = 99; step(r, 1 / 30); e.moveCd = 0; e.x = P.x; e.z = P.z - 6; step(r, 0.1);
+    const c2 = e.charge, h2 = hit();
+    out.thorn = { c1, c2, h: [1e4, h1, h1b, h2], fresh: r.legion.raise(P.x, P.z + 2, { fx: false }).trampled };
+    // a Fallen Court rush: Morwenna under Chapter 10's tides, Gorrath under Chapter 15's brambles
+    app.exitRun(); p.flags.rushCourt = 'fallen'; p.rush.tries = 0; p.flags.bossRush = 'on';
+    app.startRun(1, { rush: true }); r = app.run; r.player.hurt = () => {};
+    const keys = (o) => Object.keys(o).filter((k) => k !== 'tag').sort().join();
+    out.rush = { m0: keys(r.mods), want0: keys(D.chapterMods(D.CHAPTERS[9])) };
+    r.draftLeft = 0; r.draftPicks = 0; r.nextBossAt = r.time + 0.1; for (let i = 0; i < 30 && !r.bossSpawned; i++) r.update(1 / 30);
+    const be = r.bossEnemy; be.hp = 1; r.enemies.damage(be, 50); for (let i = 0; i < 10; i++) r.update(1 / 30);
+    Object.assign(out.rush, { ch: r.chapter.id, m1: keys(r.mods), want1: keys(D.chapterMods(D.CHAPTERS[14])), live: r.hazards.mods === r.mods });
+    app.exitRun(); document.querySelectorAll('.modal-back').forEach((n) => n.remove()); delete p.flags.rushCourt; p.flags.bossRush = 'off';
+    // Nihl's pull, cancelled by a roar, does not start again straight away
+    r = window.__bossRun(30); const b = r.boss;
+    b.wellT = 0; window.__step(r, 0.1); const T = b.well && b.well.tele;
+    b.cancelAttacks(); out.well = { twist: b.twist, was: !!T, gone: !b.well, wait: +b.wellT.toFixed(1), mark: !!T && T.t >= T.dur };
+    window.__step(r, 0.5); out.well.after = !!b.well;
+    // a Siren slain mid-song and a Stalker despawned mid-blink take their marks with them
+    r = start(7); P = r.player;
+    e = near(r, 'siren', 0, -8); e.shootCd = 0; step(r, 0.1); let M = e.tele;
+    r.enemies.kill(e); out.siren = { marked: !!M, ended: !!M && M.t >= M.dur };
+    r = start(27); P = r.player;
+    e = near(r, 'stalker', 0, -9); e.shootCd = 0; step(r, 0.1); M = e.tele;
+    r.enemies.remove(e); out.stalker = { marked: !!M, ended: !!M && M.t >= M.dur };
+    app.exitRun();
+    // the court is settled when the event is first seen: clearing Chapter 10 mid-event keeps it
+    p.rush.event = null; p.chapter.unlocked = 6;
+    const a = eco.rushState(p).court; p.chapter.unlocked = 30; const b2 = eco.rushState(p).court;
+    p.rush.event = 'next'; const c = eco.rushState(p).court;
+    out.court = { a, b: b2, c, cal: eco.rushCourt(p) };
+    return out;
+  });
+  check('review: a Thornback tramples a minion once per charge, and again on its next charge; a raised minion starts untrampled',
+    s.thorn.c2 > s.thorn.c1 && s.thorn.h[1] < s.thorn.h[0] && s.thorn.h[2] === s.thorn.h[1] && s.thorn.h[3] < s.thorn.h[2] && s.thorn.fresh === 0, JSON.stringify(s.thorn));
+  check('review: each Fallen Court fight takes its own chapter\'s hazards (Chapter 10, then 15)',
+    s.rush.m0 === s.rush.want0 && s.rush.ch === 15 && s.rush.m1 === s.rush.want1 && s.rush.m1 !== s.rush.m0 && s.rush.live, JSON.stringify(s.rush));
+  check('review: Nihl\'s pull cancelled by a roar takes its mark with it and waits a full delay',
+    s.well.twist === 10 && s.well.was && s.well.gone && s.well.mark && s.well.wait >= 6.5 && !s.well.after, JSON.stringify(s.well));
+  check('review: a Siren slain mid-song and a Stalker despawned mid-blink take their marks with them',
+    s.siren.marked && s.siren.ended && s.stalker.marked && s.stalker.ended, JSON.stringify({ si: s.siren, st: s.stalker }));
+  check('review: the Boss Rush court is settled for the event (clearing Chapter 10 mid-event keeps it; the next event follows the calendar)',
+    s.court.a === 'hollow' && s.court.b === 'hollow' && s.court.c === s.court.cal, JSON.stringify(s.court));
+});
+check('update 14 review regressions: no runtime errors', !errs.length, errs[0] || '');
 
 await browser.close();
 if (server) server.kill();

@@ -76,6 +76,7 @@ export class Enemies {
     this.counts = { husk: 0, ghoul: 0, brute: 0, witch: 0, bloater: 0, wraith: 0, priest: 0, siren: 0, thornback: 0, rat: 0, caller: 0, stalker: 0, boss: 0 };
     this.raiseHdr = hdr(RAISE_COL, 3); this.raiseColor = new THREE.Color(RAISE_COL);
     this.uidSeq = 0;
+    this.chargeSeq = 0; // each Thornback charge's stamp, so a minion is trampled once per charge (not once per Thornback)
     this.crowns = new THREE.InstancedMesh(crownGeometry(), new THREE.MeshBasicMaterial({ color: new THREE.Color(ELITE.crown).multiplyScalar(2.6) }), MAX_CROWNS);
     this.crowns.count = 0; this.crowns.frustumCulled = false;
     this.crowns.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -362,7 +363,7 @@ export class Enemies {
         // lowers its head over a marked lane, then charges down it: it throws the Shepherd aside and tramples minions
         const C = d.charge;
         if (e.state === 0 && dist < C.range && dist > C.min && e.moveCd <= 0 && e.spawnT > 1 && !tm) {
-          e.state = 1; e.stateT = -dt; e.lx = dx; e.lz = dz; e.hitP = false; e.trailD = 0;
+          e.state = 1; e.stateT = -dt; e.lx = dx; e.lz = dz; e.hitP = false; e.trailD = 0; e.charge = ++this.chargeSeq;
           if (pdist < 16) run.audio.sfx('growl', { volume: 0.55, pitch: 0.75 });
         }
         if (e.state) {
@@ -502,10 +503,10 @@ export class Enemies {
     const L = run.legion, list = L.list;
     for (let i = 0; i < list.length; i++) {
       const m = list[i];
-      if (m.gone || !(m.hp > 0) || m.trampled === e.uid) continue;
+      if (m.gone || !(m.hp > 0) || m.trampled === e.charge) continue;
       const mx = m.x - e.x, mz = m.z - e.z;
       if (mx * mx + mz * mz > r * r) continue;
-      m.trampled = e.uid;
+      m.trampled = e.charge;
       if (L.hitMinion) L.hitMinion(m, e.dmg); else m.hp -= e.dmg;
       const side = Math.sign(e.lx * mz - e.lz * mx) || 1;
       m.vx += -e.lz * side * 6; m.vz += e.lx * side * 6;
@@ -570,9 +571,7 @@ export class Enemies {
     if (e.type === 'boss') { const B = this.run.boss; if (B.state === 'chase') B.cd += DATA.RITES.bossStagger; return; }
     if (e.state && e.type !== 'witch') {
       if (e.type === 'priest') this.breakChant(e);
-      const T = e.tele; // a Siren's song or a Stalker's blink still marked: the mark goes with it
-      if (T && T.x === e.lx && T.z === e.lz && T.t < T.dur) T.t = T.dur;
-      e.tele = null;
+      this.dropMark(e);
       if (e.type === 'bloater') for (const T of this.run.fx.teles) if (T.active && !T.onDone && (T.mesh.position.x - e.x) ** 2 + (T.mesh.position.z - e.z) ** 2 < 1.5) { T.active = false; T.mesh.visible = false; }
       e.state = 0; e.stateT = 0;
     }
@@ -694,9 +693,18 @@ export class Enemies {
     if ((e.x - P.x) ** 2 + (e.z - P.z) ** 2 < 260) run.audio.sfx('raise', { volume: 0.5, pitch: 0.55 });
   }
 
+  /** A Siren's song or a Stalker's blink still marked when the move is called off (stun, death, despawn): the mark goes
+   *  with it (telegraphs are pooled: only if it is still the one placed at lx, lz). */
+  dropMark(e) {
+    const T = e.tele;
+    if (T && T.x === e.lx && T.z === e.lz && T.t < T.dur) T.t = T.dur;
+    e.tele = null;
+  }
+
   remove(e) {
     if (!e.active) return;
     e.active = false;
+    if (e.tele) this.dropMark(e);
     this.counts[e.type]--;
   }
 

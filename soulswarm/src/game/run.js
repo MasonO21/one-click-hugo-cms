@@ -740,13 +740,14 @@ export class Run {
   }
 
   /** Boss Rush: a boss falls and the next is coming. A Relic Chest (the pick between bosses), souls and a heal; the
-   *  run now scales as the next boss's chapter (the Abyss look stays). */
+   *  run now scales as the next boss's chapter and takes its hazards (the first chapter's floor stays). */
   onRushBossKilled(x, z, K) {
     const R = BOSS_RUSH, P = this.player;
     this.bossKills++;
     this.bossSpawned = false; this.warned = false; this.bossEnemy = null;
     this.nextBossAt = this.time + R.gap;
     this.chapter = CHAPTERS[this.court.chapters[this.bossKills] - 1]; this.recomputeStats(); // the court's next chapter
+    this.mods = chapterMods(this.chapter); this.hazards.setMods(this.mods); // and its ground hazards (the floor stays)
     this.fx.slowMo(0.25, 0.9);
     this.fx.flash(0.7); this.fx.shake(0.8); this.fx.aberration(0.8);
     const hex = K.color;
