@@ -1,0 +1,15 @@
+{
+  "name": "rainkeep-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rainkeep's online backend: players, Caravans, chat, help, the Caravan boss, the Arena, playtest reports and cloud saves. Node built-ins only.",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  }
+}
