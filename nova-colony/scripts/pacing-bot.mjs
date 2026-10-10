@@ -32,7 +32,7 @@ const opts = {
   nova: arg('nova', 'save'),
   pace: arg('pace', 'human'),
   seed: Number(arg('seed', 20261012)),
-  maxOnlineHours: Number(arg('hours', 40)),
+  maxOnlineHours: Number(arg('hours', 80)),
   postTitaniumHours: Number(arg('post-titanium', 0)),
   verbose: args.includes('--verbose'),
 };

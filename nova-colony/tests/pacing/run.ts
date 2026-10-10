@@ -40,7 +40,7 @@ export const DEFAULTS: RunOptions = {
   sessionsPerDay: 5,
   nova: 'save',
   pace: 'human',
-  maxOnlineHours: 60,
+  maxOnlineHours: 80,
   postTitaniumHours: 0,
   dt: 0.25,
   verbose: false,
