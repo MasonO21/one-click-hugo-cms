@@ -86,7 +86,7 @@ describe('season premium highlights (computed, never typed in)', () => {
     const nova = data.season.levels.reduce((s, l) => s + (l.premium.nova ?? 0), 0);
     expect(h.nova).toBe(nova);
     expect(h.exclusive).toBe(3); // bubble helmet, lunar hare, brass frame: only from the season
-    expect(h.bonus).toEqual({ xp: 400, chest: 'chest_explorer' });
+    expect(h.bonus).toEqual({ xp: 400, chest: 'chest_explorer', nova: 0 });
     expect(highlightChips(h)).toEqual([`10 cosmetics`, `8 caches`, `${friendlyAmount(nova)} Nova`, `${h.colonists} colonists`]);
   });
 

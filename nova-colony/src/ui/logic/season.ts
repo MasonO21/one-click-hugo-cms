@@ -17,8 +17,8 @@ export interface SeasonHighlights {
   nova: number;
   /** Colonists on the premium track. */
   colonists: number;
-  /** Bonus chest past the last level (null when the season has none). */
-  bonus: { xp: number; chest: string | null } | null;
+  /** Bonus past the last level: its cache, or its Nova where it pays Nova (null when the season has none). */
+  bonus: { xp: number; chest: string | null; nova: number } | null;
 }
 
 const cosmeticsOf = (r: Reward): string[] => [...(r.cosmetic ? [r.cosmetic] : []), ...(r.cosmetics ?? [])];
@@ -45,7 +45,18 @@ export function seasonHighlights(data: DataRegistry, season: SeasonDef = data.se
   }).length;
   const b = season.bonus;
   const bonusChest = b ? (Object.keys(b.reward.items ?? {}).find((id) => data.chest(id)) ?? null) : null;
-  return { cosmetics, exclusive, chests, nova, colonists, bonus: b ? { xp: b.xp, chest: bonusChest } : null };
+  return { cosmetics, exclusive, chests, nova, colonists, bonus: b ? { xp: b.xp, chest: bonusChest, nova: b.reward.nova ?? 0 } : null };
+}
+
+/** The premium card's line about the bonus: "an Explorer's Case every 400 XP after level 50" (or its Nova). */
+export function bonusLine(data: DataRegistry, b: NonNullable<SeasonHighlights['bonus']>, lastLevel: number): string {
+  const what = b.chest ? article(data.chest(b.chest)?.name ?? 'bonus cache') : b.nova > 0 ? `${b.nova.toLocaleString('en-US')} Nova` : 'a bonus reward';
+  return `${what} every ${b.xp.toLocaleString('en-US')} XP after level ${lastLevel}`;
+}
+
+/** "an Explorer's Case", "a Supply Cache". */
+export function article(name: string): string {
+  return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
 }
 
 /** "3,000" for a round number, else rounded down to a friendly step with a "+" (3,240 -> "3,200+"). */

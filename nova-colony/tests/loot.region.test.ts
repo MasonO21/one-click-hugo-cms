@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { createDataRegistry } from '../src/data';
 import { productHasRandomItems, regionRestrictsPaidRandom, rewardHasRandomItems, seasonAsPaid, withoutRandomItems } from '../src/sim/meta/lootRegion';
-import { highlightChips, seasonHighlights } from '../src/ui/logic/season';
+import { bonusLine, highlightChips, seasonHighlights } from '../src/ui/logic/season';
 import { claimSeasonBonus, seasonTrackXp } from '../src/sim/seasonBonus';
 import { makeGame } from './meta.helpers';
 
@@ -46,6 +46,20 @@ describe('paid random items by region', () => {
     expect(here.chests).toEqual([]);
     expect(here.nova).toBeGreaterThan(there.nova);
     expect(highlightChips(here).join(' ')).not.toMatch(/chest|cache/i);
+  });
+
+  it('the bonus past level 50 shows as it pays: its Nova where restricted, the Explorer\'s Case elsewhere', () => {
+    const season = data.season;
+    const last = season.levels.length;
+    const paid = seasonAsPaid(data, season, false);
+    expect(rewardHasRandomItems(data, season.bonus!.reward)).toBe(true);
+    expect(paid.bonus!.xp).toBe(season.bonus!.xp);
+    expect(rewardHasRandomItems(data, paid.bonus!.reward)).toBe(false);
+    expect(paid.bonus!.reward).toEqual(withoutRandomItems(data, season.bonus!.reward));
+    const here = seasonHighlights(data, paid).bonus!;
+    expect(here.chest).toBeNull();
+    expect(bonusLine(data, here, last)).toBe(`${paid.bonus!.reward.nova} Nova every 400 XP after level ${last}`);
+    expect(bonusLine(data, seasonHighlights(data, season).bonus!, last)).toBe(`an Explorer's Case every 400 XP after level ${last}`);
   });
 
   it('in Belgium the cache bundle is not offered, the paid track pays Nova instead of caches; elsewhere unchanged', () => {

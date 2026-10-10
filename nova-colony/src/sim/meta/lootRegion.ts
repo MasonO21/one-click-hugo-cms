@@ -42,10 +42,13 @@ export function withoutRandomItems(data: DataRegistry, r: Reward): Reward {
 
 /**
  * The season as the paid track pays it here: where paid random items are restricted every premium level's caches
- * are their Nova (as LiveOpsSystem.claimSeason grants them), so the Season panel never shows a cache it won't hand
- * out. The free track is untouched (earned caches stay caches). Unrestricted: the season itself.
+ * are their Nova (as LiveOpsSystem.claimSeason grants them), and so is the bonus past the last level (as
+ * claimSeasonBonus grants it), so the Season panel never shows a cache it won't hand out. The free track is
+ * untouched (earned caches stay caches). Unrestricted: the season itself.
  */
 export function seasonAsPaid(data: DataRegistry, season: SeasonDef, paidRandomAllowed: boolean): SeasonDef {
   if (paidRandomAllowed) return season;
-  return { ...season, levels: season.levels.map((l) => ({ ...l, premium: withoutRandomItems(data, l.premium) })) };
+  const levels = season.levels.map((l) => ({ ...l, premium: withoutRandomItems(data, l.premium) }));
+  const bonus = season.bonus && { ...season.bonus, reward: withoutRandomItems(data, season.bonus.reward) };
+  return { ...season, levels, ...(bonus ? { bonus } : {}) };
 }

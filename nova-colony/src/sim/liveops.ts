@@ -275,8 +275,12 @@ export class LiveOpsSystem extends System {
       this.game.toast(`🏅 Season level ${after}! New rewards are waiting`, 'success');
     } else if (s.premium && seasonBonusEarned(this.game.data.season, s.xp) > seasonBonusEarned(this.game.data.season, s.xp - xp)) {
       bus.emit('sfx', { id: 'level_up' });
-      const bonus = Object.keys(this.game.data.season.bonus?.reward.items ?? {})[0];
-      this.game.toast(`🎁 Bonus ${this.game.data.chest(bonus ?? '')?.name ?? 'cache'} earned: claim it on the season pass`, 'success', undefined, 'season');
+      // the bonus as this storefront pays it: a cache, or its Nova where paid random items are restricted
+      const reward = this.game.data.season.bonus?.reward;
+      const paid = reward && !this.paidRandomAllowed() ? withoutRandomItems(this.game.data, reward) : reward;
+      const chest = Object.keys(paid?.items ?? {}).find((id) => this.game.data.chest(id));
+      const what = chest ? this.game.data.chest(chest)?.name ?? 'cache' : `${(paid?.nova ?? 0).toLocaleString('en-US')} Nova`;
+      this.game.toast(`🎁 Bonus ${what} earned: claim it on the season pass`, 'success', undefined, 'season');
     }
   }
 

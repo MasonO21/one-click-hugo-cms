@@ -12,8 +12,8 @@ import { fmt } from '../../core/format';
 import { bar, btn, rewardChips } from '../widgets';
 import { claimableSeason } from '../logic/badges';
 import { fill, h } from '../dom';
-import { artOrEmoji, chestArt, hudArt, shopArt } from '../art';
-import { highlightChips, rewardHero, seasonHighlights } from '../logic/season';
+import { artOrEmoji, chestArt, hudArt, resourceArt, shopArt } from '../art';
+import { bonusLine, highlightChips, rewardHero, seasonHighlights } from '../logic/season';
 import { claimSeasonBonus, seasonBonusView } from '../../sim/seasonBonus';
 import { cosmeticIcon } from './wardrobe/cards';
 import { seasonAsPaid } from '../../sim/meta/lootRegion';
@@ -103,7 +103,7 @@ export class SeasonPanel extends Panel {
         { class: 'stack-v tight' },
         h('div', { class: 'sp-hl' }, ...chips.map((t) => h('span', { class: 'chip', text: t }))),
         hl.exclusive > 0 || hl.bonus
-          ? h('div', { class: 'mute small', text: [hl.exclusive > 0 ? `${hl.exclusive} cosmetics you can only get here` : '', hl.bonus ? `${article(this.data.chest(hl.bonus.chest ?? '')?.name ?? 'bonus cache')} every ${fmt(hl.bonus.xp)} XP after level ${this.data.season.levels.length}` : ''].filter(Boolean).join(' · ').replace(/^./, (c) => c.toUpperCase()) })
+          ? h('div', { class: 'mute small', text: [hl.exclusive > 0 ? `${hl.exclusive} cosmetics you can only get here` : '', hl.bonus ? bonusLine(this.data, hl.bonus, this.data.season.levels.length) : ''].filter(Boolean).join(' · ').replace(/^./, (c) => c.toUpperCase()) })
           : null,
       ),
       strip,
@@ -166,7 +166,7 @@ export class SeasonPanel extends Panel {
   /** The "50+" column: the repeatable premium bonus chest. */
   private bonusColumn(): HTMLElement {
     const b = seasonBonusView(this.game);
-    const reward = this.data.season.bonus!.reward;
+    const reward = this.paidBonus();
     const col = h('div', { class: 'scol bonus' + (b.unlocked ? ' reached' : ''), data: { level: 'bonus' } });
     col.appendChild(h('div', { class: 'sl', text: `${this.data.season.levels.length}+` }));
     col.appendChild(h('div', { class: 'scell ghost-cell', 'aria-hidden': 'true' }, h('div', { class: 'mute small center', text: `Every ${fmt(b.xpPer)} XP` })));
@@ -182,39 +182,47 @@ export class SeasonPanel extends Panel {
   /** Past level 50: progress to the next bonus chest, and any waiting. */
   private bonusCard(): HTMLElement {
     const b = seasonBonusView(this.game);
-    const bonus = this.data.season.bonus!;
-    const chestId = Object.keys(bonus.reward.items ?? {})[0] ?? '';
+    const reward = this.paidBonus();
+    const chestId = Object.keys(reward.items ?? {}).find((id) => this.data.chest(id)) ?? '';
     const chest = this.data.chest(chestId);
+    // where the bonus pays Nova instead of a cache (sim/meta/lootRegion.ts), the card says so
+    const what = chest ? chest.name : `${fmt(reward.nova ?? 0)} Nova`;
     return h(
       'div',
       { class: 'card sp-bonus', data: { bonusCard: '1' } },
-      artOrEmoji(chestArt(chestId), chest?.icon ?? '🎁', 'sp-bchest', chest?.name ?? 'Bonus cache'),
+      chest ? artOrEmoji(chestArt(chestId), chest.icon ?? '🎁', 'sp-bchest', chest.name) : artOrEmoji(resourceArt('nova'), '💎', 'sp-bchest', what),
       h(
         'div',
         { class: 'grow stack-v tight' },
-        h('div', { class: 'h3', text: b.premium ? `Bonus ${chest?.name ?? 'caches'}` : 'Bonus caches (premium)' }),
+        h('div', { class: 'h3', text: b.premium ? `Bonus ${what}` : chest ? 'Bonus caches (premium)' : 'Bonus Nova (premium)' }),
         bar(b.xpPer > 0 ? b.xpInto / b.xpPer : 0, 'purple', `${fmt(b.xpInto)} / ${fmt(b.xpPer)} XP`),
-        h('div', { class: 'mute small', text: b.premium ? `One more every ${fmt(b.xpPer)} XP of play, with no limit.${b.claimed ? ` ${b.claimed} claimed so far.` : ''}` : `The premium track keeps paying after level ${this.data.season.levels.length}: a cache every ${fmt(b.xpPer)} XP.` }),
+        h('div', { class: 'mute small', text: b.premium ? `One more every ${fmt(b.xpPer)} XP of play, with no limit.${b.claimed ? ` ${b.claimed} claimed so far.` : ''}` : `The premium track keeps paying after level ${this.data.season.levels.length}: ${chest ? 'a cache' : what} every ${fmt(b.xpPer)} XP.` }),
       ),
       b.ready > 0 ? btn({ label: `Claim ×${b.ready}`, cls: 'good small', id: 'btn-season-bonus', onClick: () => this.claimBonus() }) : null,
     );
   }
 
+  /** The bonus past the last level as it pays here: a cache, or its Nova where paid random items are restricted. */
+  private paidBonus(): Reward {
+    return this.paidSeason().bonus!.reward;
+  }
+
   private claimBonus(): void {
     const b = seasonBonusView(this.game);
+    const reward = this.paidBonus();
+    const thing = Object.keys(reward.items ?? {}).some((id) => this.data.chest(id)) ? 'cache' : 'Nova';
     if (!b.premium) {
-      this.ctx.toast('Unlock the premium track for bonus caches', 'info', '👑');
+      this.ctx.toast(`Unlock the premium track for bonus ${thing === 'cache' ? 'caches' : 'Nova'}`, 'info', '👑');
       return;
     }
     if (b.ready <= 0) {
-      this.ctx.toast(`Next bonus cache in ${fmt(Math.max(0, b.xpPer - b.xpInto))} XP`, 'info', '🎁');
+      this.ctx.toast(`Next bonus ${thing} in ${fmt(Math.max(0, b.xpPer - b.xpInto))} XP`, 'info', '🎁');
       return;
     }
-    const reward = this.data.season.bonus!.reward;
     const n = claimSeasonBonus(this.game);
     if (n > 0) {
       this.ctx.haptic('success');
-      this.ctx.showReward(n > 1 ? `${n} bonus caches` : 'Bonus cache', n > 1 ? scaleItems(reward, n) : reward, '🎁');
+      this.ctx.showReward(thing === 'cache' ? (n > 1 ? `${n} bonus caches` : 'Bonus cache') : 'Bonus Nova', n > 1 ? scaleReward(reward, n) : reward, '🎁');
     }
     this.rerender();
   }
@@ -235,14 +243,14 @@ export class SeasonPanel extends Panel {
   }
 }
 
-/** `n` of a reward's items (the "you got" card for several bonus chests at once). */
-function scaleItems(r: Reward, n: number): Reward {
-  const items: Record<string, number> = {};
-  for (const [k, v] of Object.entries(r.items ?? {})) items[k] = v * n;
-  return { ...r, items };
-}
-
-/** "an Explorer's Case", "a Supply Cache". */
-function article(name: string): string {
-  return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
+/** `n` of a reward's items and Nova (the "you got" card for several bonus rewards at once). */
+function scaleReward(r: Reward, n: number): Reward {
+  const out: Reward = { ...r };
+  if (r.items) {
+    const items: Record<string, number> = {};
+    for (const [k, v] of Object.entries(r.items)) items[k] = v * n;
+    out.items = items;
+  }
+  if (r.nova) out.nova = r.nova * n;
+  return out;
 }
