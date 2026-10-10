@@ -7,7 +7,8 @@
  *  1. claim everything waiting (victory chest, missions, medals, season, expeditions, daily gift, spin, free crate,
  *     crates in the backpack), tier up when possible;
  *  2. during an alien warning/attack, stand by the defenses (turrets do the work, the hero's gun helps);
- *  3. research: the mission / tier-gate path first, then the cheapest available tech when it does not delay the gate;
+ *  3. research: the mission / tier-gate path first, then the cheapest available tech when it does not delay the gate,
+ *     then (from the Stone tier) the cheapest Mastery level with the points left over beyond the next tier gate;
  *  4. recruit into free beds, auto-assign workers, craft better gear and vehicles, grant wishes, send expeditions;
  *  5. build: the current main mission, then "fix what is idle" (no workers, no power, no inputs), housing, food,
  *     water, storage for the next goal, research, defenses scaled to the tier, comfort, then production for the
@@ -68,7 +69,7 @@ export class PacingBot {
   /** What production planning aims at: the mission when it is resource-bound, else the next tier's bill. */
   prodGoal: GoalInfo = { label: '', binding: 'none', eta: 0 };
   /** Counters for the report. */
-  stats = { builds: 0, upgrades: 0, research: 0, crafts: 0, recruits: 0, wishes: 0, expeditions: 0, novaSpent: 0, paths: 0, stuck: 0 };
+  stats = { builds: 0, upgrades: 0, research: 0, mastery: 0, crafts: 0, recruits: 0, wishes: 0, expeditions: 0, novaSpent: 0, paths: 0, stuck: 0 };
   /** Seconds remaining in the current session (set by the runner; used for expedition sizing). */
   sessionLeft = Infinity;
   nextGap = 0;
@@ -118,7 +119,7 @@ export class PacingBot {
   }
 
   /** Human menu time per action kind (seconds of play the player spends tapping instead of walking). */
-  static readonly MENU = { build: 12, level: 6, research: 8, craft: 6, recruit: 8, claim: 2.5, wish: 5, expedition: 10, nova: 6 };
+  static readonly MENU = { build: 12, level: 6, research: 8, mastery: 3, craft: 6, recruit: 8, claim: 2.5, wish: 5, expedition: 10, nova: 6 };
 
   private acted(what: string, menu = 0): void {
     this.actedAt = this.now();
@@ -566,7 +567,38 @@ export class PacingBot {
       this.acted(`research ${d.id} (filler)`, M.research);
       return true;
     }
-    return false;
+    return this.doMastery(gateStepCost);
+  }
+
+  /**
+   * Mastery (sim/mastery.ts): what an engaged player does with a research backlog. The cheapest next level across the
+   * open lines (levels spread evenly, a few quick taps per visit), only with the points left over after the whole
+   * research chain to the next tier gate and the cheapest tech still open in the tree (new buildings come first).
+   */
+  private doMastery(gateStepCost: number): boolean {
+    const g = this.game;
+    const R = g.sys.research;
+    if (!R.masteryOpen()) return false;
+    let reserve = gateStepCost;
+    const nx = g.sys.progression.next();
+    if (nx?.research && !nx.researchDone) {
+      let chain = 0;
+      for (const r of this.researchChain(nx.research)) chain += g.data.researchDef(r)?.cost ?? 0;
+      reserve = Math.max(reserve, chain);
+    }
+    let tree = Infinity;
+    for (const d of R.available()) tree = Math.min(tree, d.cost);
+    if (tree < Infinity) reserve += tree;
+    let best: string | null = null;
+    let bestCost = Infinity;
+    for (const m of R.masteryInfo()) if (m.open && m.cost < bestCost) {
+      best = m.line.id;
+      bestCost = m.cost;
+    }
+    if (!best || g.state.research.points - bestCost < reserve || !R.master(best)) return false;
+    this.stats.mastery++;
+    this.acted(`mastery ${best} ${R.masteryLevel(best)}`, PacingBot.MENU.mastery);
+    return true;
   }
 
   // ---------------------------------------------------------------------- colonists

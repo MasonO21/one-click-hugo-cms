@@ -9,7 +9,8 @@
  * a teleport to the goal is the last resort when no path exists (e.g. a bed in a sealed room) or the colonist is stuck
  * > 3 s. Colonists far from the player/camera skip walking entirely and snap to their destination.
  *
- * Priorities each decision: combat (guards man their post, everyone else shelters) > night (sleep in bed, or
+ * Priorities each decision: combat (guards man their post, everyone else shelters) > a Colony Spirit festival
+ * (everyone gathers in rings round the campfire nearest the core, sim/colony/spirit.ts) > night (sleep in bed, or
  * around the campfire/core) > midday meal break (once per day) > work (at the workplace, with visible
  * gathering trips for gatherers/miners and field pacing for farmers) > relax near campfires/decor.
  */
@@ -38,6 +39,7 @@ const M_MEAL = 2;
 const M_SLEEP = 3;
 const M_SHELTER = 4;
 const M_GUARD = 5;
+const M_FESTIVAL = 6;
 
 const PH_SITE = 0;
 const PH_NODE = 1;
@@ -152,7 +154,9 @@ export class ColonistAI {
 
   private readonly brains = new Map<Id, Brain>();
   private readonly nodeCache = new Map<Id, { at: number; list: WorldNode[] }>();
-  private readonly f = { day: 1, dayTime: 0, night: false, combat: false, px: 0, pz: 0, cx: 0, cz: 0, overview: false, now: 0 };
+  private readonly f = { day: 1, dayTime: 0, night: false, combat: false, festival: false, px: 0, pz: 0, cx: 0, cz: 0, overview: false, now: 0 };
+  /** Scratch for festival standing spots. */
+  private readonly spot = { x: 0, z: 0 };
   /** choose() results. */
   private pm = 0;
   private pa = -1;
@@ -256,6 +260,7 @@ export class ColonistAI {
     f.night = g.isNight();
     const ph = st.combat.phase;
     f.combat = ph === 'warning' || ph === 'attack';
+    f.festival = !!g.sys.spirit?.active();
     f.px = st.player.x;
     f.pz = st.player.z;
     const cam = g.view.camera;
@@ -374,6 +379,11 @@ export class ColonistAI {
       }
       return;
     }
+    if (f.festival) {
+      this.pm = M_FESTIVAL;
+      this.pa = -1;
+      return;
+    }
     if (f.night) {
       this.pm = M_SLEEP;
       this.pa = c.bed ?? -1;
@@ -417,6 +427,9 @@ export class ColonistAI {
       case M_WORK:
         br.phase = PH_SITE;
         this.pickWork(c, br);
+        break;
+      case M_FESTIVAL:
+        this.goFestival(c, br);
         break;
       default:
         this.goRelax(c, br);
@@ -492,6 +505,15 @@ export class ColonistAI {
     const r = Math.hypot(spot.hw, spot.hd) + 0.7 + Math.hypot(br.ox, br.oz) * 0.8;
     const a = Math.atan2(br.oz, br.ox) + c.id * 0.37;
     this.setGoal(c, br, spot.x + Math.cos(a) * r, spot.z + Math.sin(a) * r, -1, 'eating', this.game.rng.range(12, 20), true, spot.x, spot.z);
+  }
+
+  /** Festival: a spot in the rings round the fire, facing it (a toast now and then, render/actors/Characters.ts). */
+  private goFestival(c: Colonist, br: Brain): void {
+    const g = this.game;
+    const sp = g.state.spirit;
+    const idx = g.state.colonists.list.indexOf(c);
+    if (!sp || !g.sys.spirit?.slotFor(idx, this.spot)) return this.goRelax(c, br);
+    this.setGoal(c, br, this.spot.x, this.spot.z, -1, 'celebrating', Infinity, true, sp.fx, sp.fz);
   }
 
   private goRelax(c: Colonist, br: Brain): void {

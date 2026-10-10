@@ -229,15 +229,16 @@ export function rewardValue(data: DataRegistry, r: Reward, tier: number): number
   return v;
 }
 
-/** Expected haul of a trip for a squad (and optional vehicle). */
-export function planHaul(data: DataRegistry, spec: TripSpec, members: readonly Member[], vehicle?: VehicleDef | null): HaulPlan {
+/** Expected haul of a trip for a squad (and optional vehicle); `haulMod` = the colony's 'expeditionHaul' modifier. */
+export function planHaul(data: DataRegistry, spec: TripSpec, members: readonly Member[], vehicle?: VehicleDef | null, haulMod = 1): HaulPlan {
   const rules = data.expeditionRules;
   const squad = squadInfo(rules, spec, members);
   const veh = vehicleEffect(rules, vehicle);
   const refHour = referenceValuePerHour(rules, spec.tier);
   const hours = spec.duration / 3600;
   const depth = spec.depth > 0 ? 1 + Math.min(rules.frontier.depthBonusMax, rules.frontier.depthBonus * (spec.depth - 1)) : 1;
-  const value = refHour * rules.baseFraction * durationEfficiency(rules, spec.duration) * squad.bonus * squad.sizeFactor * veh.haulMult * depth * hours;
+  const mod = Number.isFinite(haulMod) && haulMod > 0 ? haulMod : 1;
+  const value = refHour * rules.baseFraction * durationEfficiency(rules, spec.duration) * squad.bonus * squad.sizeFactor * veh.haulMult * depth * hours * mod;
   const seconds = Math.round(spec.duration * veh.durMult);
   const resources: Record<string, number> = {};
   let rp = 0;

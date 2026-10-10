@@ -27,6 +27,11 @@ declare module '../data/schema' {
      * capacity × this (default 1 = clamp to free capacity).
      */
     offlineStorageMult?: number;
+    /**
+     * Research points stop after this many credited offline minutes (the labs bank about two hours of output, like a
+     * store fills up), so the backlog stays meaningful. Undefined = no cap.
+     */
+    offlineResearchMinutes?: number;
   }
 }
 
@@ -37,6 +42,8 @@ export interface OfflineSummary {
   away: number;
   gains: ResourceBag;
   rp: number;
+  /** Research stopped at balance.offlineResearchMinutes before the time ran out (Welcome Back says so). */
+  rpCapped?: boolean;
   /** Stockpiled inputs consumed by converters/factories while away (deducted once, never doubled). */
   spent?: ResourceBag;
 }
@@ -532,6 +539,7 @@ export class EconomySystem extends System {
     }
     const res = simulateOffline(this.offlineModel(), seconds, this.game.state.resources.amounts, capacity);
     const summary: OfflineSummary = { seconds, away, gains: res.gains, rp: res.rp };
+    if (res.rpCapped) summary.rpCapped = true;
     if (Object.keys(res.spent).length) summary.spent = res.spent;
     return summary;
   }
@@ -782,6 +790,7 @@ export class EconomySystem extends System {
       flows,
       upkeep: [...this.upkeepPerMin],
       rpPerMin: this.rpBasePerMin * mods.get('research'),
+      rpMinutes: this.game.data.balance.offlineResearchMinutes,
     };
   }
 }

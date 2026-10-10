@@ -37,7 +37,7 @@ declare module '../core/state' {
     /** Spin rewards waiting for the wheel animation to finish (survives a quit mid-spin). */
     pendingSpins?: { index: number; at: number }[];
     /** Unclaimed "Welcome back" earnings, kept until claimed so quitting at that screen never loses them. */
-    pendingOffline?: { seconds: number; away: number; gains: ResourceBag; rp: number } | null;
+    pendingOffline?: { seconds: number; away: number; gains: ResourceBag; rp: number; rpCapped?: boolean } | null;
   }
 }
 
@@ -919,9 +919,11 @@ export class LiveOpsSystem extends System {
       cur.seconds += left.seconds;
       cur.away += left.away;
       cur.rp += left.rp;
+      if (left.rpCapped) cur.rpCapped = true;
       for (const [k, v] of Object.entries(left.gains)) cur.gains[k] = (cur.gains[k] ?? 0) + (v ?? 0);
     }
     lo.pendingOffline = { seconds: cur.seconds, away: cur.away, gains: { ...cur.gains }, rp: cur.rp };
+    if (cur.rpCapped) lo.pendingOffline.rpCapped = true;
   }
 
   /** A previous session's unclaimed earnings with nothing new on top: offer them again. */
@@ -930,6 +932,7 @@ export class LiveOpsSystem extends System {
     const left = g.state.liveops.pendingOffline;
     if (g.pendingOffline || !left) return;
     g.pendingOffline = { seconds: left.seconds, away: left.away, gains: { ...left.gains }, rp: left.rp };
+    if (left.rpCapped) g.pendingOffline.rpCapped = true;
     this.restoringOffline = true;
     try {
       g.bus.emit('offline:ready', { seconds: left.seconds, gains: g.pendingOffline.gains, rp: left.rp });

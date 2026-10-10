@@ -100,11 +100,25 @@ describe('economy: offline progress', () => {
     expect(s.gains.food).toBe(40);
   });
 
-  it('credits research points without a cap', () => {
+  it('credits research points up to the labs\' offline cap (balance.offlineResearchMinutes)', () => {
     const { game } = makeGame();
     game.sys.colonists.productivity = () => 1;
     staff(game, addBuilding(game, 't_lab'), 2); // 6 RP / min
-    expect(game.sys.economy.computeOffline(4 * H).rp).toBe(1440);
+    game.data.balance.offlineResearchMinutes = 120;
+    let s = game.sys.economy.computeOffline(1 * H);
+    expect(s.rp).toBe(360);
+    expect(s.rpCapped).toBeUndefined();
+    s = game.sys.economy.computeOffline(4 * H);
+    expect(s.rp).toBe(720); // two hours of lab output, not four
+    expect(s.rpCapped).toBe(true);
+    // the rest of the colony is not capped by it
+    addBuilding(game, 't_mine');
+    expect(game.sys.economy.computeOffline(4 * H).gains.t_ore).toBe(1440);
+    // no cap configured: every credited minute counts
+    game.data.balance.offlineResearchMinutes = undefined;
+    s = game.sys.economy.computeOffline(4 * H);
+    expect(s.rp).toBe(1440);
+    expect(s.rpCapped).toBeUndefined();
   });
 
   it('end to end: load after 4h -> Welcome Back summary -> doubled claim', () => {

@@ -6,8 +6,31 @@
  */
 import { System } from './System';
 import type { ResearchDef, ResourceBag } from '../data/schema';
+import { MASTERY_LINES } from '../data/mastery';
+import { levelOf, masteryBonus, masteryCost, masteryLine, type MasteryLine } from './mastery';
+
+declare module '../core/events' {
+  interface GameEvents {
+    /** A Research Mastery level was bought (sim/mastery.ts). */
+    'research:mastered': { line: string; level: number };
+  }
+}
 
 export type ResearchStatus = 'done' | 'available' | 'locked_prereq' | 'locked_tier';
+
+/** One Mastery line as the research panel shows it. */
+export interface MasteryInfo {
+  line: MasteryLine;
+  level: number;
+  /** Open at this colony tier. */
+  open: boolean;
+  /** Total bonus now and after the next level (0.21 = +21%). */
+  bonus: number;
+  next: number;
+  /** RP for the next level. */
+  cost: number;
+  ready: boolean;
+}
 
 /** Everything the research panel needs to explain one node. */
 export interface ResearchRequirements {
@@ -41,6 +64,7 @@ export class ResearchSystem extends System {
     this.checkTimer += dt;
     if (this.checkTimer < 1) return;
     this.checkTimer = 0;
+    this.announceMastery();
     // Gentle nudge the first time research becomes affordable (one toast per check).
     let first: ResearchDef | null = null;
     let count = 0;
@@ -140,6 +164,76 @@ export class ResearchSystem extends System {
     bus.emit('ui:celebrate', { title: 'Research Complete!', text: this.celebrateText(def), icon: def.icon });
     bus.emit('sfx', { id: 'research_done' });
     return true;
+  }
+
+  // ---------------------------------------------------------------- Mastery (repeatable research)
+
+  /** The colony tier Mastery opens at (its first line). */
+  masteryTier(): number {
+    return MASTERY_LINES.reduce((m, l) => Math.min(m, l.tier), Infinity);
+  }
+
+  masteryOpen(): boolean {
+    return this.game.state.colony.tier >= this.masteryTier();
+  }
+
+  masteryLevel(id: string): number {
+    return levelOf(this.game.state.research.mastery, id);
+  }
+
+  /** RP for the next level of a line (Infinity for an unknown line). */
+  masteryCost(id: string): number {
+    const line = masteryLine(id);
+    return line ? masteryCost(line, this.masteryLevel(id) + 1) : Infinity;
+  }
+
+  canMaster(id: string): boolean {
+    const line = masteryLine(id);
+    if (!line || this.game.state.colony.tier < line.tier) return false;
+    return this.game.state.research.points >= this.masteryCost(id);
+  }
+
+  masteryInfo(): MasteryInfo[] {
+    const tier = this.game.state.colony.tier;
+    return MASTERY_LINES.map((line) => {
+      const level = this.masteryLevel(line.id);
+      return {
+        line,
+        level,
+        open: tier >= line.tier,
+        bonus: masteryBonus(line, level),
+        next: masteryBonus(line, level + 1),
+        cost: masteryCost(line, level + 1),
+        ready: this.canMaster(line.id),
+      };
+    });
+  }
+
+  /** Spend RP on the next level of a Mastery line. Repeatable; no cap. */
+  master(id: string): boolean {
+    const line = masteryLine(id);
+    if (!line || !this.canMaster(id)) {
+      this.game.bus.emit('sfx', { id: 'ui_error' });
+      return false;
+    }
+    const st = this.game.state.research;
+    st.points -= this.masteryCost(id);
+    st.mastery ??= {};
+    const level = this.masteryLevel(id) + 1;
+    st.mastery[id] = level;
+    this.game.sys.economy.markDirty();
+    this.game.bus.emit('research:mastered', { line: id, level });
+    this.game.bus.emit('sfx', { id: 'research_done' });
+    return true;
+  }
+
+  /** Once per colony: a quiet note when Mastery opens (tapping it opens the Research panel). */
+  private announceMastery(): void {
+    const g = this.game;
+    const flags = g.state.tutorial.flags;
+    if (flags.masteryIntro || !this.masteryOpen()) return;
+    flags.masteryIntro = true;
+    g.toast('Mastery is open: spare research points now buy lasting colony bonuses', 'info', '🔬', 'research');
   }
 
   addPoints(n: number): void {

@@ -349,7 +349,11 @@ export type ModifierStat =
   | 'playerHp'
   | 'offlineHours'
   | 'recruitSlots'
-  | 'invasionReward';
+  | 'invasionReward'
+  /** Colonist work speed at their workplace (Crew mastery): multiplies their productivity. */
+  | 'workSpeed'
+  /** Expedition haul (Expeditions mastery). */
+  | 'expeditionHaul';
 
 export interface Modifier {
   stat: ModifierStat;
@@ -628,7 +632,9 @@ export type MissionType =
   | 'rescue' // rescue survivors from camps
   | 'expedition' // target = 'launch' | 'collect' | 'frontier' | region id | expedition id (see sim/expeditions.ts)
   | 'wish' // grant colonists' wishes; target = WishKind or '*' (see sim/wishes.ts)
-  | 'photo'; // take photos in Photo Mode (target '*')
+  | 'photo' // take photos in Photo Mode (target '*')
+  | 'festival' // hold Colony Spirit festivals (target '*')
+  | 'mastery'; // research Mastery levels (target = line id or '*')
 
 export interface MissionDef {
   id: string;

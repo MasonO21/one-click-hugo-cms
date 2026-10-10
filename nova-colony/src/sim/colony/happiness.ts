@@ -120,13 +120,14 @@ export function tripMood(game: Game, c: Colonist): number {
 
 /**
  * Productivity multiplier at the colonist's workplace (>= 1):
- * (1 + specialtyMatch + (skill-1) x perLevel + trait) x (1 + max(0, happiness - 50) / 100)
+ * (1 + specialtyMatch + (skill-1) x perLevel + trait) x (1 + max(0, happiness - 50) / 100) x friendship x Crew mastery
  */
 export function productivityOf(game: Game, layout: Layout, c: Colonist): number {
   const b = game.data.balance;
   const job = c.workplace != null ? layout.byId.get(c.workplace)?.def.workers?.job : undefined;
   const trait = game.data.trait(c.trait);
   const skill = 1 + (job && job === c.specialty ? b.specialtyBonus : 0) + (c.skill - 1) * b.skillBonusPerLevel + (trait?.productivity ?? 0);
-  // friendship: from three hearts the colonist works a little harder (sim/wishes.ts)
-  return Math.max(1, skill * (1 + Math.max(0, c.happiness - 50) / 100) * (1 + friendProductivity(game, c)));
+  // friendship: from three hearts the colonist works a little harder (sim/wishes.ts); Crew mastery: everyone does
+  const crew = game.sys.economy.modifier('workSpeed');
+  return Math.max(1, skill * (1 + Math.max(0, c.happiness - 50) / 100) * (1 + friendProductivity(game, c)) * (crew > 0 ? crew : 1));
 }

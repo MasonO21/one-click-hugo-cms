@@ -56,7 +56,7 @@ export class ColonistSystem extends System {
         this.dirty = true;
       });
     }
-    for (const e of ['combat:warning', 'combat:started', 'combat:ended', 'time:nightfall', 'time:sunrise'] as const) {
+    for (const e of ['combat:warning', 'combat:started', 'combat:ended', 'time:nightfall', 'time:sunrise', 'spirit:festival', 'spirit:festivalEnded'] as const) {
       bus.on(e, () => this.ai.kick());
     }
   }
@@ -243,6 +243,34 @@ export class ColonistSystem extends System {
   freeBeds(): number {
     this.syncLayout();
     return Math.max(0, this.layout.beds - this.game.state.colonists.list.length);
+  }
+
+  /** Decor/comfort, entertainment and medical points across the colony (Colony Spirit reads them). */
+  amenities(): { comfort: number; entertainment: number; medical: number } {
+    this.syncLayout();
+    const l = this.layout;
+    return { comfort: l.comfort, entertainment: l.entertainment, medical: l.medical };
+  }
+
+  /**
+   * Where the colony gathers for a festival: the campfire nearest the core (its half-size in `r`), else the core.
+   * Null before there is a core.
+   */
+  gatherSpot(): { x: number; z: number; r: number } | null {
+    this.syncLayout();
+    const core = this.layout.core;
+    if (!core) return null;
+    let best: { x: number; z: number; r: number } | null = null;
+    let bd = Infinity;
+    for (const p of this.layout.meals) {
+      if (!p.usable || (p.def.model !== 'campfire' && p.def.model !== 'campfire_lounge')) continue;
+      const d = (p.x - core.x) ** 2 + (p.z - core.z) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = { x: p.x, z: p.z, r: Math.max(p.hw, p.hd) };
+      }
+    }
+    return best ?? { x: core.x, z: core.z, r: Math.max(core.hw, core.hd) };
   }
 
   /** Is there an active building with the `recruit` flag (the recruitment board works)? */

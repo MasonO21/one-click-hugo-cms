@@ -1,0 +1,70 @@
+/* ---------- Colony Spirit chip (ui/hud/SpiritChip.ts) ---------- */
+.schip.spirit {
+  padding: 0 0.45em;
+}
+.schip.spirit .sp-ring {
+  --p: 0;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1.95em;
+  height: 1.95em;
+  border-radius: 50%;
+  background: conic-gradient(#ffc66e calc(var(--p) * 360deg), rgba(255, 246, 227, 0.16) 0);
+  transition: --p 0.4s;
+}
+.schip.spirit .sp-ring::before {
+  content: '';
+  position: absolute;
+  inset: 0.2em;
+  border-radius: 50%;
+  background: #2a1f46;
+}
+.schip.spirit .sp-ring .ic.aico {
+  position: relative;
+  width: 1.45em;
+  height: 1.45em;
+  margin: 0;
+}
+.schip.spirit .sp-ring .ic.aico.emoji {
+  font-size: 0.9em;
+}
+.schip.spirit .v {
+  font-variant-numeric: tabular-nums;
+}
+/* a festival: warm lantern light, the ring counts the time down */
+.schip.spirit.fest {
+  background: linear-gradient(180deg, rgba(255, 190, 90, 0.96), rgba(214, 110, 46, 0.96));
+  color: #3a1d00;
+  animation: sp-glow 2.4s ease-in-out infinite;
+}
+.schip.spirit.fest .sp-ring {
+  background: conic-gradient(#fff3d6 calc(var(--p) * 360deg), rgba(58, 29, 0, 0.18) 0);
+}
+.schip.spirit.fest .sp-ring::before {
+  background: #8a3f16;
+}
+@keyframes sp-glow {
+  0%,
+  100% {
+    box-shadow: 0 0.15em 0.5em rgba(24, 12, 44, 0.22), 0 0 0 0 rgba(255, 190, 90, 0);
+  }
+  50% {
+    box-shadow: 0 0.15em 0.5em rgba(24, 12, 44, 0.22), 0 0 0.9em 0.15em rgba(255, 190, 90, 0.55);
+  }
+}
+/* (reduced motion: base.css stops every animation under .nv-root.reduce-motion) */
+.hud-pop .sp-note {
+  margin-top: 0.4em;
+  font-size: 0.86em;
+  font-weight: 700;
+  line-height: 1.25;
+  opacity: 0.8;
+  white-space: normal;
+}
+.hud-pop .sp-pop h4 .ic.aico {
+  display: inline-block;
+  width: 1.3em;
+  height: 1.3em;
+  vertical-align: -0.3em;
+}

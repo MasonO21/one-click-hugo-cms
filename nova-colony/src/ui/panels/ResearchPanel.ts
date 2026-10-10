@@ -1,7 +1,9 @@
 /**
  * ResearchPanel — the tech tree. Category tabs, nodes laid out by `pos` with connectors, status
  * colours (done / available / locked), the RP bank with a "+RP" ad button, and a detail card with
- * prerequisites, unlocks, effects and the Research button.
+ * prerequisites, unlocks, effects and the Research button. From the Stone tier a Mastery tab lists the repeatable
+ * research lines (sim/mastery.ts): level, total bonus, the next level's bonus and price, and a big Research button.
+ * With nothing left to research in the tree, the panel opens on Mastery.
  */
 import { Panel, type PanelTitle } from './Panel';
 import type { ResearchDef } from '../../data/schema';
@@ -13,6 +15,12 @@ import { buildingUnlock, modifierText, vehicleUnlock, type UnlockEntry } from '.
 import { adButton, btn, costChips, emptyState, section, tabs, unlockChip } from '../widgets';
 import { fill, h, s } from '../dom';
 import { hudArt, researchArt, researchIcon } from '../art';
+import type { MasteryInfo } from '../../sim/research';
+import { nextBonus, pct } from '../../sim/mastery';
+import '../styles/mastery.css';
+
+/** The Mastery tab's id (not a ResearchCategory). */
+const MASTERY = 'mastery';
 
 export class ResearchPanel extends Panel {
   readonly name = 'research';
@@ -26,16 +34,20 @@ export class ResearchPanel extends Panel {
 
   private categories(): string[] {
     const present = new Set(this.data.research.map((r) => r.category));
-    return RESEARCH_CATEGORIES.filter((c) => present.has(c.id as never)).map((c) => c.id);
+    const cats = RESEARCH_CATEGORIES.filter((c) => present.has(c.id as never)).map((c) => c.id);
+    if (this.game.sys.research.masteryOpen()) cats.push(MASTERY);
+    return cats;
   }
 
   override onOpen(arg: unknown): void {
     const id = this.pick<string>(arg, 'id');
     const cats = this.categories();
-    // first visit: the first tab with something to research (an Alloy colony opened on Reinforced Wood, done long ago)
+    // first visit: the first tab with something to research (an Alloy colony opened on Reinforced Wood, done long ago);
+    // with nothing to research in the tree, Mastery (where the spare points go)
     const rs = this.game.sys.research;
     const open = cats.find((c) => this.data.research.some((r) => r.category === c && rs.status(r.id) === 'available'));
-    this.cat = cats.includes(ResearchPanel.lastCat) ? ResearchPanel.lastCat : (open ?? cats[0] ?? '');
+    const idle = !rs.available().some((r) => rs.canResearch(r.id)) && cats.includes(MASTERY);
+    this.cat = idle && !id ? MASTERY : cats.includes(ResearchPanel.lastCat) ? ResearchPanel.lastCat : (open ?? cats[0] ?? '');
     // no node asked for: the research the main mission is waiting on (the guide points here for it)
     const focus = id ?? this.game.sys.tutorial.researchFocus();
     if (focus) this.focusNode(focus);
@@ -58,6 +70,7 @@ export class ResearchPanel extends Panel {
   }
 
   private defaultSel(): string | null {
+    if (this.cat === MASTERY) return null;
     const rs = this.game.sys.research;
     const inCat = this.data.research.filter((r) => r.category === this.cat);
     return (inCat.find((r) => rs.status(r.id) === 'available') ?? inCat[0])?.id ?? null;
@@ -70,6 +83,10 @@ export class ResearchPanel extends Panel {
   override signature(): string {
     const g = this.game;
     const rs = g.sys.research;
+    if (this.cat === MASTERY) {
+      const lv = rs.masteryInfo().map((m) => `${m.level}${m.ready ? '!' : ''}${m.open ? '' : 'x'}`).join(',');
+      return `${this.cat}|${Math.floor(g.state.research.points)}|${g.state.colony.tier}|${lv}|${g.state.research.completed.length}`;
+    }
     const inCat = this.data.research.filter((r) => r.category === this.cat);
     const mask = inCat.map((r) => rs.status(r.id)[0] + (rs.canResearch(r.id) ? '!' : '')).join('');
     return `${this.cat}|${this.sel}|${Math.floor(g.state.research.points)}|${g.state.research.completed.length}|${g.state.colony.tier}|${mask}`;
@@ -100,11 +117,17 @@ export class ResearchPanel extends Panel {
       label: c.label,
       badge: this.data.research.filter((r) => r.category === c.id && rs.canResearch(r.id)).length || undefined,
     }));
+    if (cats.includes(MASTERY)) items.push({ id: MASTERY, icon: '👑', art: researchArt('colony_mastery'), label: 'Mastery', badge: undefined });
+    if (this.cat === MASTERY && !cats.includes(MASTERY)) this.cat = cats[0] ?? '';
     const tabBar = tabs(items, this.cat, (id) => {
       this.cat = id;
       this.sel = this.defaultSel();
       this.rerender();
     });
+    if (this.cat === MASTERY) {
+      fill(this.body, tabBar, this.mastery());
+      return;
+    }
 
     const layout = layoutTree(this.data.research, this.cat);
     const tree = h('div', { class: 'tree', style: { width: `${layout.width}px`, height: `${layout.height}px` } });
@@ -120,6 +143,56 @@ export class ResearchPanel extends Panel {
 
     const detail = this.detail();
     fill(this.body, tabBar, h('div', { class: 'research-layout' }, scroll, detail));
+  }
+
+  /** Mastery: one card per line (level, bonus now, next level's bonus and price, a big Research button). */
+  private mastery(): HTMLElement {
+    const rs = this.game.sys.research;
+    const list = h('div', { class: 'mastery-list' });
+    for (const m of rs.masteryInfo()) list.appendChild(this.masteryCard(m));
+    return h(
+      'div',
+      { class: 'mastery' },
+      h('div', { class: 'mastery-intro small', text: 'Spare research points buy lasting bonuses. Each level costs a little more than the last, and there is no cap.' }),
+      list,
+    );
+  }
+
+  private masteryCard(m: MasteryInfo): HTMLElement {
+    const g = this.game;
+    const rs = g.sys.research;
+    const { line } = m;
+    const head = h(
+      'div',
+      { class: 'mc-head' },
+      researchIcon(line.art, line.icon, 'mc-ic', 'span'),
+      h('div', { class: 'grow' }, h('div', { class: 'mc-name' }, line.name, h('span', { class: 'mc-lv', text: m.level > 0 ? `Lv ${m.level}` : 'New' })), h('div', { class: 'mc-now', text: m.level > 0 ? `${pct(m.bonus)} ${line.label}` : line.blurb })),
+    );
+    const card = h('div', { class: 'card mc' + (m.open ? '' : ' locked') + (m.ready ? ' ready' : ''), data: { mastery: line.id } }, head);
+    if (!m.open) {
+      card.appendChild(h('div', { class: 'mc-lock small', text: `🔒 Opens at the ${this.data.tier(line.tier).name} tier` }));
+      return card;
+    }
+    if (m.level > 0) card.appendChild(h('div', { class: 'mc-blurb small mute', text: line.blurb }));
+    const need = Math.max(0, Math.ceil(m.cost - g.state.research.points));
+    const step = nextBonus(line, m.level);
+    card.appendChild(
+      btn({
+        label: `🔬 Research · ${pct(step)}`,
+        sub: `${fmt(m.cost)} RP · Lv ${m.level + 1}`,
+        cls: 'big good block mc-btn',
+        disabled: m.ready ? false : `Need ${fmt(need)} more research points`,
+        data: { action: 'master', line: line.id },
+        onClick: () => {
+          if (rs.master(line.id)) {
+            this.ctx.haptic('success');
+            this.ctx.toast(`${line.name} Mastery ${rs.masteryLevel(line.id)}: ${pct(m.next)} ${line.label}`, 'success', researchArt(line.art) ?? line.icon);
+          }
+          this.rerender();
+        },
+      }),
+    );
+    return card;
   }
 
   private node(d: ResearchDef, x: number, y: number): HTMLElement {

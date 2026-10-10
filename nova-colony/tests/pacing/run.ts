@@ -87,6 +87,14 @@ export interface Sample {
   binding: string;
   eta: number;
   activity: Activity;
+  /** Colony Spirit meter 0..100 and its fill rate per online minute; lifetime festivals (sim/colony/spirit.ts). */
+  spirit: number;
+  spiritRate: number;
+  festivals: number;
+  /** Research Mastery levels by line (sim/mastery.ts) and whether one is affordable now. */
+  mastery: Record<string, number>;
+  masteryOpen: boolean;
+  masteryAffordable: boolean;
 }
 
 export interface RaidRec {
@@ -143,7 +151,8 @@ export interface RunResult {
   wallMs: number;
 }
 
-const ACCOMPLISHMENT = new Set(['build', 'research', 'recruit', 'mission', 'tier', 'raid', 'expedition', 'wish', 'discover']);
+// a festival counts; Mastery levels are reported on their own (several quick taps per visit would flatter the gaps)
+const ACCOMPLISHMENT = new Set(['build', 'research', 'recruit', 'mission', 'tier', 'raid', 'expedition', 'wish', 'discover', 'festival']);
 
 export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
   const opts: RunOptions = { ...DEFAULTS, ...partial };
@@ -209,6 +218,8 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
     });
     bus.on('building:upgraded', (e) => ev('upgrade', `${e.def} L${e.level}`));
     bus.on('research:completed', (e) => ev('research', e.id));
+    bus.on('research:mastered', (e) => ev('mastery', `${e.line} ${e.level}`));
+    bus.on('spirit:festival', (e) => ev('festival', String(e.n)));
     bus.on('colonist:recruited', (e) => ev('recruit', e.rarity));
     bus.on('mission:claimed', (e) => ev('mission', `${g.data.mission(e.id)?.chain}:${e.id}`));
     bus.on('colony:tierUp', (e) => {
@@ -344,6 +355,12 @@ export function runPlaythrough(partial: Partial<RunOptions> = {}): RunResult {
       binding: bot.goal.binding,
       eta: bot.goal.eta,
       activity: bot.activity,
+      spirit: st.spirit.meter,
+      spiritRate: g.sys.spirit.rate().perMinute,
+      festivals: st.spirit.festivals,
+      mastery: { ...st.research.mastery },
+      masteryOpen: g.sys.research.masteryOpen(),
+      masteryAffordable: g.sys.research.masteryInfo().some((m) => m.ready),
     });
   };
 

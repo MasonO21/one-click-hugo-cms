@@ -307,8 +307,9 @@ describe('data.integrity — missions', () => {
       expect(data.mission(n)!.chain, `${m.id}.next must stay in its chain`).toBe(m.chain);
     }
     const heads = side.filter((m) => !referenced.has(m.id));
-    // day-one heads stay a handful; tier-gated heads arrive a few at a time as the colony grows
-    const dayOne = heads.filter((m) => !m.minTier);
+    // day-one heads stay a handful; tier-gated heads arrive a few at a time as the colony grows (the festival and
+    // mastery chains wait for their feature to open, sim/missions.ts sideFeasible, so they are not day-one goals)
+    const dayOne = heads.filter((m) => !m.minTier && m.type !== 'festival' && m.type !== 'mastery');
     expect(dayOne.length).toBeGreaterThanOrEqual(5);
     expect(dayOne.length).toBeLessThanOrEqual(10);
     for (let t = 1; t <= 6; t++) expect(heads.filter((m) => m.minTier === t).length, `heads opening at tier ${t}`).toBeLessThanOrEqual(6);

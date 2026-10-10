@@ -17,6 +17,7 @@ import { ResourceBar } from './ResourceBar';
 import { InteractButton } from './Interact';
 import { MissionTracker } from './MissionTracker';
 import { Banners } from './Banners';
+import { SpiritChip } from './SpiritChip';
 
 interface NavDef {
   id: string;
@@ -112,6 +113,8 @@ export class Hud {
   private readonly chipExpV: HTMLElement;
   private readonly hpFill: HTMLElement;
   private readonly boostWrap: HTMLElement;
+  /** Colony Spirit meter / festival countdown (SpiritChip.ts). */
+  private readonly spirit: SpiritChip;
   private readonly statusEl: HTMLElement;
   private statusH = '';
   private boostKey = '';
@@ -186,7 +189,8 @@ export class Hud {
     this.chipExp.addEventListener('click', () => ctx.open('expeditions'));
 
     this.boostWrap = h('div', { class: 'row', style: 'display:contents' });
-    const status = h('div', { class: 'hud-status' }, this.chipPop, this.chipPower, dayRow.el, this.chipExp, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
+    this.spirit = new SpiritChip(ctx, (anchor, build) => this.showPop(anchor, build));
+    const status = h('div', { class: 'hud-status' }, this.chipPop, this.spirit.el, this.chipPower, dayRow.el, this.chipExp, this.chipDef, this.chipPack, this.chipHp, this.boostWrap);
     this.statusEl = status;
 
     // --- rail + dock
@@ -297,6 +301,9 @@ export class Hud {
     setText(this.chipPopV, d.housing.beds > 0 ? `${n}/${d.housing.beds}` : String(n));
     const face = happinessFace(d.happiness.average);
     setText(this.chipPopS, n > 0 ? `${face.icon} ${Math.round(d.happiness.average)}` : '');
+
+    // Colony Spirit
+    this.spirit.poll();
 
     // power
     const hasPower = d.power.produced > 0 || d.power.consumed > 0;

@@ -44,6 +44,7 @@ export interface GameState {
   expeditions: ExpeditionState;
   achievements: AchievementState;
   wishes: WishState;
+  spirit: SpiritState;
   stats: StatsState;
   settings: SettingsState;
 }
@@ -115,7 +116,7 @@ export interface BuildingState {
   blueprints: Blueprint[];
 }
 
-export type ColonistActivity = 'idle' | 'walking' | 'working' | 'sleeping' | 'eating' | 'relaxing' | 'sheltering';
+export type ColonistActivity = 'idle' | 'walking' | 'working' | 'sleeping' | 'eating' | 'relaxing' | 'sheltering' | 'celebrating';
 
 export interface ColonistAppearance {
   /** Indices into palettes defined by the renderer. */
@@ -174,6 +175,8 @@ export interface ResearchState {
   /** Unspent research points. */
   points: number;
   completed: string[];
+  /** Research Mastery level by line id (data/mastery.ts); repeatable, no cap. */
+  mastery: Record<string, number>;
 }
 
 export interface CraftJob {
@@ -480,6 +483,19 @@ export interface WishState {
   recent: string[];
 }
 
+/** Colony Spirit (sim/colony/spirit.ts). Times are `playTime` seconds: the meter and a festival only move online. */
+export interface SpiritState {
+  /** 0..SPIRIT_RULES.full. */
+  meter: number;
+  /** playTime when the current festival ends; 0 = none running. */
+  festivalUntil: number;
+  /** Where the colony gathers for the current festival (world units). */
+  fx: number;
+  fz: number;
+  /** Lifetime festivals. */
+  festivals: number;
+}
+
 export interface StatsState {
   sessions: number;
   /** Total online seconds (mirrors playTime but never reset). */
@@ -553,7 +569,7 @@ export function createInitialState(seed: number, now: number): GameState {
     resources: { amounts: {}, lifetime: {} },
     buildings: { list: [], nextId: 1, blueprints: [] },
     colonists: { list: [], nextId: 1, candidates: [], refreshAt: 0 },
-    research: { points: 0, completed: [] },
+    research: { points: 0, completed: [], mastery: {} },
     crafting: { queue: [], nextJobId: 1, crafted: {} },
     player: { x: 3, z: 4, rot: 0, hp: 100, equip: {}, items: {}, backpack: {}, vehicle: null, vehicles: [], downUntil: 0 },
     world: {
@@ -600,6 +616,7 @@ export function createInitialState(seed: number, now: number): GameState {
     expeditions: { list: [], nextId: 1, launched: 0, collected: 0, frontier: { charted: [], signal: 0, claimed: [], announced: false } },
     achievements: { unlocked: {}, claimed: {} },
     wishes: { open: [], nextId: 1, nextAt: -1, offered: 0, granted: 0, expired: 0, bonds: {}, moods: {}, recent: [] },
+    spirit: { meter: 0, festivalUntil: 0, fx: 0, fz: 0, festivals: 0 },
     stats: { sessions: 0, online: 0, gathered: 0, built: 0, crafted: 0, kills: 0, wavesWon: 0, explored: 0, adsWatched: 0, purchases: 0 },
     settings: { music: 0.6, sfx: 0.8, quality: 'medium', qualityMode: 'auto', qualityDevice: '', haptics: true, autoGather: true, analytics: false, analyticsAsked: false, showFps: false, leftHanded: false, batterySaver: false, largeText: false, reduceMotion: false, notifications: false, notifyAsked: false },
   };

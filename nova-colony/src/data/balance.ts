@@ -11,6 +11,8 @@ export const BALANCE: BalanceDef = {
   offlineEfficiency: 0.8,
   /** Welcome Back may overflow storage up to 3x capacity — returning should always feel generous. */
   offlineStorageMult: 3,
+  /** Labs bank about two hours of research points while you are away (Welcome Back says when they filled up). */
+  offlineResearchMinutes: 120,
   autosaveSeconds: 20,
   playerSpeed: 7,
   playerHp: 100,

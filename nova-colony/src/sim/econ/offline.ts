@@ -11,6 +11,8 @@
  *  - Converters may draw on the stockpile (the factories really were working); those inputs are
  *    reported in `spent` and deducted once when the summary is applied (never doubled).
  *  - Gains are clamped to free storage capacity.
+ *  - Research points stop after `rpMinutes` of credited time (the labs bank about two hours, like a store fills up),
+ *    so the research backlog stays something you come back to spend.
  */
 import type { ResourceBag } from '../../data/schema';
 
@@ -27,12 +29,16 @@ export interface OfflineModel {
   upkeep: [string, number][];
   /** Research points per minute. */
   rpPerMin: number;
+  /** Most credited minutes that earn research points (undefined = no cap). */
+  rpMinutes?: number;
 }
 
 export interface OfflineResult {
   gains: ResourceBag;
   spent: ResourceBag;
   rp: number;
+  /** True when research stopped at `rpMinutes` before the time ran out. */
+  rpCapped?: boolean;
 }
 
 /** Upper bound on simulation steps (one step per simulated minute until then). */
@@ -51,7 +57,9 @@ export function simulateOffline(
   const gains: ResourceBag = {};
   const spent: ResourceBag = {};
   const minutes = Math.max(0, seconds) / 60;
-  const rp = Math.floor(Math.max(0, model.rpPerMin) * minutes);
+  const rpCap = model.rpMinutes !== undefined && model.rpMinutes >= 0 ? model.rpMinutes : Infinity;
+  const rp = Math.floor(Math.max(0, model.rpPerMin) * Math.min(minutes, rpCap));
+  const rpCapped = model.rpPerMin > 0 && minutes > rpCap;
   if (minutes <= 0) return { gains, spent, rp: 0 };
 
   // Aggregate simple producers per resource; keep converters as separate flows.
@@ -116,5 +124,5 @@ export function simulateOffline(
     if (delta >= 1) gains[r] = Math.floor(delta + 1e-6);
     else if (delta <= -1) spent[r] = Math.floor(-delta + 1e-6);
   }
-  return { gains, spent, rp };
+  return rpCapped ? { gains, spent, rp, rpCapped } : { gains, spent, rp };
 }

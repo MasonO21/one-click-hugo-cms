@@ -3,6 +3,12 @@
  */
 import type { RunResult, EventRec } from './run';
 import { isAccomplishment } from './run';
+import { masteryCost, masteryLine } from '../../src/sim/mastery';
+
+const masteryCostOf = (line: string, level: number): number => {
+  const l = masteryLine(line);
+  return l && level > 0 ? masteryCost(l, level) : 0;
+};
 
 const TIER_NAMES = ['Wood', 'Reinforced', 'Stone', 'Steel', 'Alloy', 'Nano', 'Titanium'];
 
@@ -71,7 +77,7 @@ export function tierTable(r: RunResult): string {
     rows.push(`| ${sp.tier} ${TIER_NAMES[sp.tier]} | ${reach} | ${cal} | ${sessions} | ${samp?.colonists ?? '-'} | ${samp?.buildings ?? '-'} | ${samp?.researchDone ?? '-'} | ${acc.length} in ${fmtMin(sp.t1 - sp.t0)} min | ${fmtMin(quantile(gaps, 0.5))} | ${fmtMin(quantile(gaps, 0.9))} | ${fmtMin(Math.max(...gaps))} | ${dry.length} (${fmtMin(dry.reduce((a, b) => a + b, 0))} min) | ${raids} | ${topBind} |`);
   }
   rows.push('');
-  rows.push('*colonists / buildings / research at the end of the tier span (buildings exclude wall/floor pieces). Gaps are online minutes between accomplishments (build complete, research, recruit, mission claimed, tier, raid won, expedition home, wish granted, region discovered).');
+  rows.push('*colonists / buildings / research at the end of the tier span (buildings exclude wall/floor pieces). Gaps are online minutes between accomplishments (build complete, research, recruit, mission claimed, tier, raid won, expedition home, wish granted, region discovered, festival).');
   return rows.join('\n');
 }
 
@@ -143,6 +149,43 @@ export function researchTable(r: RunResult): string {
   return rows.join('\n');
 }
 
+/** Research Mastery and Colony Spirit per tier (the long tail: sim/mastery.ts, sim/colony/spirit.ts). */
+export function longTailTable(r: RunResult): string {
+  const rows = [
+    '| Tier | Mastery levels bought | RP into Mastery | levels at end (prod/stor/build/def/crew/exp) | share of time with nothing researchable (tree + Mastery) | share of time RP covers a tree tech or a Mastery level | festivals | online min between festivals | avg Spirit fill /min |',
+    '|---|---|---|---|---|---|---|---|---|',
+  ];
+  const lines = ['production', 'logistics', 'construction', 'defense', 'crew', 'expeditions'];
+  const fest = r.events.filter((e) => e.kind === 'festival').map((e) => e.t);
+  for (const sp of tierSpans(r)) {
+    const ss = r.samples.filter((s) => s.t >= sp.t0 && s.t < sp.t1);
+    if (!ss.length) continue;
+    const ev = r.events.filter((e) => e.kind === 'mastery' && e.t >= sp.t0 && e.t < sp.t1);
+    // cost of a level from its line and number (the events carry "line level")
+    let spent = 0;
+    for (const e of ev) {
+      const [line, lv] = e.what.split(' ');
+      spent += masteryCostOf(line, Number(lv));
+    }
+    const end = ss.at(-1)!;
+    const lv = lines.map((l) => end.mastery?.[l] ?? 0).join('/');
+    const none = ss.filter((s) => s.researchAvailable === 0 && !s.masteryOpen).length;
+    const can = ss.filter((s) => s.researchAffordable > 0 || s.masteryAffordable).length;
+    const fs = fest.filter((t) => t >= sp.t0 && t < sp.t1);
+    const all = fest.filter((t) => t < sp.t1);
+    const gaps: number[] = [];
+    for (const t of fs) {
+      const i = all.indexOf(t);
+      if (i > 0) gaps.push(t - all[i - 1]);
+    }
+    const rate = ss.reduce((a, s) => a + (s.spiritRate ?? 0), 0) / ss.length;
+    rows.push(`| ${sp.tier} | ${ev.length} | ${Math.round(spent).toLocaleString('en-US')} | ${lv} | ${pct(none, ss.length)} | ${pct(can, ss.length)} | ${fs.length} | ${gaps.length ? gaps.map((g) => fmtMin(g)).join(', ') : '-'} | ${rate.toFixed(2)} |`);
+  }
+  rows.push('');
+  rows.push('The bot buys the cheapest Mastery level with what is left after the research chain to the next tier gate, so the bank rarely covers one for long.');
+  return rows.join('\n');
+}
+
 export function missionTable(r: RunResult): string {
   const rows = ['| Tier | main missions claimed | side claimed | daily claimed | avg side active | avg side claimable (unclaimed) | share of time main mission is waiting on production only (eta > 10 min) |', '|---|---|---|---|---|---|---|'];
   for (const sp of tierSpans(r)) {
@@ -188,6 +231,9 @@ export function fullReport(r: RunResult, title: string): string {
     '',
     '### Research backlog',
     researchTable(r),
+    '',
+    '### Long tail: Research Mastery and Colony Spirit',
+    longTailTable(r),
     '',
     '### Missions',
     missionTable(r),

@@ -240,7 +240,12 @@ export class ExpeditionSystem extends System {
   preview(target: string, squad: readonly Id[], vehicle: string | null = null): HaulPlan | null {
     const spec = this.spec(target);
     if (!spec) return null;
-    return planHaul(this.game.data, spec, this.members(squad), vehicle ? this.game.data.vehicle(vehicle) : null);
+    return planHaul(this.game.data, spec, this.members(squad), vehicle ? this.game.data.vehicle(vehicle) : null, this.haulMod());
+  }
+
+  /** Expeditions mastery (sim/mastery.ts): the haul is valued when the squad gets home. */
+  private haulMod(): number {
+    return this.game.sys.economy.modifier('expeditionHaul');
   }
 
   private members(ids: readonly Id[]): Member[] {
@@ -292,7 +297,7 @@ export class ExpeditionSystem extends System {
       return null;
     }
     const spec = this.spec(target)!;
-    const plan = planHaul(g.data, spec, this.members(squad), vehicle ? g.data.vehicle(vehicle) : null);
+    const plan = planHaul(g.data, spec, this.members(squad), vehicle ? g.data.vehicle(vehicle) : null, this.haulMod());
     const st = g.state.expeditions;
     const now = g.now();
     const ids = [...squad];
@@ -370,7 +375,7 @@ export class ExpeditionSystem extends System {
     const vehicle = e.vehicle ? g.data.vehicle(e.vehicle) : null;
     const members = this.members(e.squad);
     if (spec && members.length) {
-      const plan = planHaul(g.data, spec, members, vehicle);
+      const plan = planHaul(g.data, spec, members, vehicle, this.haulMod());
       e.haul = rollHaul(g.data, plan, e.seed).reward;
       e.mood = plan.mood;
     } else {

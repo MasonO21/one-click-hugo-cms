@@ -108,6 +108,9 @@ export class MissionSystem extends System {
     bus.on('wish:offered', () => this.offerSide());
     // Photo Mode: every still taken counts (the Journal's "Say Cheese!")
     bus.on('photo:taken', () => this.bump('photo', [], 1));
+    // Colony Spirit festivals and Research Mastery levels (their side chains open with the feature)
+    bus.on('spirit:festival', () => this.bump('festival', [], 1));
+    bus.on('research:mastered', (e) => this.bump('mastery', [e.line], 1));
   }
 
   override onLoad(fresh: boolean): void {
@@ -361,6 +364,8 @@ export class MissionSystem extends System {
   private sideFeasible(def: MissionDef): boolean {
     if (this.tierLocked(def)) return false;
     if (def.type === 'wish') return !!this.game.sys.wishes?.started() || this.counter('wish') > 0;
+    if (def.type === 'festival') return !!this.game.sys.spirit?.open() || this.counter('festival') > 0;
+    if (def.type === 'mastery') return !!this.game.sys.research?.masteryOpen() || this.counter('mastery') > 0;
     if (def.type !== 'expedition') return true;
     const ex = this.game.sys.expeditions;
     if (def.target === 'frontier') return ex.frontierUnlocked();

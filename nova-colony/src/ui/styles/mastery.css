@@ -1,0 +1,101 @@
+/* ---------- Research Mastery (ResearchPanel's Mastery tab, sim/mastery.ts) ---------- */
+.mastery-intro {
+  margin: 0.1em 0.2em 0.6em;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+.mastery-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5em, 1fr));
+  gap: 0.7em;
+}
+.mastery .mc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45em;
+  padding: 0.7em 0.8em 0.8em;
+  border-radius: 1.1em;
+}
+.mastery .mc.ready {
+  border-color: var(--accent-l);
+}
+.mastery .mc.locked {
+  opacity: 0.7;
+  border-style: dashed;
+}
+.mastery .mc.locked .mc-ic {
+  filter: grayscale(1) opacity(0.6);
+}
+.mc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.mc-head .mc-ic {
+  flex: 0 0 auto;
+  width: 3.2em;
+  height: 3.2em;
+  font-size: 1em;
+  display: grid;
+  place-items: center;
+}
+.mc-head .mc-ic img,
+.mc-head img.mc-ic {
+  width: 3.2em;
+  height: 3.2em;
+  object-fit: contain;
+}
+.mc-head span.mc-ic:not(:has(img)) {
+  font-size: 2em;
+  width: 1.6em;
+  height: 1.6em;
+}
+.mc-name {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-weight: 900;
+  font-size: 1.08em;
+  line-height: 1.15;
+}
+.mc-lv {
+  font-size: 0.72em;
+  font-weight: 900;
+  padding: 0.12em 0.6em;
+  border-radius: 99px;
+  color: #fff;
+  background: linear-gradient(180deg, #b48a3e, #8a6526);
+  box-shadow: inset 0 -0.12em 0 rgba(0, 0, 0, 0.18);
+  white-space: nowrap;
+}
+.mc-now {
+  margin-top: 0.15em;
+  font-weight: 800;
+  font-size: 0.92em;
+  color: var(--good-d);
+  line-height: 1.2;
+}
+.mc.locked .mc-now,
+.mc:not(:has(.mc-blurb)) .mc-now {
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+.mc-blurb {
+  line-height: 1.25;
+}
+.mc-lock {
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+.mc .mc-btn {
+  margin-top: auto;
+}
+@media (orientation: portrait) {
+  .mastery-list {
+    grid-template-columns: 1fr;
+    gap: 0.55em;
+  }
+  .mastery .mc {
+    padding: 0.6em 0.7em 0.7em;
+  }
+}

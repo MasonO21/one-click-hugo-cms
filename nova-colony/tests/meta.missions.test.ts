@@ -15,7 +15,8 @@ describe('missions: setup', () => {
     for (const d of side) {
       // late chains wait for their tier; expedition chains until expeditions open (Stone tier + Radio Tower); the
       // wishes chain until the first colonist wish (after the tutorial); a goal that unlocks later waits for its tier
-      if (followUps.has(d.id) || d.minTier || d.type === 'expedition' || d.type === 'wish' || goalTier(game.data, d) > 0) expect(game.state.missions.active).not.toContain(d.id);
+      // (festivals and Mastery wait for their feature too: the Reinforced and Stone tiers)
+      if (followUps.has(d.id) || d.minTier || d.type === 'expedition' || d.type === 'wish' || d.type === 'festival' || d.type === 'mastery' || goalTier(game.data, d) > 0) expect(game.state.missions.active).not.toContain(d.id);
       else expect(game.state.missions.active).toContain(d.id);
     }
     expect(m.activeByChain('side').length).toBeGreaterThan(2);
@@ -414,11 +415,17 @@ describe('missions: persistence & repair', () => {
       opens.push(e.open);
     });
     expect(st.active).not.toContain('s_grid_solar');
+    tierUp(1);
+    // Colony Spirit opens at the Reinforced tier: its festival chain with it
+    expect(st.active).toContain('s_festival_one');
+    toasts.length = 0;
     tierUp(2);
     expect(st.active).not.toContain('s_grid_solar');
-    // only the Stone-tier tool step ("Equip an Iron Pickaxe") opens here, no late chain
-    expect(toasts.filter((t) => t.includes('side mission'))).toEqual(['A new side mission is ready']);
+    // only the Stone-tier tool step ("Equip an Iron Pickaxe") and the Mastery chain (it opens at Stone) start here,
+    // no late chain
+    expect(toasts.filter((t) => t.includes('side mission'))).toEqual(['2 new side missions are ready']);
     expect(st.active).toContain('s_toolup');
+    expect(st.active).toContain('s_mastery_one');
     tierUp(3);
     expect(st.active).toContain('s_grid_solar');
     expect(toasts).toContain('6 new side missions are ready');

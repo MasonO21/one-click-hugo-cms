@@ -10,7 +10,7 @@ import type { AchievementDef, AchievementMetric, AchievementSource, MissionType 
 /** Mission types MissionSystem keeps lifetime counters for (the counters an achievement may read). */
 export const COUNTED_TYPES: ReadonlySet<MissionType> = new Set<MissionType>([
   'gather', 'build', 'upgrade', 'recruit', 'rescue', 'discover', 'kill', 'defend', 'craft', 'research', 'loot', 'equip', 'spin', 'expedition', 'wish',
-  'photo',
+  'photo', 'festival', 'mastery',
 ]);
 
 /** Every metric the reader below knows. */

@@ -58,6 +58,8 @@ const A_AIM = 8;
 const A_DOWN = 9;
 /** Walking / standing with the gathering tool resting on the right shoulder. */
 const A_SHOULDER = 10;
+/** A Colony Spirit festival: a mug in hand, raised for a toast now and then, a gentle sway to the music. */
+const A_CHEER = 11;
 
 interface Pose {
   /** 0..1 gait amplitude. */
@@ -391,6 +393,26 @@ export class Characters {
         turn *= 1 - sip;
         thL = thR = 0;
         knL = knR = 0;
+        break;
+      }
+      case A_CHEER: {
+        // a mug in the left hand, lifted high for a toast now and then; a gentle sway and a little bounce on the beat
+        const toast = smooth(clamp((Math.sin(t * 0.55 + sd * 1.7) - 0.55) * 3, 0, 1));
+        const beat = Math.sin(t * 4.4 + sd);
+        uaL = lerp(-0.42, -2.5, toast);
+        uaLz = lerp(-0.16, -0.3, toast);
+        faL = lerp(-1.25, -0.35, toast);
+        uaR = -0.22 + beat * 0.14;
+        uaRz = 0.14;
+        faR = -0.85 + beat * 0.12;
+        tRx = 0.02;
+        tRy = 0;
+        tRz = Math.sin(t * 2.2 + sd) * 0.07;
+        thL = thR = 0;
+        knL = knR = 0.05 + Math.max(0, beat) * 0.1;
+        bob = -Math.max(0, beat) * 0.025;
+        nod = -0.06 * toast + beat * 0.03;
+        turn *= 0.35;
         break;
       }
       case A_SIT: {
@@ -765,6 +787,9 @@ export class Characters {
       case 'eating':
         pose = A_EAT;
         break;
+      case 'celebrating':
+        pose = A_CHEER;
+        break;
     }
     if (act !== 'walking' && act !== 'working' && this.carry.size) this.carry.delete(c.id);
     const run = raid ? 1 : 0.35;
@@ -774,7 +799,7 @@ export class Characters {
     if (this.uniHasBody) this.uniBody.push(_hip);
     if (this.uniHasHead) this.uniHead.push(_neck);
     if (tool) this.hold(tool, _foreR, 2.7);
-    else if (pose === A_EAT) this.hold('mug', _foreL, 0.15);
+    else if (pose === A_EAT || pose === A_CHEER) this.hold('mug', _foreL, 0.15);
     else if (pose === A_CARRY) this.tools.get(load === 1 ? 'logs' : 'sack')!.push(_hip);
     if (act === 'sleeping' && Math.random() < ctx.env.dt * 0.8 && inView(ctx.env, c.x, c.z, -40)) {
       ctx.particles.emit('glow', c.x + 0.3, y + 1.0, c.z, 0.2, 0.6, 0, 1.4, 0.1, '#9fdcff', { curve: 'grow' });

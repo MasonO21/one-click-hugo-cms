@@ -28,6 +28,7 @@ import { Aliens } from './actors/Aliens';
 import { Projectiles } from './actors/Projectiles';
 import { WishBubbles } from './actors/WishBubbles';
 import { ThemeFx } from './fx/ThemeFx';
+import { Festival } from './fx/Festival';
 import './models'; // registers all procedural building models
 import type { WorldGen } from '../sim/world';
 
@@ -57,6 +58,7 @@ export class Renderer implements RendererApi {
   private projectiles!: Projectiles;
   private wishBubbles!: WishBubbles;
   private themeFx!: ThemeFx;
+  private festival!: Festival;
   private container!: HTMLElement;
   private width = 1;
   private height = 1;
@@ -165,6 +167,7 @@ export class Renderer implements RendererApi {
     this.projectiles = new Projectiles(this.ctx);
     this.wishBubbles = new WishBubbles(this.ctx);
     this.themeFx = new ThemeFx(this.ctx);
+    this.festival = new Festival(this.ctx);
     this.overlay = new BuildOverlay(this.ctx);
     this.effects = new Effects(this.ctx, this.rig);
     this.applyQuality(this.quality, true);
@@ -253,6 +256,7 @@ export class Renderer implements RendererApi {
     this.wishBubbles.update(dt);
     this.aliens.update(dt);
     this.projectiles.update(dt);
+    this.festival.update(dt);
     this.particles.setNight(this.env.night);
     this.particles.update(dt);
     this.themeFx.update(dt, this.renderer.getDrawingBufferSize(_buf).y);
@@ -441,6 +445,7 @@ export class Renderer implements RendererApi {
     this.projectiles?.dispose();
     this.wishBubbles?.dispose();
     this.themeFx?.dispose();
+    this.festival?.dispose();
     this.aliens?.dispose();
     this.characters?.dispose();
     this.pois?.dispose();

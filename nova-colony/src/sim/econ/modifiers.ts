@@ -3,6 +3,7 @@
  *
  * Sources:
  *  - completed research `effects`
+ *  - Research Mastery levels (sim/mastery.ts: repeatable research, +3% production per level ...)
  *  - equipped items (`ItemDef.stats`: gatherYield / gatherSpeed / moveSpeed as adds; armor hp is a flat
  *    add applied by PlayerSystem.maxHp and damage is handled by combat, so neither is a modifier here)
  *  - Colony Pass VIP (production add, offlineHours add)
@@ -10,12 +11,15 @@
  *    the strongest active one applies)
  *  - colony happiness (`derived.happiness.productivity`, maintained by the colonists system) as a
  *    'production' mult
+ *  - a Colony Spirit festival (sim/colony/spirit.ts) as a 'production' mult, online only like the boosts
  *
  * The table is rebuilt lazily by EconomySystem (on relevant events and at most once per second);
  * lookups are cached Map reads so other systems may call `modifier()` every frame.
  */
 import type { Game } from '../../core/Game';
 import type { Boost } from '../../core/state';
+import { forEachMasteryAdd } from '../mastery';
+import { festivalProductionMult } from '../colony/spiritRules';
 
 export interface ModifierOptions {
   /** Include temporary boosts. Offline progress excludes them. */
@@ -56,6 +60,9 @@ export class ModifierTable {
       }
     }
 
+    // Research Mastery (repeatable research)
+    forEachMasteryAdd(state.research.mastery, (stat, v) => this.add(stat, v));
+
     // equipment
     for (const itemId of Object.values(state.player.equip)) {
       if (!itemId) continue;
@@ -82,6 +89,9 @@ export class ModifierTable {
         if (stat) this.boostMax.set(stat, Math.max(this.boostMax.get(stat) ?? 1, b.mult));
       }
       for (const [stat, m] of this.boostMax) this.mult(stat, m);
+      // a festival is a timed, online-only bonus too (it stacks with the ad boosts: a different source, like VIP)
+      const fest = festivalProductionMult(state);
+      if (fest !== 1) this.mult('production', fest);
     }
 
     // colony happiness -> production

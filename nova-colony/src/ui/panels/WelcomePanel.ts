@@ -16,6 +16,8 @@ export interface WelcomeArg {
   seconds: number;
   gains: ResourceBag;
   rp: number;
+  /** Research stopped at the labs' offline cap (balance.offlineResearchMinutes). */
+  rpCapped?: boolean;
 }
 
 export class WelcomePanel extends Panel {
@@ -34,7 +36,7 @@ export class WelcomePanel extends Panel {
   /** The live pending summary first: leaving again before collecting merges more into it while the card is up. */
   private summary(): WelcomeArg {
     const p = this.game.pendingOffline;
-    if (p) return { seconds: p.seconds, gains: p.gains, rp: p.rp };
+    if (p) return { seconds: p.seconds, gains: p.gains, rp: p.rp, rpCapped: p.rpCapped };
     const a = this.arg as WelcomeArg | undefined;
     return a && a.gains ? a : { seconds: 0, gains: {}, rp: 0 };
   }
@@ -81,6 +83,9 @@ export class WelcomePanel extends Panel {
     if (s.rp > 0) addRow('🔬', 'Research points', s.rp, '#8fa8ff');
     if (!rows.length) list.appendChild(h('div', { class: 'mute center', text: 'Your colonists were resting — build production to earn while away!' }));
     right.appendChild(list);
+    // honest about the labs' offline cap: research stops once they have banked it (the rest of the colony kept going)
+    const capMin = this.data.balance.offlineResearchMinutes;
+    if (s.rpCapped && s.rp > 0 && capMin) right.appendChild(h('div', { class: 'mute small center wb-note', text: `🔬 Your labs bank up to ${capMin % 60 === 0 ? `${capMin / 60} hours` : fmtDuration(capMin * 60)} of research while you're away.` }));
 
     const dbl = btn({
       label: '▶ DOUBLE REWARDS',

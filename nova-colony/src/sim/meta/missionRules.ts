@@ -67,7 +67,7 @@ export function liveValue(game: Game, def: MissionDef): number {
  */
 export function retroValue(game: Game, def: MissionDef): number {
   // granted wishes are counted for the whole colony's life (the chain picks up where the player already is)
-  if (def.type === 'wish' && def.chain !== 'daily') return game.state.missions.counters[`wish:${def.target}`] ?? 0;
+  if ((def.type === 'wish' || def.type === 'festival' || def.type === 'mastery') && def.chain !== 'daily') return game.state.missions.counters[`${def.type}:${def.target}`] ?? 0;
   if (def.chain === 'daily' || def.target === '*') return 0;
   const s = game.state;
   switch (def.type) {

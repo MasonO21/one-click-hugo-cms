@@ -27,6 +27,7 @@ import { ExpeditionSystem } from '../sim/expeditions';
 import { AchievementSystem } from '../sim/achievements';
 import { WishSystem } from '../sim/wishes';
 import { ChestSystem } from '../sim/chests';
+import { SpiritSystem } from '../sim/colony/spirit';
 import { createMockServices } from '../platform/mock';
 import { reportLoopError } from './guard';
 
@@ -48,6 +49,7 @@ export interface Systems {
   achievements: AchievementSystem;
   wishes: WishSystem;
   chests: ChestSystem;
+  spirit: SpiritSystem;
 }
 
 export interface GameOptions {
@@ -88,6 +90,7 @@ const UPDATE_ORDER: (keyof Systems)[] = [
   'tutorial',
   'liveops',
   'wishes',
+  'spirit',
   'achievements',
   'chests',
 ];
@@ -137,6 +140,7 @@ export class Game {
       achievements: new AchievementSystem(this),
       wishes: new WishSystem(this),
       chests: new ChestSystem(this),
+      spirit: new SpiritSystem(this),
     };
   }
 
