@@ -1333,12 +1333,22 @@
   // ======================================================================
   // Tutorial hints: pulse whatever the current quest needs pressed next
   // ======================================================================
+  let toldDone = -1;
   function applyHints() {
     document.querySelectorAll('.hint').forEach((e) => e.classList.remove('hint'));
     const q = DATA.quests[S.quest];
-    if (!q || q.check(S) || UI.battle) return;
-    const [kind, arg] = q.go.split(':');
+    if (!q || UI.battle) return;
     const mark = (sel) => { const e = $(sel); if (e) e.classList.add('hint'); return !!e; };
+    // a quest finished away from the keep (a recruit at the Beacon, a battle on the Dunes): its Claim is on the
+    // keep's quest bar, so the Keep tab pulses and a toast says so, once
+    if (q.check(S)) {
+      if (UI.tab !== 'town' && !UI.sheet) {
+        mark('#tabs [data-arg="town"]');
+        if (toldDone !== S.quest) { toldDone = S.quest; toast('Quest complete. Claim your reward in the Keep.', 'good', 'questdone', 4); }
+      }
+      return;
+    }
+    const [kind, arg] = q.go.split(':');
     if (UI.sheet) {
       if (kind === 'sheet' && (UI.sheet.kind === 'hub' || UI.sheet.kind === 'menu')) { mark(`#sheet .hub-tile[data-arg$="|${arg}"]`); return; }
       if (kind === 'plot' && UI.sheet.kind === 'plot' && UI.sheet.pid === arg) {
