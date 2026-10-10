@@ -187,13 +187,13 @@ export class WishBubbles {
     g.textAlign = 'center';
     g.textBaseline = 'middle';
     if (this.bubbleReady && this.bubble) {
-      // the painted bubble (it carries its own lantern) with the wish's icon as a little badge
+      // the painted bubble (parchment with a brass star) with the wish's icon as a little badge in its colours
       g.drawImage(this.bubble, 0, 0, S, S);
       const bx = S * 0.76;
       const by = S * 0.26;
       const br = S * 0.2;
-      g.fillStyle = '#ffffff';
-      g.strokeStyle = '#ffb3c7';
+      g.fillStyle = '#fdf1d8';
+      g.strokeStyle = '#a87a32';
       g.lineWidth = S * 0.03;
       g.beginPath();
       g.arc(bx, by, br, 0, Math.PI * 2);
