@@ -24,7 +24,15 @@ const TIERS = ['tier-0-wood', 'tier-1-reinforced', 'tier-2-stone', 'tier-3-steel
 
 /** True for a URL returned by one of the lookups below (toasts accept those as their icon). */
 export function isArtSrc(s: string | null | undefined): s is string {
-  return !!s && s.startsWith(ROOT);
+  return !!s && (s.startsWith(ROOT) || s.startsWith('data:image/'));
+}
+
+/**
+ * Web preview builds can ship whole art folders as one packed script (scripts/web-artpack.mjs sets
+ * `__NOVA_ART_PACK__`) to stay under a host's file-count limit; the app itself never loads one.
+ */
+function packed(path: string): string {
+  return (globalThis as { __NOVA_ART_PACK__?: Record<string, string> }).__NOVA_ART_PACK__?.[path] ?? path;
 }
 
 /** Resource (or 'nova') icon, 128 px with transparency. */
@@ -172,7 +180,7 @@ export function rewardArt(id: string): string | null {
 
 /** Item icon by ItemDef.id (tools, weapons, armor, gear, consumables, components, crates), 192 px with transparency. */
 export function itemArt(id: string): string | null {
-  return ITEMS.has(id) ? `${ROOT}items/${id}.webp` : null;
+  return ITEMS.has(id) ? packed(`${ROOT}items/${id}.webp`) : null;
 }
 /** Every id `itemArt` knows (for tests). */
 export function itemArtIds(): string[] {
@@ -213,7 +221,7 @@ const COSMETIC_ART = new Set<string>([
   'turret_neon', 'turret_patina', 'ride_carbon_gold',
 ]);
 export function cosmeticArt(id: string): string | null {
-  return COSMETIC_ART.has(id) ? `${ROOT}cosmetics/${id}.webp` : null;
+  return COSMETIC_ART.has(id) ? packed(`${ROOT}cosmetics/${id}.webp`) : null;
 }
 /** Every id `cosmeticArt` knows (for tests). */
 export function cosmeticArtIds(): string[] {
@@ -241,7 +249,7 @@ export function vehicleArtIds(): string[] {
 }
 /** Painted tech-tree icon by ResearchDef.id, 128 px with transparency. */
 export function researchArt(id: string): string | null {
-  return RESEARCH.has(id) ? `${ROOT}research/${id}.webp` : null;
+  return RESEARCH.has(id) ? packed(`${ROOT}research/${id}.webp`) : null;
 }
 /** Every id `researchArt` knows (for tests). */
 export function researchArtIds(): string[] {
