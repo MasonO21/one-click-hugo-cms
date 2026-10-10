@@ -132,6 +132,25 @@ night with the lanterns lit. Seven screenshots, in this order:
 
 Record with the iOS Simulator (File › Record Screen) at 30 fps and trim to the frames above.
 
+## Google Play
+
+Play Console asks for a few things the App Store doesn't:
+
+- **Short description (80 max) · 72 characters:**
+
+  ```
+  Raise the last water dragon, build a desert keep and survive the storms.
+  ```
+
+- **Full description:** the App Store description above fits (Play's limit is also 4,000 characters).
+- **Feature graphic (1024×500, required):** `store/google-play-feature-1024x500.png`.
+- **App icon (512×512):** `icons/icon-512.png`.
+- **Phone screenshots:** `store/android/` (1080×1920, the same seven as the App Store's, captioned).
+- **Category:** Strategy. **Tags:** base building, city builder, dragon, survival.
+- **Content rating:** answer the IARC questionnaire as in NATIVE.md, section 7 (in-game purchases including random
+  items: yes; users can interact online: yes, chat with Report and Block).
+- **Data safety:** see NATIVE.md (the same answers as the App Store privacy label).
+
 ## Support and marketing URLs
 
 - Support URL: required. A simple page with a contact email is enough.
