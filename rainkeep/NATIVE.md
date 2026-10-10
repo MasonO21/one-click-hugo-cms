@@ -127,6 +127,24 @@ npx cap open android      # opens Android Studio
 2. Add a **Play Store** app in RevenueCat, connect the Play service credentials, and use the Google public SDK key (starts with `goog_`). The game reads one key, so ship separate builds per platform, or extend `KHNative.init` to choose the key by platform.
 3. Upload a signed App Bundle (`Build`, then `Generate Signed Bundle`) to an internal testing track first.
 
+### Android test build (sideload, no Play Console needed)
+
+For a closed test before the store listing exists, a debug-signed APK can be built on any Linux or Mac machine
+with JDK 21, Node 20+ and Python 3 with Pillow, without Android Studio:
+
+```bash
+scripts/android-debug-build.sh
+```
+
+It downloads the Android command-line tools and SDK into `~/.rainkeep-android` on its first run (about 3 GB;
+`ANDROID_HOME` reuses an SDK you have), copies the game into a Capacitor project there, generates the launcher
+icon and splash from `icons/` (`scripts/android-res.py`), stamps the version from `DATA.version`, and writes
+`~/.rainkeep-android/Rainkeep-debug.apk`. Later runs take under a minute. Keep `~/.rainkeep-android/debug.keystore`:
+builds signed with the same key install over each other, so testers keep their saves.
+
+Testers install it by opening the file on the phone and allowing installs from that source. A debug build has no
+store purchases (the shop runs in its simulated mode) and plays online only when `DATA.server` names a server.
+
 ## Updating the game after launch
 
 1. Edit the web files, then `npm run cap:sync`.

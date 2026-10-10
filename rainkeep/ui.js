@@ -465,7 +465,7 @@
     const crates = RES.map((r) => `<button class="card sg" data-act="crate" data-arg="${r}">${icon(ICON[r])}<b>${fmt(DATA.crateSize(r, S.lv.wyrm))}</b><span class="muted small">${NAME[r]} crate</span><span class="chip">${icon('i-gem')}${DATA.crateCost}</span></button>`).join('');
     const native = window.KHNative && window.KHNative.purchasesAvailable;
     return `<div class="panel-head"><h2>Store</h2><p>${native ? '' : `Simulated spend so far: $${S.spentUsd.toFixed(2)}`}</p></div>
-      ${native ? '' : '<p class="proto-note">Web version: purchases are simulated and nothing is charged. In the App Store version these buttons use Apple in-app purchase.</p>'}
+      ${native ? '' : '<p class="proto-note">This version: purchases are simulated and nothing is charged. In the App Store and Google Play versions these buttons use the store\'s in-app purchase.</p>'}
       ${KH.patronCard ? KH.patronCard() : ''}
       <div class="section-label">Offers</div><div class="stack">${offers.map(offer).join('')}</div>
       <div class="section-label">Wellkeeper's Ledger · Season ${season}${S.pass.end ? ` · ends in ${fmtTime(Math.max(0, S.pass.end - S.time))}` : ''}</div>
@@ -834,7 +834,7 @@
     return {
       title: name, lvl: price(id, usd),
       body: `${sh.skin ? wyrmCanvas({ skin: sh.skin }) : ''}<p>${esc(desc)}</p>${grants ? `<div class="costs">${rewardHTML(grants)}</div>` : ''}
-        <p class="proto-note">Web version: no money changes hands. In the App Store version this step opens Apple's purchase sheet.</p>
+        <p class="proto-note">This version: no money changes hands. In the store versions this step opens the store's purchase sheet.</p>
         <div class="confirm-actions"><button class="btn alt" data-act="close">Cancel</button><button class="btn" data-act="confirmbuy">Simulate ${price(id, usd)}</button></div>`,
     };
   }
