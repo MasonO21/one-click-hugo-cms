@@ -40,7 +40,7 @@
     // a trait the chosen art leaves unanswered that another learned art would answer, and the arts that do
     const t = tr.find((x) => !(ANSWERS[x] || []).includes(cur) && (ANSWERS[x] || []).some((a) => KH.artOpen(a)));
     const tip = t ? `Against ${esc(DATA.traits.list[t].name.toLowerCase())} foes: ${(ANSWERS[t]).filter((a) => KH.artOpen(a)).map((a) => AR[a].name).join(' or ')}.` : esc(AR[cur].text);
-    return `<div class="fm ba"><span class="fm-lbl">Breath</span><div class="seg fm-seg ba-seg">${AR.order.map(opt).join('')}</div><div class="muted small fm-tip">${tip}</div></div>`;
+    return `<div class="fm ba"><span class="fm-lbl">Breath</span><div class="seg ba-seg">${AR.order.map(opt).join('')}</div><div class="muted small fm-tip">${tip}</div></div>`;
   };
   KH.arts = { answers: ANSWERS, good: (a, foe) => ((foe && foe.traits) || []).some((t) => (ANSWERS[t] || []).includes(a)) };
 })();
