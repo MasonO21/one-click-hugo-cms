@@ -10,7 +10,7 @@ import { CARD_RATIO, PEDESTAL, FEET, fitGrid, placeGrid, sceneLayout, type Rect 
 import { cardFace, chestBack, findsLabel, fxBudget, revealGap, revealSound, tapHint, tapsToOpen, teaseMs } from '../src/ui/chest/logic';
 import { backAction } from '../src/ui/logic/back';
 import { resolveSoundId } from '../src/audio/ids';
-import { pctText } from '../src/ui/shop/ChestOddsPanel';
+import { cosmeticFine, pctText } from '../src/ui/shop/ChestOddsPanel';
 import { pityText } from '../src/ui/shop/ChestsTab';
 
 const data = createDataRegistry();
@@ -177,5 +177,13 @@ describe('chest scene: pacing, sound, particles, back', () => {
     expect(pctText(24)).toBe('24%');
     expect(pctText(6.24)).toBe('6.2%');
     expect(pctText(0.04)).toBe('<0.1%');
+  });
+
+  it('the fine print never speaks of a rarity below common', () => {
+    const common = cosmeticFine('common', 'common');
+    expect(common).not.toMatch(/rarity down|go up to common/);
+    expect(common).toMatch(/never repeated/);
+    expect(common).toMatch(/Nova back/);
+    expect(cosmeticFine('epic', 'epic')).toMatch(/go up to epic.*next rarity down.*Nova back/);
   });
 });

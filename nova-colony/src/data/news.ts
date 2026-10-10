@@ -8,7 +8,7 @@ export const NEWS = {
   text: 'A few things arrived with the last supply drop:',
   items: [
     { icon: '🧥', text: 'Wardrobe: outfits, headwear, companions, colony themes, decor and more (Menu › Wardrobe)' },
-    { icon: '📦', text: 'Loot caches in five tiers, from the Supply Cache to the Nova Core (Shop › Chests)' },
+    { icon: '📦', text: 'Loot caches in five tiers, from the Supply Cache to the Nova Core (Shop › Caches)' },
     { icon: '📸', text: 'Photo Mode: frame your colony and share it (Menu › Photo)' },
     { icon: '🌳', text: 'A cozier frontier: new trees, rocks, warmer light and rounder settlers' },
     { icon: '🔎', text: 'Accessibility: larger text and reduce motion (Settings)' },

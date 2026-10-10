@@ -105,14 +105,15 @@ export class ChestOddsPanel extends Panel {
       h(
         'div',
         { class: 'co-fine' },
-        h('p', { text: `Cosmetics go up to ${top} in this cache and are never repeated: if you own every one of a rarity you get the next rarity down; if you own them all, you get Nova back instead (about ${Math.round(DUPLICATE_SHARE * 100)}% of a typical price).` }),
+        h('p', { text: cosmeticFine(def.rarity, top) }),
         h('p', { text: 'Odds are per find. When a cache rolls nothing good enough for its guarantee, one find is lifted to it. Resources are sized to your colony’s current tier.' }),
         h('p', { text: 'Everything in a cache only speeds things up or is cosmetic: every building, every tier and Titanium itself can be reached for free.' }),
       ),
     );
 
     const afford = g.sys.chests.canAfford(def.id);
-    if (def.nova > 0) {
+    // not sold here (paid random items restricted in this region): the odds stay, without a way to buy
+    if (g.sys.chests.forSale(def.id)) {
       wrap.appendChild(
         btn({
           label: afford ? `Buy & open · ${bigNum(def.nova)} Nova` : `${bigNum(def.nova)} Nova · Get more Nova`,
@@ -150,4 +151,11 @@ export class ChestOddsPanel extends Panel {
       h('span', { class: 'co-pct', text: pctText(pct) }),
     );
   }
+}
+
+/** The fine print on cosmetics: never repeated, stepping down a rarity, Nova back once there is nothing new. */
+export function cosmeticFine(rarity: CosmeticRarity, top: string): string {
+  const back = `you get Nova back instead (about ${Math.round(DUPLICATE_SHARE * 100)}% of a typical price)`;
+  if (rarity === 'common') return `Cosmetics in this cache are common and never repeated: once you own every one, ${back}.`;
+  return `Cosmetics go up to ${top} in this cache and are never repeated: if you own every one of a rarity you get the next rarity down; if you own them all, ${back}.`;
 }

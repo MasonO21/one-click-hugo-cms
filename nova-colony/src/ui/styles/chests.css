@@ -75,7 +75,8 @@
   --ray: rgba(255, 234, 200, 0.4);
   --b1: #3e4466;
   --b2: #121526;
-  --seam: 48%;
+  /* the capsule's cap meets its body high up, well above the star-core window */
+  --seam: 30%;
 }
 
 .nv-chest .cs-probe {
@@ -133,6 +134,18 @@
   filter: saturate(0.82) brightness(0.86) contrast(1.05);
   user-select: none;
   -webkit-user-drag: none;
+}
+/* the Nova Core stands on a floating island: when the capsule steps down to make room for its seven cards, the island
+   comes down with it (the painting slides; deep space, the colour of the painting's top edge, fills in above it under
+   the cards' shade) instead of leaving the capsule hanging in the sky below its pedestal */
+.nv-chest[data-theme='nova'] .cs-bg {
+  background: #2a2664;
+}
+.nv-chest[data-theme='nova'] .cs-bgimg {
+  transform: translate3d(0, var(--shift), 0);
+  transition: transform 0.8s cubic-bezier(0.25, 0.9, 0.3, 1);
+  -webkit-mask: linear-gradient(180deg, transparent 0, #000 7%);
+  mask: linear-gradient(180deg, transparent 0, #000 7%);
 }
 @keyframes cs-drift {
   from {
@@ -1423,9 +1436,12 @@
   transition-property: opacity;
   transform: none;
 }
+.nv-chest.calm .cs-chest,
+.nv-chest.calm .cs-bgimg {
+  transition: none;
+}
 .nv-chest.calm .cs-chest {
   transform: translate3d(0, var(--shift), 0) scale(var(--settle, 1));
-  transition: none;
 }
 .nv-chest.calm .cs-rays,
 .nv-chest.calm.opened .cs-rays {
@@ -1694,8 +1710,8 @@
 .nv-root .chest-card .cc-keep {
   display: block;
   margin: 0.1em auto 0;
-  padding: 0.3em 0.4em;
-  min-height: 32px;
+  padding: 0.3em 0.6em;
+  min-height: 44px;
   border: 0;
   background: none;
   font: inherit;

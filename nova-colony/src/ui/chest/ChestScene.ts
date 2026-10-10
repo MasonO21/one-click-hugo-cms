@@ -161,6 +161,8 @@ export class ChestScene {
     this.shownAt = performance.now();
     this.el.dataset.phase = 'load';
     this.el.hidden = false;
+    // a fixed layout: undo any programmatic scroll (focus, scrollIntoView) left over from the last scene
+    this.el.scrollTop = this.el.scrollLeft = 0;
     this.el.classList.remove('on', 'ready');
     void this.el.offsetWidth;
     this.el.classList.add('on');
