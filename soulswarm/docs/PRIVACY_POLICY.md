@@ -10,7 +10,7 @@
 This policy explains what information the Soulswarm mobile game ("the Game") collects, why, and the choices you have.
 
 ## 2. Information the Game stores on your device
-The Game saves your progress on your own device: heroes, relics, currencies, settings, quest and pass progress. This data stays on the device and is deleted when you uninstall the Game or use **Settings → Reset progress**.
+The Game saves your progress on your own device: heroes, relics, currencies, settings, quest and pass progress. This data stays on the device and is deleted when you uninstall the Game or use **Settings → Delete my data**.
 
 *Current build:* the Game sends no personal information to us or to third parties. To keep daily rewards fair it asks a time server for the current time (at launch, on resume and every 10 minutes). The request carries no player data, but like any web request the time server sees your IP address. Until our own backend exists these servers are Cloudflare (cloudflare.com/cdn-cgi/trace) and timeapi.io. Since Update 14 the Game also asks, once, for your year of birth (kept on the device; it decides which features and choices apply to you), shows a consent screen for gameplay analytics and personalised ads (both off until you choose), and gives you a random player ID, an export of your data and a delete button in **Settings → Privacy**. With your consent, gameplay events are kept on the device; this build has no analytics service and sends none.
 
@@ -21,9 +21,14 @@ The Game saves your progress on your own device: heroes, relics, currencies, set
 | Purchase receipts (no card details) | Delivering and restoring purchases, fraud prevention | Apple / Google, [RevenueCat] |
 | Device model, OS version, crash logs | Fixing crashes and performance problems | [Crash reporting provider] |
 | Gameplay events (e.g. level reached, run length) | Balancing difficulty and improving the Game | [Analytics provider, e.g. GameAnalytics / Firebase] |
+| Achievements and leaderboard scores (Feat tiers, Endless and Boss Rush times) | Game Center / Google Play Games achievements and leaderboards, if you are signed in to them | Apple / Google |
 | Advertising ID (only with your permission on iOS) | Showing and measuring the optional rewarded videos | [Ad mediation, e.g. AppLovin MAX] and its partners |
 
 We never see or store your payment card details. Purchases are handled entirely by Apple or Google.
+
+**Reminders.** If you switch on Settings → Reminders (off by default), the Game schedules local notifications on your device (energy full, the daily chest, the Boss Rush opening). They are scheduled and shown by your device; nothing is sent to us. Switching them off, or turning off notifications in your device settings, cancels them.
+
+**Fonts.** The Game's fonts are bundled with the app, so no font service is contacted.
 
 ## 4. Advertising
 Ads in the Game are **optional rewarded videos** that you choose to watch for a reward. On iOS we ask permission through Apple's App Tracking Transparency prompt before any cross-app tracking. You can decline, and the Game still works. On Android you can reset or opt out of your advertising ID in system settings. Buying the Soul Pact removes the need to watch ads for rewards.

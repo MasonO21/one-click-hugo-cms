@@ -167,7 +167,7 @@ function installSoak() {
   }
 
   // ---------------------------------------------------------------- invariants
-  const INF_OK = new Set(['nextWave', '_bestD2', '_leash2']);
+  const INF_OK = new Set(['nextWave', '_bestD2', '_leash2', 'wellT']); // wellT: no pull (every boss but Nihl)
   function scan(o, path) {
     if (!o) return;
     for (const k in o) {
@@ -212,7 +212,11 @@ function installSoak() {
     scanList(L.list, 'minion'); scanList(L.orbs, 'orb');
     scanList(r.projectiles.shots, 'shot'); scanList(r.projectiles.embers, 'ember'); scanList(r.projectiles.lobs, 'lob');
     scanList(r.pickups.gems, 'gem'); scanList(r.pickups.special, 'special'); scanList(r.novaQueue, 'novaQueue'); scanList(r.burstQueue, 'burstQueue');
-    for (const k in r.counters) { const v = r.counters[k]; if (!(v >= 0) || Math.floor(v) !== v) V('nan', `counters.${k} = ${v}`); }
+    for (const k in r.counters) {
+      const v = r.counters[k];
+      if (v && typeof v === 'object') { for (const t in v) if (!(v[t] >= 0) || Math.floor(v[t]) !== v[t]) V('nan', `counters.${k}.${t} = ${v[t]}`); } // kills per foe (the Bestiary)
+      else if (!(v >= 0) || Math.floor(v) !== v) V('nan', `counters.${k} = ${v}`);
+    }
     // bounds: HP within its max, queues and caps sane, XP below the next level
     if (P.hp > P.maxHp + 1e-6 || P.hp < 0) V('nan', `player hp ${P.hp} / ${P.maxHp}`);
     if (r.levelQueue < 0 || r.chestQueue < 0) V('nan', `level queue ${r.levelQueue}, chest queue ${r.chestQueue}`);
